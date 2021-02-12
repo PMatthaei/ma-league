@@ -13,7 +13,7 @@ class EpisodeRunner:
         assert self.batch_size == 1
 
         self.env = env_REGISTRY[self.args.env](**self.args.env_args)
-        self.episode_limit = self.env.max_steps
+        self.episode_limit = self.env.episode_limit
         self.t = 0
 
         self.t_env = 0
@@ -32,18 +32,15 @@ class EpisodeRunner:
         self.mac = mac
 
     def get_env_info(self):
-        env_info = {"state_shape": self.observation_space,
-                    "obs_shape": self.env.observation_space,
-                    "n_actions": self.env.action_space,
-                    "n_agents": self.env.n,
-                    "episode_limit": self.episode_limit}
-        return env_info
+        return self.env.get_env_info()
 
     def save_replay(self):
-        self.env.save_replay()
+        raise NotImplementedError()
+        #self.env.save_replay()
 
     def close_env(self):
-        self.env.close()
+        raise NotImplementedError()
+        #self.env.close()
 
     def reset(self):
         self.batch = self.new_batch()
@@ -55,6 +52,7 @@ class EpisodeRunner:
 
         terminated = False
         episode_return = 0
+
         self.mac.init_hidden(batch_size=self.batch_size)
 
         while not terminated:
@@ -70,13 +68,13 @@ class EpisodeRunner:
             # Receive the actions for each agent at this timestep in a batch of size 1
             actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
 
-            reward, terminated, env_info = self.env.step(actions[0])
-            episode_return += reward
+            obs, reward, terminated, env_info = self.env.step(actions[0])
+            episode_return += reward[0] # TODO which reaward?
 
             post_transition_data = {
                 "actions": actions,
-                "reward": [(reward,)],
-                "terminated": [(terminated != env_info.get("episode_limit", False),)],
+                "reward": [(reward[0],)],
+                "terminated": [(any(terminated),)],
             }
 
             self.batch.update(post_transition_data, ts=self.t)
@@ -88,31 +86,32 @@ class EpisodeRunner:
             "avail_actions": [self.env.get_avail_actions()],
             "obs": [self.env.get_obs()]
         }
+
         self.batch.update(last_data, ts=self.t)
 
         # Select actions in the last stored state
         actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
         self.batch.update({"actions": actions}, ts=self.t)
 
-        cur_stats = self.test_stats if test_mode else self.train_stats
-        cur_returns = self.test_returns if test_mode else self.train_returns
-        log_prefix = "test_" if test_mode else ""
-        cur_stats.update({k: cur_stats.get(k, 0) + env_info.get(k, 0) for k in set(cur_stats) | set(env_info)})
-        cur_stats["n_episodes"] = 1 + cur_stats.get("n_episodes", 0)
-        cur_stats["ep_length"] = self.t + cur_stats.get("ep_length", 0)
+        #cur_stats = self.test_stats if test_mode else self.train_stats
+        #cur_returns = self.test_returns if test_mode else self.train_returns
+        #log_prefix = "test_" if test_mode else ""
+        #.update({k: cur_stats.get(k, 0) + env_info.get(k, 0) for k in set(cur_stats) | set(env_info)})
+        #cur_stats["n_episodes"] = 1 + cur_stats.get("n_episodes", 0)
+        #cur_stats["ep_length"] = self.t + cur_stats.get("ep_length", 0)
 
         if not test_mode:
             self.t_env += self.t
 
-        cur_returns.append(episode_return)
-
-        if test_mode and (len(self.test_returns) == self.args.test_nepisode):
-            self._log(cur_returns, cur_stats, log_prefix)
-        elif self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
-            self._log(cur_returns, cur_stats, log_prefix)
-            if hasattr(self.mac.action_selector, "epsilon"):
-                self.logger.log_stat("epsilon", self.mac.action_selector.epsilon, self.t_env)
-            self.log_train_stats_t = self.t_env
+        # cur_returns.append(episode_return)
+        #
+        # if test_mode and (len(self.test_returns) == self.args.test_nepisode):
+        #     self._log(cur_returns, cur_stats, log_prefix)
+        # elif self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
+        #     self._log(cur_returns, cur_stats, log_prefix)
+        #     if hasattr(self.mac.action_selector, "epsilon"):
+        #         self.logger.log_stat("epsilon", self.mac.action_selector.epsilon, self.t_env)
+        #     self.log_train_stats_t = self.t_env
 
         return self.batch
 

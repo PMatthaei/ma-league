@@ -11,17 +11,17 @@ from mlflow import log_metric
 import numpy as np
 
 import tensorflow as tf
-
+from bin.team_plans_example import TWO_TEAMS_SIZE_TWO_SYMMETRIC_HETEROGENEOUS
 if __name__ == '__main__':
-    writer = tf.summary.create_file_writer(logdir="mlruns/tf/logs/{}".format(int(time.time())))
+    writer = tf.summary.create_file_writer(logdir="src/mlruns/tf/logs/{}".format(int(time.time())))
     writer.set_as_default()
     # parse arguments
     parser = argparse.ArgumentParser(description=None)
-    parser.add_argument('-s', '--scenario', default='team_simple.py', help='Path of the scenario Python script.')
+    parser.add_argument('-s', '--scenario', default='teams.py', help='Path of the scenario Python script.')
     args = parser.parse_args()
 
     # load scenario from script
-    scenario = team.load(args.scenario).TeamSimpleScenario()
+    scenario = team.load(args.scenario).TeamsScenario(TWO_TEAMS_SIZE_TWO_SYMMETRIC_HETEROGENEOUS)
     # create world
     world = scenario.make_teams_world(grid_size=10.0)
     # create multi-agent environment
@@ -46,8 +46,6 @@ if __name__ == '__main__':
     total_rewards = []
 
     taken_actions = [0] * 7
-
-    buf = io.BytesIO()
 
     while total_steps < 10000:
         # query for action from each agent's policy
