@@ -29,7 +29,7 @@ def my_main(_run, _config, _log):
     config = config_copy(_config)
     np.random.seed(config["seed"])
     th.manual_seed(config["seed"])
-    #config['env_args']['seed'] = config["seed"]
+    config['env_args']['seed'] = config["seed"]
 
     # run the framework
     run(_run, config, _log)
