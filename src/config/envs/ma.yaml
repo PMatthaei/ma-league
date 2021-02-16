@@ -1,4 +1,10 @@
 env: ma
 
 env_args:
+  headless: True
+  record: False
+  fps: 30
+  draw_grid: False
+  infos: True
   seed: null
+  global_reward: True
