@@ -36,11 +36,11 @@ class EpisodeRunner:
 
     def save_replay(self):
         raise NotImplementedError()
-        #self.env.save_replay()
+        # self.env.save_replay()
 
     def close_env(self):
         raise NotImplementedError()
-        #self.env.close()
+        # self.env.close()
 
     def reset(self):
         self.batch = self.new_batch()
@@ -69,7 +69,8 @@ class EpisodeRunner:
             actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
 
             obs, reward, terminated, env_info = self.env.step(actions[0])
-            episode_return += reward[0] # TODO which reaward?
+
+            episode_return += reward[0]  # TODO Add reward of trained team
 
             post_transition_data = {
                 "actions": actions,
@@ -96,7 +97,7 @@ class EpisodeRunner:
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
         log_prefix = "test_" if test_mode else ""
-        #cur_stats.update({k: cur_stats.get(k, 0) + env_info.get(k, 0) for k in set(cur_stats) | set(env_info)})
+        cur_stats.update({k: cur_stats.get(k, 0) + env_info.get(k, 0) for k in set(cur_stats) | set(env_info)})
         cur_stats["n_episodes"] = 1 + cur_stats.get("n_episodes", 0)
         cur_stats["ep_length"] = self.t + cur_stats.get("ep_length", 0)
 
