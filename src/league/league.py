@@ -3,6 +3,9 @@ import collections
 
 import numpy as np
 
+from league.roles.exploiters import MainExploiter, LeagueExploiter
+from league.roles.players import MainPlayer, Player
+
 
 class Agent(object):
     """Demonstrates agent interface.
@@ -12,7 +15,7 @@ class Agent(object):
     """
 
     def __init__(self, race, initial_weights):
-        self.race = race
+        self.race = race # TODO: replace race with team composition he resides in?
         self.steps = 0
         self.weights = initial_weights
 
@@ -42,32 +45,6 @@ class Agent(object):
         """
         # We omit the details of network inference here.
         return policy_logits, baselines
-
-
-def remove_monotonic_suffix(win_rates, players):
-    if not win_rates:
-        return win_rates, players
-
-    for i in range(len(win_rates) - 1, 0, -1):
-        if win_rates[i - 1] < win_rates[i]:
-            return win_rates[:i + 1], players[:i + 1]
-
-    return np.array([]), []
-
-
-def prioritized_fictitious_self_play(win_rates, weighting="linear"):
-    weightings = {
-        "variance": lambda x: x * (1 - x),
-        "linear": lambda x: 1 - x,
-        "linear_capped": lambda x: np.minimum(0.5, 1 - x),
-        "squared": lambda x: (1 - x) ** 2,
-    }
-    fn = weightings[weighting]
-    probs = fn(np.asarray(win_rates))
-    norm = probs.sum()
-    if norm < 1e-10:
-        return np.ones_like(win_rates) / len(win_rates)
-    return probs / norm
 
 
 class Payoff:
@@ -135,6 +112,7 @@ class League(object):
                  league_exploiters=2):
         self._payoff = Payoff()
         self._learning_agents = []
+        # TODO: This will change since we do not consider races but team compositions in terms of agent/unit selection
         for race in initial_agents:
             for _ in range(main_agents):
                 main_agent = MainPlayer(race, initial_agents[race], self._payoff)
@@ -147,6 +125,7 @@ class League(object):
             for _ in range(league_exploiters):
                 self._learning_agents.append(
                     LeagueExploiter(race, initial_agents[race], self._payoff))
+
         for player in self._learning_agents:
             self._payoff.add_player(player)
 
