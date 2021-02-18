@@ -6,19 +6,6 @@ BATCH_SIZE = 512
 TRAJECTORY_LENGTH = 64
 
 
-class SC2Environment:
-    """See PySC2 environment."""
-
-    def __init__(self, settings):
-        pass
-
-    def step(self, home_action, away_action):
-        pass
-
-    def reset(self):
-        pass
-
-
 class Coordinator:
     """Central worker that maintains payoff matrix and assigns new matches."""
 
