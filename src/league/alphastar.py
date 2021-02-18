@@ -1,5 +1,9 @@
-from multiagent import League
-from rl import Trajectory, loss_function
+from time import time
+
+from league.rl import Trajectory, loss_function
+from multiagent.environment import MAEnv
+
+from league.league import League
 
 LOOPS_PER_ACTOR = 1000
 BATCH_SIZE = 512
@@ -26,8 +30,8 @@ class ActorLoop:
 
     def __init__(self, player, coordinator):
         self.player = player
-        self.teacher = get_supervised_agent(player.get_race())
-        self.environment = SC2Environment()
+        self.teacher = get_supervised_agent(player.get_race()) # TODO: how to get teacher?
+        self.environment = MAEnv() # TODO: add our env configured with yaml
         self.coordinator = coordinator
 
     def run(self):
@@ -39,7 +43,7 @@ class ActorLoop:
                 home_observation, away_observation, is_final, z = self.environment.reset()
                 student_state = self.player.initial_state()
                 opponent_state = opponent.initial_state()
-                teacher_state = teacher.initial_state()
+                teacher_state = self.teacher.initial_state()
 
                 while not is_final:
                     student_action, student_logits, student_state = self.player.step(home_observation, student_state)
@@ -78,7 +82,7 @@ class Learner:
         self.optimizer = AdamOptimizer(learning_rate=3e-5, beta1=0, beta2=0.99,
                                        epsilon=1e-5)
 
-    def get_parameters():
+    def get_parameters(self):
         return self.player.agent.get_weights()
 
     def send_trajectory(self, trajectory):
@@ -100,23 +104,22 @@ class Learner:
 
 def main():
     """Trains the AlphaStar league."""
-    league = League(
-        initial_agents={
-            race: get_supervised_agent(race)
-            for race in ("Protoss", "Zerg", "Terran")
-        })
+    league = League(initial_agents={}) # TODO how to initialize
     coordinator = Coordinator(league)
     learners = []
     actors = []
-    for idx in range(12):
+    RACES = 3
+    INITIAL_AGENTS_PER_RACE = 4
+    for idx in range(INITIAL_AGENTS_PER_RACE * RACES):
         player = league.get_player(idx)
         learner = Learner(player)
+        learners.append(learner)
         actors.extend([ActorLoop(player, coordinator) for _ in range(16000)])
 
-    for l in learners:
-        l.run()
-    for a in actors:
-        a.run()
+    for learner in learners:
+        learner.run()
+    for actor in actors:
+        actor.run()
 
     # Wait for training to finish.
     join()

@@ -1,4 +1,16 @@
+from league.league import Agent
+from league.roles.exploiters import MainExploiter
+from league.utils.pfsp import prioritized_fictitious_self_play
+import numpy as np
+
+from league.utils.various import remove_monotonic_suffix
+
+
 class Player(object):
+
+    def __init__(self):
+        self._payoff = None
+        self._race = None
 
     def get_match(self):
         pass
@@ -7,7 +19,7 @@ class Player(object):
         return False
 
     def _create_checkpoint(self):
-        return Historical(self, self.payoff)
+        return HistoricalPlayer(self, self.payoff)
 
     @property
     def payoff(self):
@@ -24,6 +36,7 @@ class Player(object):
 class MainPlayer(Player):
 
     def __init__(self, race, agent, payoff):
+        super().__init__()
         self.agent = Agent(race, agent.get_weights())
         self._payoff = payoff
         self._race = agent.race
@@ -32,7 +45,7 @@ class MainPlayer(Player):
     def _pfsp_branch(self):
         historical = [
             player for player in self._payoff.players
-            if isinstance(player, Historical)
+            if isinstance(player, HistoricalPlayer)
         ]
         win_rates = self._payoff[self, historical]
         return np.random.choice(
@@ -47,7 +60,7 @@ class MainPlayer(Player):
         # as curriculum
         historical = [
             player for player in self._payoff.players
-            if isinstance(player, Historical) and player.parent == opponent
+            if isinstance(player, HistoricalPlayer) and player.parent == opponent
         ]
         win_rates = self._payoff[self, historical]
         return np.random.choice(
@@ -61,7 +74,7 @@ class MainPlayer(Player):
         ])
         exp_historical = [
             player for player in self._payoff.players
-            if isinstance(player, Historical) and player.parent in exploiters
+            if isinstance(player, HistoricalPlayer) and player.parent in exploiters
         ]
         win_rates = self._payoff[self, exp_historical]
         if len(win_rates) and win_rates.min() < 0.3:
@@ -71,7 +84,7 @@ class MainPlayer(Player):
         # Check forgetting
         historical = [
             player for player in self._payoff.players
-            if isinstance(player, Historical) and player.parent == opponent
+            if isinstance(player, HistoricalPlayer) and player.parent == opponent
         ]
         win_rates = self._payoff[self, historical]
         win_rates, historical = remove_monotonic_suffix(win_rates, historical)
@@ -109,7 +122,7 @@ class MainPlayer(Player):
 
         historical = [
             player for player in self._payoff.players
-            if isinstance(player, Historical)
+            if isinstance(player, HistoricalPlayer)
         ]
         win_rates = self._payoff[self, historical]
         return win_rates.min() > 0.7 or steps_passed > 4e9
@@ -119,9 +132,10 @@ class MainPlayer(Player):
         return self._create_checkpoint()
 
 
-class Historical(Player):
+class HistoricalPlayer(Player):
 
     def __init__(self, agent, payoff):
+        super().__init__()
         self._agent = Agent(agent.race, agent.get_weights())
         self._payoff = payoff
         self._race = agent.race
@@ -133,6 +147,9 @@ class Historical(Player):
 
     def get_match(self):
         raise ValueError("Historical players should not request matches")
+
+    def checkpoint(self):
+        raise NotImplementedError
 
     def ready_to_checkpoint(self):
         return False
