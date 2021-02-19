@@ -121,8 +121,8 @@ class LeagueRunner:
         self.home_mac.init_hidden(batch_size=self.batch_size)
         self.opponent_mac.init_hidden(batch_size=self.batch_size)
 
+        # Run while episode is not terminated
         while not terminated:
-            # TODO build data for each team
             state = self.env.get_state()
             actions = self.env.get_avail_actions()
             obs = self.env.get_obs()
@@ -152,7 +152,7 @@ class LeagueRunner:
             all_actions = th.cat((home_actions[0], opponent_actions[0]))
             obs, reward, terminated, env_info = self.env.step(all_actions)
 
-            home_reward = reward[0] # TODO: Assumes global reward and team size of 2 with 2 teams
+            home_reward = reward[0]  # TODO: Assumes global reward and team size of 2 with 2 teams
             opponent_reward = reward[2]
             home_episode_return += home_reward
             opp_episode_return += opponent_reward
@@ -160,7 +160,7 @@ class LeagueRunner:
             home_post_transition_data = {
                 "actions": home_actions,
                 "reward": [(home_reward,)],
-                "terminated": [(any(terminated),)], # TODO: terminated correctly used and set by env?
+                "terminated": [(any(terminated),)],  # TODO: terminated correctly used and set by env?
             }
             opponent_post_transition_data = {
                 "actions": opponent_actions,
@@ -171,6 +171,9 @@ class LeagueRunner:
             self.opponent_batch.update(opponent_post_transition_data, ts=self.t)
 
             self.t += 1
+
+        # TODO: send episode result to coordinator
+        # self.coordinator.send_outcome(student, opponent, self.environment.outcome())
 
         state = self.env.get_state()
         actions = self.env.get_avail_actions()
@@ -215,11 +218,11 @@ class LeagueRunner:
         cur_returns["opponent"].append(opp_episode_return)
 
         if test_mode and (len(self.test_returns) == self.args.test_nepisode):
-            self._log(cur_returns["home"], cur_stats, log_prefix+"home_")
-            self._log(cur_returns["opponent"], cur_stats, log_prefix+"opponent_")
+            self._log(cur_returns["home"], cur_stats, "home_" + log_prefix)
+            self._log(cur_returns["opponent"], cur_stats, "opponent_" + log_prefix)
         elif self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
-            self._log(cur_returns["home"], cur_stats, log_prefix + "home_")
-            self._log(cur_returns["opponent"], cur_stats, log_prefix + "opponent_")
+            self._log(cur_returns["home"], cur_stats, "home_" + log_prefix)
+            self._log(cur_returns["opponent"], cur_stats, "opponent_" + log_prefix)
             if hasattr(self.home_mac.action_selector, "epsilon"):
                 self.logger.log_stat("home_epsilon", self.home_mac.action_selector.epsilon, self.t_env)
             if hasattr(self.opponent_mac.action_selector, "epsilon"):

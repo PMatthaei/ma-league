@@ -80,7 +80,7 @@ def run_sequential(args, logger):
 
     # Set up schemes and groups here
     env_info = runner.get_env_info()
-    args.n_agents = int(env_info["n_agents"] / 2)
+    args.n_agents = int(env_info["n_agents"] / 2) # TODO: assuming same team size
     args.n_actions = env_info["n_actions"]
     args.state_shape = env_info["state_shape"]
 
@@ -100,6 +100,7 @@ def run_sequential(args, logger):
         "actions": ("actions_onehot", [OneHot(out_dim=args.n_actions)])
     }
 
+    # Buffers
     opponent_buffer = ReplayBuffer(scheme, groups, args.buffer_size, env_info["episode_limit"] + 1,
                           preprocess=preprocess,
                           device="cpu" if args.buffer_cpu_only else args.device)
@@ -108,14 +109,14 @@ def run_sequential(args, logger):
                           preprocess=preprocess,
                           device="cpu" if args.buffer_cpu_only else args.device)
 
-    # Setup multiagent controller here
+    # Setup multi-agent controller here
     home_mac = mac_REGISTRY[args.mac](home_buffer.scheme, groups, args)
     opponent_mac = mac_REGISTRY[args.mac](opponent_buffer.scheme, groups, args)
 
     # Give runner the scheme
     runner.setup(scheme=scheme, groups=groups, preprocess=preprocess, home_mac=home_mac, opponent_mac=opponent_mac)
 
-    # Learner
+    # Learners
     home_learner = le_REGISTRY[args.learner](home_mac, home_buffer.scheme, logger, args)
     opponent_learner = le_REGISTRY[args.learner](opponent_mac, opponent_buffer.scheme, logger, args)
 

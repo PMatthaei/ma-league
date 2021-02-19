@@ -47,7 +47,7 @@ class EpsilonGreedyActionSelector():
         self.epsilon = self.schedule.eval(t_env)
 
         if test_mode:
-            # Greedy action selection only
+            # Greedy action selection only -> Exploit
             self.epsilon = 0.0
 
         # mask actions that are excluded from selection
