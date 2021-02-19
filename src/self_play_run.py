@@ -5,6 +5,8 @@ import time
 import threading
 import torch as th
 from types import SimpleNamespace as SN
+
+from runners.league_runner import LeagueRunner
 from utils.logging import Logger
 from utils.timehelper import time_left, time_str
 from os.path import dirname, abspath
@@ -74,11 +76,11 @@ def evaluate_sequential(args, runner):
 
 def run_sequential(args, logger):
     # Init runner so we can get env info
-    runner = r_REGISTRY[args.runner](args=args, logger=logger)
+    runner = LeagueRunner(args=args, logger=logger)
 
     # Set up schemes and groups here
     env_info = runner.get_env_info()
-    args.n_agents = env_info["n_agents"]
+    args.n_agents = int(env_info["n_agents"] / 2)
     args.n_actions = env_info["n_actions"]
     args.state_shape = env_info["state_shape"]
 
@@ -98,54 +100,30 @@ def run_sequential(args, logger):
         "actions": ("actions_onehot", [OneHot(out_dim=args.n_actions)])
     }
 
-    buffer = ReplayBuffer(scheme, groups, args.buffer_size, env_info["episode_limit"] + 1,
+    opponent_buffer = ReplayBuffer(scheme, groups, args.buffer_size, env_info["episode_limit"] + 1,
+                          preprocess=preprocess,
+                          device="cpu" if args.buffer_cpu_only else args.device)
+
+    home_buffer = ReplayBuffer(scheme, groups, args.buffer_size, env_info["episode_limit"] + 1,
                           preprocess=preprocess,
                           device="cpu" if args.buffer_cpu_only else args.device)
 
     # Setup multiagent controller here
-    mac = mac_REGISTRY[args.mac](buffer.scheme, groups, args)
+    home_mac = mac_REGISTRY[args.mac](home_buffer.scheme, groups, args)
+    opponent_mac = mac_REGISTRY[args.mac](opponent_buffer.scheme, groups, args)
 
     # Give runner the scheme
-    runner.setup(scheme=scheme, groups=groups, preprocess=preprocess, mac=mac)
+    runner.setup(scheme=scheme, groups=groups, preprocess=preprocess, home_mac=home_mac, opponent_mac=opponent_mac)
 
     # Learner
-    learner = le_REGISTRY[args.learner](mac, buffer.scheme, logger, args)
+    home_learner = le_REGISTRY[args.learner](home_mac, home_buffer.scheme, logger, args)
+    opponent_learner = le_REGISTRY[args.learner](opponent_mac, opponent_buffer.scheme, logger, args)
 
     if args.use_cuda:
-        learner.cuda()
+        home_learner.cuda()
+        opponent_learner.cuda()
 
-    if args.checkpoint_path != "":
-
-        timesteps = []
-        timestep_to_load = 0
-
-        if not os.path.isdir(args.checkpoint_path):
-            logger.console_logger.info("Checkpoint directiory {} doesn't exist".format(args.checkpoint_path))
-            return
-
-        # Go through all files in args.checkpoint_path
-        for name in os.listdir(args.checkpoint_path):
-            full_name = os.path.join(args.checkpoint_path, name)
-            # Check if they are dirs the names of which are numbers
-            if os.path.isdir(full_name) and name.isdigit():
-                timesteps.append(int(name))
-
-        if args.load_step == 0:
-            # choose the max timestep
-            timestep_to_load = max(timesteps)
-        else:
-            # choose the timestep closest to load_step
-            timestep_to_load = min(timesteps, key=lambda x: abs(x - args.load_step))
-
-        model_path = os.path.join(args.checkpoint_path, str(timestep_to_load))
-
-        logger.console_logger.info("Loading model from {}".format(model_path))
-        learner.load_models(model_path)
-        runner.t_env = timestep_to_load
-
-        if args.evaluate or args.save_replay:
-            evaluate_sequential(args, runner)
-            return
+    # TODO: re-add checkpoint
 
     # start training
     episode = 0
@@ -161,20 +139,28 @@ def run_sequential(args, logger):
     while runner.t_env <= args.t_max:
 
         # Run for a whole episode at a time
-        episode_batch = runner.run(test_mode=False)
-        buffer.insert_episode_batch(episode_batch)
+        home_batch, opponent_batch = runner.run(test_mode=False)
+        home_buffer.insert_episode_batch(home_batch)
+        opponent_buffer.insert_episode_batch(opponent_batch)
 
-        if buffer.can_sample(args.batch_size):
-            episode_sample = buffer.sample(args.batch_size)
+        if home_buffer.can_sample(args.batch_size) and opponent_buffer.can_sample(args.batch_size):
+            home_sample = home_buffer.sample(args.batch_size)
+            opponent_sample = opponent_buffer.sample(args.batch_size)
 
             # Truncate batch to only filled timesteps
-            max_ep_t = episode_sample.max_t_filled()
-            episode_sample = episode_sample[:, :max_ep_t]
+            max_ep_t_h = home_sample.max_t_filled()
+            max_ep_t_o = opponent_sample.max_t_filled()
+            home_sample = home_sample[:, :max_ep_t_h]
+            opponent_sample = opponent_sample[:, :max_ep_t_o]
 
-            if episode_sample.device != args.device:
-                episode_sample.to(args.device)
+            if home_sample.device != args.device:
+                home_sample.to(args.device)
 
-            learner.train(episode_sample, runner.t_env, episode)
+            if opponent_sample.device != args.device:
+                opponent_sample.to(args.device)
+
+            home_learner.train(home_sample, runner.t_env, episode)
+            opponent_learner.train(opponent_sample, runner.t_env, episode)
 
         # Execute test runs once in a while
         n_test_runs = max(1, args.test_nepisode // runner.batch_size)
@@ -198,7 +184,8 @@ def run_sequential(args, logger):
 
             # learner should handle saving/loading -- delegate actor save/load to mac,
             # use appropriate filenames to do critics, optimizer states
-            learner.save_models(save_path)
+            # TODO: re-add save model for learners
+            # learner.save_models(save_path)
 
         episode += args.batch_size_run
 
