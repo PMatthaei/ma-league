@@ -11,8 +11,7 @@ import sys
 import os
 
 if sys.platform == "linux":
-    os.environ.setdefault("SC2PATH",
-                          os.path.join(os.getcwd(), "3rdparty", "StarCraftII"))
+    os.environ.setdefault("SC2PATH", os.path.join(os.getcwd(), "3rdparty", "StarCraftII"))
 
 
 def smac_env(env, **kwargs) -> StarCraft2Env:
@@ -27,12 +26,10 @@ def ma_env(env, **kwargs) -> MAEnv:
     world = scenario.make_teams_world(grid_size=10.0)
     # create multi-agent environment
     return env(world=world,
-               reset_callback=scenario.reset_world,
-               reward_callback=scenario.reward,
-               observation_callback=scenario.observation,
-               info_callback=None,
-               done_callback=scenario.done,
-               log=True, log_level=logging.ERROR)
+               reset_callback=scenario.reset_world, reward_callback=scenario.reward,
+               observation_callback=scenario.observation, info_callback=None, done_callback=scenario.done,
+               log=True, log_level=logging.ERROR,
+               headless=True)
 
 
 REGISTRY = {}
