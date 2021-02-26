@@ -65,6 +65,11 @@ class ActorLoop:
 class LeagueRunner:
 
     def __init__(self, args, logger):
+        """
+        Runner to train two multi-agents (home and opponent) in the same environment.
+        :param args:
+        :param logger:
+        """
         self.args = args
         self.logger = logger
         self.batch_size = self.args.batch_size_run
@@ -206,8 +211,8 @@ class LeagueRunner:
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
         log_prefix = "test_" if test_mode else ""
-        cur_stats.update(
-            {k: cur_stats.get(k, 0) + env_info.get(k, 0) for k in set(cur_stats) | set(env_info)})
+
+        cur_stats.update({k: self._update_stats(cur_stats, k, env_info) for k in set(cur_stats) | set(env_info)})
         cur_stats["n_episodes"] = 1 + cur_stats.get("n_episodes", 0)
         cur_stats["ep_length"] = self.t + cur_stats.get("ep_length", 0)
 
@@ -218,11 +223,14 @@ class LeagueRunner:
         cur_returns["opponent"].append(opp_episode_return)
 
         if test_mode and (len(self.test_returns) == self.args.test_nepisode):
-            self._log(cur_returns["home"], cur_stats, "home_" + log_prefix)
-            self._log(cur_returns["opponent"], cur_stats, "opponent_" + log_prefix)
+            self._log_returns(cur_returns["home"], "home_" + log_prefix)
+            self._log_returns(cur_returns["opponent"], "opponent_" + log_prefix)
+            self._log_stats(cur_stats, log_prefix)
         elif self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
-            self._log(cur_returns["home"], cur_stats, "home_" + log_prefix)
-            self._log(cur_returns["opponent"], cur_stats, "opponent_" + log_prefix)
+            self._log_returns(cur_returns["home"], "home_" + log_prefix)
+            self._log_returns(cur_returns["opponent"], "opponent_" + log_prefix)
+            self._log_stats(cur_stats, log_prefix)
+
             if hasattr(self.home_mac.action_selector, "epsilon"):
                 self.logger.log_stat("home_epsilon", self.home_mac.action_selector.epsilon, self.t_env)
             if hasattr(self.opponent_mac.action_selector, "epsilon"):
@@ -231,12 +239,29 @@ class LeagueRunner:
 
         return self.home_batch, self.opponent_batch
 
-    def _log(self, returns, stats, prefix):
+    def _update_stats(self, cur_stats, k, env_info):
+        if k in env_info:
+            stat_type = type(env_info[k])
+        elif k in cur_stats:
+            stat_type = type(cur_stats[k])
+        else:
+            raise KeyError("Key not found in supplied env_info dict which is used to update the current stats.")
+
+        if stat_type is int or stat_type is float:
+            return cur_stats.get(k, 0) + env_info.get(k, 0)
+        elif stat_type is list:
+            return cur_stats.get(k, []) + env_info.get(k, [])
+
+    def _log_returns(self, returns, prefix):
         self.logger.log_stat(prefix + "return_mean", np.mean(returns), self.t_env)
         self.logger.log_stat(prefix + "return_std", np.std(returns), self.t_env)
         returns.clear()
 
+    def _log_stats(self, stats, prefix):
         for k, v in stats.items():
-            if k != "n_episodes":
+            if k == "battle_won":
+                self.logger.log_stat("home_" + prefix + k + "_mean", v[0] / stats["n_episodes"], self.t_env)
+                self.logger.log_stat("opponent_" + prefix + k + "_mean", v[1] / stats["n_episodes"], self.t_env)
+            elif k != "n_episodes":
                 self.logger.log_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
         stats.clear()
