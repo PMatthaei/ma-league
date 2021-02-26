@@ -58,12 +58,13 @@ def main():
     coordinator = Coordinator(league)
     learners = []
     actors = []
-    RACES = 3
+    RACES = 3 # TODO: no races
     INITIAL_AGENTS_PER_RACE = 4
     for idx in range(INITIAL_AGENTS_PER_RACE * RACES):
         player = league.get_player(idx)
         learner = Learner(player)
         learners.append(learner)
+        # Add 16000 loops per initial player
         actors.extend([ActorLoop(player, coordinator) for _ in range(16000)])
 
     for learner in learners:
