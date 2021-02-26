@@ -108,7 +108,7 @@ class LeagueRunner:
         raise NotImplementedError()
 
     def close_env(self):
-        raise NotImplementedError()
+        self.env.close()
 
     def reset(self):
         self.home_batch = self.new_batch()
