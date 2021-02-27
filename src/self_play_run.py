@@ -117,9 +117,10 @@ def run_sequential(args, logger):
     runner.setup(scheme=scheme, groups=groups, preprocess=preprocess, home_mac=home_mac, opponent_mac=opponent_mac)
 
     # Learners
-    home_learner = le_REGISTRY[args.learner](home_mac, home_buffer.scheme, logger, args)
-    opponent_learner = le_REGISTRY[args.learner](opponent_mac, opponent_buffer.scheme, logger, args)
+    home_learner = le_REGISTRY[args.learner](home_mac, home_buffer.scheme, logger, args, name="home")
+    opponent_learner = le_REGISTRY[args.learner](opponent_mac, opponent_buffer.scheme, logger, args, name="opponent")
 
+    # Activate CUDA mode if supported
     if args.use_cuda:
         home_learner.cuda()
         opponent_learner.cuda()
@@ -137,6 +138,11 @@ def run_sequential(args, logger):
 
     logger.console_logger.info("Beginning training for {} timesteps".format(args.t_max))
 
+    #
+    #
+    # Main Loop
+    #
+    #
     while runner.t_env <= args.t_max:
 
         # Run for a whole episode at a time
@@ -144,6 +150,7 @@ def run_sequential(args, logger):
         home_buffer.insert_episode_batch(home_batch)
         opponent_buffer.insert_episode_batch(opponent_batch)
 
+        # Sample batch from buffer if possible
         if home_buffer.can_sample(args.batch_size) and opponent_buffer.can_sample(args.batch_size):
             home_sample = home_buffer.sample(args.batch_size)
             opponent_sample = opponent_buffer.sample(args.batch_size)
@@ -163,7 +170,9 @@ def run_sequential(args, logger):
             home_learner.train(home_sample, runner.t_env, episode)
             opponent_learner.train(opponent_sample, runner.t_env, episode)
 
+        #
         # Execute test runs once in a while
+        #
         n_test_runs = max(1, args.test_nepisode // runner.batch_size)
         if (runner.t_env - last_test_T) / args.test_interval >= 1.0:
 
@@ -176,6 +185,7 @@ def run_sequential(args, logger):
             for _ in range(n_test_runs):
                 runner.run(test_mode=True)
 
+        # Model saving
         if args.save_model and (runner.t_env - model_save_time >= args.save_model_interval or model_save_time == 0):
             model_save_time = runner.t_env
             save_path = os.path.join(args.local_results_path, "models", args.unique_token, str(runner.t_env))
@@ -188,12 +198,19 @@ def run_sequential(args, logger):
             # TODO: re-add save model for learners
             # learner.save_models(save_path)
 
+        # Batch size == how many episodes are run -> add on top of episode counter
         episode += args.batch_size_run
 
+        # Log
         if (runner.t_env - last_log_T) >= args.log_interval:
             logger.log_stat("episode", episode, runner.t_env)
             logger.print_recent_stats()
             last_log_T = runner.t_env
+    #
+    #
+    #
+    #
+    #
 
     runner.close_env()
     logger.console_logger.info("Finished Training")
