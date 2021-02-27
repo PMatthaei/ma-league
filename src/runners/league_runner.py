@@ -62,11 +62,27 @@ class ActorLoop:
                 self.coordinator.send_outcome(student, opponent, self.environment.outcome())
 
 
+def _update_stats(cur_stats, k, env_info):
+    if k in env_info:
+        stat_type = type(env_info[k])
+    elif k in cur_stats:
+        stat_type = type(cur_stats[k])
+    else:
+        raise KeyError("Key not found in supplied env_info dict which is used to update the current stats.")
+
+    if stat_type is int or stat_type is float:
+        return cur_stats.get(k, 0) + env_info.get(k, 0)
+    elif stat_type is list:
+        return cur_stats.get(k, []) + env_info.get(k, [])
+
+
 class LeagueRunner:
 
     def __init__(self, args, logger):
         """
         Runner to train two multi-agents (home and opponent) in the same environment.
+        The runner steps the environment and creates batches of episodes which are supplied to action selection.
+        The resulting batches are return per run()-cycle and served to the Learner and ReplayBuffer.
         :param args:
         :param logger:
         """
@@ -126,22 +142,29 @@ class LeagueRunner:
         self.home_mac.init_hidden(batch_size=self.batch_size)
         self.opponent_mac.init_hidden(batch_size=self.batch_size)
 
-        # Run while episode is not terminated
+        #
+        #
+        # Main Loop - Run while episode is not terminated
+        #
+        #
         while not terminated:
             state = self.env.get_state()
             actions = self.env.get_avail_actions()
             obs = self.env.get_obs()
 
+            home_avail_actions = actions[:len(actions) // 2]
+            home_obs = obs[:len(obs) // 2]
             home_pre_transition_data = {
                 "state": [state],
-                "avail_actions": [actions[:len(actions) // 2]],
-                "obs": [obs[:len(obs) // 2]]
+                "avail_actions": [home_avail_actions],
+                "obs": [home_obs]
             }
-
+            opponent_avail_actions = actions[len(actions) // 2:]
+            opponent_obs = obs[len(obs) // 2:]
             opponent_pre_transition_data = {
                 "state": [state],
-                "avail_actions": [actions[len(actions) // 2:]],
-                "obs": [obs[len(obs) // 2:]]
+                "avail_actions": [opponent_avail_actions],
+                "obs": [opponent_obs]
             }
 
             self.home_batch.update(home_pre_transition_data, ts=self.t)
@@ -155,7 +178,12 @@ class LeagueRunner:
                                                                 test_mode=test_mode)
 
             all_actions = th.cat((home_actions[0], opponent_actions[0]))
+            #
+            # Environment Step
+            #
             obs, reward, terminated, env_info = self.env.step(all_actions)
+            #
+            #
             self.env.render()
 
             home_reward = reward[0]  # TODO: Assumes global reward and team size of 2 with 2 teams
@@ -177,24 +205,38 @@ class LeagueRunner:
             self.opponent_batch.update(opponent_post_transition_data, ts=self.t)
 
             self.t += 1
+        #
+        #
+        #
+        #
+        #
 
         # TODO: send episode result to coordinator
         # self.coordinator.send_outcome(student, opponent, self.environment.outcome())
 
+        #
+        #
+        # Last (state,action) pair per learner
+        #
+        #
         state = self.env.get_state()
         actions = self.env.get_avail_actions()
         obs = self.env.get_obs()
 
+        home_avail_actions = actions[:len(actions) // 2]
+        home_obs = obs[:len(obs) // 2]
         home_last_data = {
             "state": [state],
-            "avail_actions": [actions[:len(actions) // 2]],
-            "obs": [obs[:len(obs) // 2]]
+            "avail_actions": [home_avail_actions],
+            "obs": [home_obs]
         }
 
+        opponent_avail_actions = actions[len(actions) // 2:]
+        opponent_obs = obs[len(obs) // 2:]
         opponent_last_data = {
             "state": [state],
-            "avail_actions": [actions[len(actions) // 2:]],
-            "obs": [obs[len(obs) // 2:]]
+            "avail_actions": [opponent_avail_actions],
+            "obs": [opponent_obs]
         }
 
         self.home_batch.update(home_last_data, ts=self.t)
@@ -209,11 +251,14 @@ class LeagueRunner:
                                                test_mode=test_mode)
         self.opponent_batch.update({"actions": actions}, ts=self.t)
 
+        #
+        # Stats and Logging
+        #
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
         log_prefix = "test_" if test_mode else ""
 
-        cur_stats.update({k: self._update_stats(cur_stats, k, env_info) for k in set(cur_stats) | set(env_info)})
+        cur_stats.update({k: _update_stats(cur_stats, k, env_info) for k in set(cur_stats) | set(env_info)})
         cur_stats["n_episodes"] = 1 + cur_stats.get("n_episodes", 0)
         cur_stats["ep_length"] = self.t + cur_stats.get("ep_length", 0)
 
@@ -239,19 +284,6 @@ class LeagueRunner:
             self.log_train_stats_t = self.t_env
 
         return self.home_batch, self.opponent_batch
-
-    def _update_stats(self, cur_stats, k, env_info):
-        if k in env_info:
-            stat_type = type(env_info[k])
-        elif k in cur_stats:
-            stat_type = type(cur_stats[k])
-        else:
-            raise KeyError("Key not found in supplied env_info dict which is used to update the current stats.")
-
-        if stat_type is int or stat_type is float:
-            return cur_stats.get(k, 0) + env_info.get(k, 0)
-        elif stat_type is list:
-            return cur_stats.get(k, []) + env_info.get(k, [])
 
     def _log_returns(self, returns, prefix):
         self.logger.log_stat(prefix + "return_mean", np.mean(returns), self.t_env)

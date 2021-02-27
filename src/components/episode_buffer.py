@@ -24,7 +24,7 @@ class EpisodeBatch:
         else:
             self.data = SN()
             self.data.transition_data = {}
-            self.data.episode_data = {}
+            self.data.episode_data = {}  # ! This is only used if episodes are of constant length !
             self._setup_data(self.scheme, self.groups, batch_size, max_seq_length, self.preprocess)
 
     def _setup_data(self, scheme, groups, batch_size, max_seq_length, preprocess):
@@ -123,9 +123,9 @@ class EpisodeBatch:
 
             # Perform pre-processing
             if key in self.preprocess:
-                new_k = self.preprocess[key][0] # Get new key defined by preprocess method
-                value = target[key][_slices] # Get original value
-                for transform in self.preprocess[key][1]: # Get all transforms and apply them in array order
+                new_k = self.preprocess[key][0]  # Get new key defined by preprocess method
+                value = target[key][_slices]  # Get original value
+                for transform in self.preprocess[key][1]:  # Get all transforms and apply them in array order
                     value = transform.transform(value)
                 # Add transformed value via view_as
                 self._check_safe_view(value, target[new_k][_slices])
@@ -141,15 +141,16 @@ class EpisodeBatch:
                 idx -= 1
 
     def __getitem__(self, item):
+        # If item is a string
         if isinstance(item, str):
-            # implement [""] to get item from data
+            # implement [""] to get item from batch data
             if item in self.data.episode_data:
                 return self.data.episode_data[item]
             elif item in self.data.transition_data:
                 return self.data.transition_data[item]
             else:
                 raise ValueError
-        # If a string only tuple
+        # If item is a string only tuple
         elif isinstance(item, tuple) and all([isinstance(it, str) for it in item]):
             new_data = self._new_data_sn()
             # Copy all values from keys into new_data
@@ -183,6 +184,7 @@ class EpisodeBatch:
             return ret
 
     def _get_num_items(self, indexing_item, max_size):
+        # Get the number of items depending on the type of indexing_item
         if isinstance(indexing_item, list) or isinstance(indexing_item, np.ndarray):
             return len(indexing_item)
         elif isinstance(indexing_item, slice):
@@ -190,6 +192,7 @@ class EpisodeBatch:
             return 1 + (_range[1] - _range[0] - 1) // _range[2]
 
     def _new_data_sn(self):
+        # Returns empty batch data
         new_data = SN()
         new_data.transition_data = {}
         new_data.episode_data = {}
@@ -219,6 +222,7 @@ class EpisodeBatch:
         return parsed
 
     def max_t_filled(self):
+        # Return the number of the maximum timestep until which a episode is filled (episodes have different length)
         return th.sum(self.data.transition_data["filled"], 1).max(0)[0]
 
     def __repr__(self):
@@ -230,6 +234,15 @@ class EpisodeBatch:
 
 class ReplayBuffer(EpisodeBatch):
     def __init__(self, scheme, groups, buffer_size, max_seq_length, preprocess=None, device="cpu"):
+        """
+        ReplayBuffer is a EpisodeBatch which is caped in size by its buffer size.
+        :param scheme:
+        :param groups:
+        :param buffer_size:
+        :param max_seq_length:
+        :param preprocess:
+        :param device:
+        """
         super(ReplayBuffer, self).__init__(scheme, groups, buffer_size, max_seq_length, preprocess=preprocess,
                                            device=device)
         self.buffer_size = buffer_size  # same as self.batch_size but more explicit
@@ -237,18 +250,23 @@ class ReplayBuffer(EpisodeBatch):
         self.episodes_in_buffer = 0
 
     def insert_episode_batch(self, ep_batch):
+        # If buffer does not overflow with new episode batch
         if self.buffer_index + ep_batch.batch_size <= self.buffer_size:
+            # Add transition data as samples to buffer
             self.update(ep_batch.data.transition_data,
                         slice(self.buffer_index, self.buffer_index + ep_batch.batch_size),
                         slice(0, ep_batch.max_seq_length),
                         mark_filled=False)
+            # Add episode data as samples to buffer
             self.update(ep_batch.data.episode_data,
                         slice(self.buffer_index, self.buffer_index + ep_batch.batch_size))
             self.buffer_index = (self.buffer_index + ep_batch.batch_size)
             self.episodes_in_buffer = max(self.episodes_in_buffer, self.buffer_index)
             self.buffer_index = self.buffer_index % self.buffer_size
             assert self.buffer_index < self.buffer_size
+        # If buffer overflows with new episode batch
         else:
+            # Slice episode batch to size (buffer_left) fitting into buffer and insert recursively
             buffer_left = self.buffer_size - self.buffer_index
             self.insert_episode_batch(ep_batch[0:buffer_left, :])
             self.insert_episode_batch(ep_batch[buffer_left:, :])
@@ -259,9 +277,9 @@ class ReplayBuffer(EpisodeBatch):
     def sample(self, batch_size):
         assert self.can_sample(batch_size)
         if self.episodes_in_buffer == batch_size:
-            return self[:batch_size]
+            return self[:batch_size]  # return complete buffer if the buffer is filled with one batch
         else:
-            # Uniform sampling only atm
+            # Uniform sampling - Choose episode ids to include into the sample
             ep_ids = np.random.choice(self.episodes_in_buffer, batch_size, replace=False)
             return self[ep_ids]
 
