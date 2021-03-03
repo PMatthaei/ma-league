@@ -253,7 +253,7 @@ class LeagueRunner:
         self.opponent_batch.update({"actions": actions}, ts=self.t)
 
         #
-        # Stats and Logging
+        # Stats and Logging for two learners
         #
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns

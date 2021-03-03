@@ -20,7 +20,7 @@ def smac_env(env, **kwargs) -> StarCraft2Env:
 
 def ma_env(env, **kwargs) -> MAEnv:
     # load scenario from script
-    # TODO: init via kwargs from yaml
+    # TODO: init via kwargs from yaml as with SC2 env
     scenario = team.load('teams.py').TeamsScenario(TWO_TEAMS_SIZE_TWO_SYMMETRIC_HETEROGENEOUS)
     # create world
     world = scenario.make_teams_world(grid_size=10.0)

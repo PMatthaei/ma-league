@@ -1,4 +1,5 @@
 env: ma
+self_play: True
 
 env_args:
   headless: True
