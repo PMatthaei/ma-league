@@ -3,6 +3,57 @@ import numpy as np
 from types import SimpleNamespace as SN
 
 
+def _check_safe_view(v, dest):
+    idx = len(v.shape) - 1
+    for s in dest.shape[::-1]:
+        if v.shape[idx] != s:
+            if s != 1:
+                raise ValueError("Unsafe reshape of {} to {}".format(v.shape, dest.shape))
+        else:
+            idx -= 1
+
+
+def _get_num_items(indexing_item, max_size):
+    # Get the number of items depending on the type of indexing_item
+    if isinstance(indexing_item, list) or isinstance(indexing_item, np.ndarray):
+        return len(indexing_item)
+    elif isinstance(indexing_item, slice):
+        _range = indexing_item.indices(max_size)
+        return 1 + (_range[1] - _range[0] - 1) // _range[2]
+
+
+def _new_data_sn():
+    # Returns empty batch data
+    new_data = SN()
+    new_data.transition_data = {}
+    new_data.episode_data = {}  # ! This is only used if episodes are of constant length !
+    return new_data
+
+
+def _parse_slices(items):
+    parsed = []
+    # Only batch slice given, add full time slice
+    if (isinstance(items, slice)  # slice a:b
+            or isinstance(items, int)  # int i
+            or (isinstance(items, (list, np.ndarray, th.LongTensor, th.cuda.LongTensor)))  # [a,b,c]
+    ):
+        items = (items, slice(None))
+
+    # Need the time indexing to be contiguous
+    if isinstance(items[1], list):
+        raise IndexError("Indexing across Time must be contiguous")
+
+    for item in items:
+        # TODO: stronger checks to ensure only supported options get through
+        if isinstance(item, int):
+            # Convert single indices to slices
+            parsed.append(slice(item, item + 1))
+        else:
+            # Leave slices and lists as is
+            parsed.append(item)
+    return parsed
+
+
 class EpisodeBatch:
     def __init__(self,
                  scheme,
@@ -12,6 +63,16 @@ class EpisodeBatch:
                  data=None,
                  preprocess=None,
                  device="cpu"):
+        """
+        Batch of episodes.
+        :param scheme:
+        :param groups:
+        :param batch_size: Amount of episodes within this batch.
+        :param max_seq_length: Longest episode
+        :param data: Data of all episodes
+        :param preprocess: Pre-processing steps to the data
+        :param device: Device-type for tensors
+        """
         self.scheme = scheme.copy()
         self.groups = groups
         self.batch_size = batch_size
@@ -22,9 +83,8 @@ class EpisodeBatch:
         if data is not None:
             self.data = data
         else:
-            self.data = SN()
-            self.data.transition_data = {}
-            self.data.episode_data = {}  # ! This is only used if episodes are of constant length !
+
+            self.data = _new_data_sn()
             self._setup_data(self.scheme, self.groups, batch_size, max_seq_length, self.preprocess)
 
     def _setup_data(self, scheme, groups, batch_size, max_seq_length, preprocess):
@@ -96,7 +156,7 @@ class EpisodeBatch:
         self.device = device
 
     def update(self, data, bs=slice(None), ts=slice(None), mark_filled=True):
-        slices = self._parse_slices((bs, ts))
+        slices = _parse_slices((bs, ts))
         for key, value in data.items():
             # Find target of the update process -> transition data
             if key in self.data.transition_data:
@@ -117,7 +177,7 @@ class EpisodeBatch:
             dtype = self.scheme[key].get("dtype", th.float32)
             value = th.tensor(value, dtype=dtype, device=self.device)
             # Check validity of following view_as
-            self._check_safe_view(value, target[key][_slices])
+            _check_safe_view(value, target[key][_slices])
             # Add value via view_as
             target[key][_slices] = value.view_as(target[key][_slices])
 
@@ -128,17 +188,8 @@ class EpisodeBatch:
                 for transform in self.preprocess[key][1]:  # Get all transforms and apply them in array order
                     value = transform.transform(value)
                 # Add transformed value via view_as
-                self._check_safe_view(value, target[new_k][_slices])
+                _check_safe_view(value, target[new_k][_slices])
                 target[new_k][_slices] = value.view_as(target[new_k][_slices])
-
-    def _check_safe_view(self, v, dest):
-        idx = len(v.shape) - 1
-        for s in dest.shape[::-1]:
-            if v.shape[idx] != s:
-                if s != 1:
-                    raise ValueError("Unsafe reshape of {} to {}".format(v.shape, dest.shape))
-            else:
-                idx -= 1
 
     def __getitem__(self, item):
         # If item is a string
@@ -152,7 +203,7 @@ class EpisodeBatch:
                 raise ValueError
         # If item is a string only tuple
         elif isinstance(item, tuple) and all([isinstance(it, str) for it in item]):
-            new_data = self._new_data_sn()
+            new_data = _new_data_sn()
             # Copy all values from keys into new_data
             for key in item:
                 if key in self.data.transition_data:
@@ -170,56 +221,18 @@ class EpisodeBatch:
                                device=self.device)
             return ret
         else:
-            item = self._parse_slices(item)
-            new_data = self._new_data_sn()
+            item = _parse_slices(item)
+            new_data = _new_data_sn()
             for k, v in self.data.transition_data.items():
                 new_data.transition_data[k] = v[item]
             for k, v in self.data.episode_data.items():
                 new_data.episode_data[k] = v[item[0]]
 
-            ret_bs = self._get_num_items(item[0], self.batch_size)
-            ret_max_t = self._get_num_items(item[1], self.max_seq_length)
+            ret_bs = _get_num_items(item[0], self.batch_size)
+            ret_max_t = _get_num_items(item[1], self.max_seq_length)
 
             ret = EpisodeBatch(self.scheme, self.groups, ret_bs, ret_max_t, data=new_data, device=self.device)
             return ret
-
-    def _get_num_items(self, indexing_item, max_size):
-        # Get the number of items depending on the type of indexing_item
-        if isinstance(indexing_item, list) or isinstance(indexing_item, np.ndarray):
-            return len(indexing_item)
-        elif isinstance(indexing_item, slice):
-            _range = indexing_item.indices(max_size)
-            return 1 + (_range[1] - _range[0] - 1) // _range[2]
-
-    def _new_data_sn(self):
-        # Returns empty batch data
-        new_data = SN()
-        new_data.transition_data = {}
-        new_data.episode_data = {}
-        return new_data
-
-    def _parse_slices(self, items):
-        parsed = []
-        # Only batch slice given, add full time slice
-        if (isinstance(items, slice)  # slice a:b
-                or isinstance(items, int)  # int i
-                or (isinstance(items, (list, np.ndarray, th.LongTensor, th.cuda.LongTensor)))  # [a,b,c]
-        ):
-            items = (items, slice(None))
-
-        # Need the time indexing to be contiguous
-        if isinstance(items[1], list):
-            raise IndexError("Indexing across Time must be contiguous")
-
-        for item in items:
-            # TODO: stronger checks to ensure only supported options get through
-            if isinstance(item, int):
-                # Convert single indices to slices
-                parsed.append(slice(item, item + 1))
-            else:
-                # Leave slices and lists as is
-                parsed.append(item)
-        return parsed
 
     def max_t_filled(self):
         # Return the number of the maximum timestep until which a episode is filled (episodes have different length)

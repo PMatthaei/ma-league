@@ -13,7 +13,7 @@ class QMixer(nn.Module):
         self.state_dim = int(np.prod(args.state_shape))
 
         self.embed_dim = args.mixing_embed_dim
-
+        # Build hypernet via args
         if getattr(args, "hypernet_layers", 1) == 1:
             self.hyper_w_1 = nn.Linear(self.state_dim, self.embed_dim * self.n_agents)
             self.hyper_w_final = nn.Linear(self.state_dim, self.embed_dim)

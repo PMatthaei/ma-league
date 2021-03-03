@@ -184,10 +184,11 @@ class LeagueRunner:
             obs, reward, terminated, env_info = self.env.step(all_actions)
             #
             #
+            #
             self.env.render()
 
             home_reward = reward[0]  # TODO: Assumes global reward and team size of 2 with 2 teams
-            opponent_reward = reward[1]
+            opponent_reward = reward[2]
             home_episode_return += home_reward
             opp_episode_return += opponent_reward
 

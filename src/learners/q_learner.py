@@ -47,6 +47,7 @@ class QLearner:
         # Calculate estimated Q-Values
         mac_out = []
         self.mac.init_hidden(batch.batch_size)
+        # Iterate over all timesteps defined by the max. in the batch
         for t in range(batch.max_seq_length):
             agent_outs = self.mac.forward(batch, t=t)
             mac_out.append(agent_outs)
@@ -65,10 +66,9 @@ class QLearner:
         # We don't need the first timesteps Q-Value estimate for calculating targets
         target_mac_out = th.stack(target_mac_out[1:], dim=1)  # Concat across time
 
-        # Mask out unavailable actions
+        # Mask out unavailable actions by setting utility very low
         target_mac_out[avail_actions[:, 1:] == 0] = -9999999
 
-        # Max over target Q-Values
         if self.args.double_q:
             # Get actions that maximise live Q (for double q-learning)
             mac_out_detach = mac_out.clone().detach()
@@ -76,6 +76,7 @@ class QLearner:
             cur_max_actions = mac_out_detach[:, 1:].max(dim=3, keepdim=True)[1]
             target_max_qvals = th.gather(target_mac_out, 3, cur_max_actions).squeeze(3)
         else:
+            # Max over target Q-Values
             target_max_qvals = target_mac_out.max(dim=3)[0]
 
         # Mix
@@ -103,10 +104,12 @@ class QLearner:
         grad_norm = th.nn.utils.clip_grad_norm_(self.params, self.args.grad_norm_clip)
         self.optimiser.step()
 
+        # Update target in interval
         if (episode_num - self.last_target_update_episode) / self.args.target_update_interval >= 1.0:
             self._update_targets()
             self.last_target_update_episode = episode_num
 
+        # Log learner stats in interval
         if t_env - self.log_stats_t >= self.args.learner_log_interval:
             self.logger.log_stat(self.name + "loss", loss.item(), t_env)
             self.logger.log_stat(self.name + "grad_norm", grad_norm.cpu().numpy(), t_env)
