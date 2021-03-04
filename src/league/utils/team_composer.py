@@ -20,9 +20,8 @@ class TeamComposer:
         return list(map(self._to_team_build_plan, team_comps))
 
     def compose_unique_units(self):
-        self.logger.debug("Composing units with {} characteristics.".format(len(self.characteristics)))
-        self.logger.debug(
-            "Characteristics: {}".format(["Name {}: - Size: {}".format(c, len(c)) for c in self.characteristics]))
+        self.logger.debug("Composing units with {} characteristics:".format(len(self.characteristics)))
+        self.logger.debug((["Name {}: - Size: {}".format(c, len(c)) for c in self.characteristics]))
         units = list(itertools.product(*self.characteristics))
         self.logger.debug("Created {} unique units.".format(len(units)))
         return units

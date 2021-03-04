@@ -19,8 +19,6 @@ def _update_stats(cur_stats, k, env_info):
             # Count battles won via element-wise summation of boolean lists (contains win bool for each team)
             cur_battle_wons = cur_stats.get(k, [])
             battle_wons = env_info.get(k, [])
-            if battle_wons.count(True) > 0:
-                print()
             cur_battle_wons = [False] * len(battle_wons) if len(cur_battle_wons) == 0 else cur_battle_wons
             battle_won_stats = [old + new for old, new in zip(cur_battle_wons, battle_wons)]
             return battle_won_stats
