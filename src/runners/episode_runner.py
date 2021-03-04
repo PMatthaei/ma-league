@@ -4,6 +4,32 @@ from components.episode_buffer import EpisodeBatch
 import numpy as np
 
 
+def _update_stats(cur_stats, k, env_info):
+    if k in env_info:
+        stat_type = type(env_info[k])
+    elif k in cur_stats:
+        stat_type = type(cur_stats[k])
+    else:
+        raise KeyError("Key not found in supplied env_info dict which is used to update the current stats.")
+
+    if stat_type is int or stat_type is float:
+        return cur_stats.get(k, 0) + env_info.get(k, 0)
+    elif stat_type is list:
+        if k == "battle_won":
+            # Count battles won via element-wise summation of boolean lists (contains win bool for each team)
+            cur_battle_wons = cur_stats.get(k, [])
+            battle_wons = env_info.get(k, [])
+            if battle_wons.count(True) > 0:
+                print()
+            cur_battle_wons = [False] * len(battle_wons) if len(cur_battle_wons) == 0 else cur_battle_wons
+            battle_won_stats = [old + new for old, new in zip(cur_battle_wons, battle_wons)]
+            return battle_won_stats
+    else:
+        raise NotImplementedError()
+
+    return cur_stats.get(k, []) + env_info.get(k, [])
+
+
 class EpisodeRunner:
 
     def __init__(self, args, logger):
@@ -97,7 +123,7 @@ class EpisodeRunner:
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
         log_prefix = "test_" if test_mode else ""
-        cur_stats.update({k: cur_stats.get(k, 0) + env_info.get(k, 0) for k in set(cur_stats) | set(env_info)})
+        cur_stats.update({k: _update_stats(cur_stats, k, env_info) for k in set(cur_stats) | set(env_info)})
         cur_stats["n_episodes"] = 1 + cur_stats.get("n_episodes", 0)
         cur_stats["ep_length"] = self.t + cur_stats.get("ep_length", 0)
 
@@ -122,6 +148,8 @@ class EpisodeRunner:
         returns.clear()
 
         for k, v in stats.items():
-            if k != "n_episodes":
+            if k == "battle_won":
+                self.logger.log_stat(prefix + k + "_mean", v[0] / stats["n_episodes"], self.t_env)
+            elif k != "n_episodes":
                 self.logger.log_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
         stats.clear()
