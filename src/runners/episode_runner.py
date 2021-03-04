@@ -99,7 +99,7 @@ class EpisodeRunner:
             post_transition_data = {
                 "actions": actions,
                 "reward": [(reward[0],)],
-                "terminated": [(any(terminated),)],
+                "terminated": [(terminated != env_info.get("episode_limit", False),)],
             }
 
             self.batch.update(post_transition_data, ts=self.t)
