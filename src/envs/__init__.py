@@ -1,6 +1,7 @@
 import logging
 from functools import partial
 
+from multiagent.core import RoleTypes, UnitAttackTypes
 from smac.env import StarCraft2Env
 
 from multiagent.environment import MAEnv
@@ -21,7 +22,35 @@ def smac_env(env, **kwargs) -> StarCraft2Env:
 def ma_env(env, **kwargs) -> MAEnv:
     # load scenario from script
     # TODO: init via kwargs from yaml as with SC2 env
-    scenario = team.load('teams.py').TeamsScenario(TWO_TEAMS_SIZE_TWO_SYMMETRIC_HETEROGENEOUS)
+    T = [
+        {
+            "is_scripted": True,
+            "units": [  # Team 1
+                {
+                    "role": RoleTypes.ADC,
+                    "attack_type": UnitAttackTypes.RANGED
+                },
+                {
+                    "role": RoleTypes.TANK,
+                    "attack_type": UnitAttackTypes.RANGED
+                },
+            ]
+        },
+        {
+            "is_scripted": False,
+            "units": [  # Team 2
+                {
+                    "role": RoleTypes.ADC,
+                    "attack_type": UnitAttackTypes.RANGED
+                },
+                {
+                    "role": RoleTypes.TANK,
+                    "attack_type": UnitAttackTypes.RANGED
+                },
+            ]
+        },
+    ]
+    scenario = team.load('teams.py').TeamsScenario(T)
     # create world
     world = scenario.make_teams_world(grid_size=10.0)
     # create multi-agent environment
