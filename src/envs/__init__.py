@@ -24,15 +24,15 @@ def ma_env(env, **kwargs) -> MAEnv:
     # TODO: init via kwargs from yaml as with SC2 env
     T = [
         {
-            "is_scripted": True,
+            "is_scripted": False,
             "units": [  # Team 1
                 {
-                    "role": RoleTypes.ADC,
-                    "attack_type": UnitAttackTypes.RANGED
+                    "role": RoleTypes.TANK,
+                    "attack_type": UnitAttackTypes.MELEE
                 },
                 {
                     "role": RoleTypes.TANK,
-                    "attack_type": UnitAttackTypes.RANGED
+                    "attack_type": UnitAttackTypes.MELEE
                 },
             ]
         },
@@ -44,7 +44,7 @@ def ma_env(env, **kwargs) -> MAEnv:
                     "attack_type": UnitAttackTypes.RANGED
                 },
                 {
-                    "role": RoleTypes.TANK,
+                    "role": RoleTypes.ADC,
                     "attack_type": UnitAttackTypes.RANGED
                 },
             ]

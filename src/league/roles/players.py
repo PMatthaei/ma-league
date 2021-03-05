@@ -10,7 +10,7 @@ class Player(object):
 
     def __init__(self):
         self._payoff = None
-        self._race = None
+        self._team_plan = None
 
     def get_match(self):
         pass
@@ -27,7 +27,7 @@ class Player(object):
 
     @property
     def race(self):
-        return self._race
+        return self._team_plan
 
     def checkpoint(self):
         raise NotImplementedError
@@ -35,11 +35,11 @@ class Player(object):
 
 class MainPlayer(Player):
 
-    def __init__(self, race, agent, payoff):
+    def __init__(self, team_plan, agent, payoff):
         super().__init__()
-        self.agent = Agent(race, agent.get_weights())
+        self.agent = Agent(team_plan, agent.get_weights())
         self._payoff = payoff
-        self._race = agent.race
+        self._team_plan = agent.team_plan
         self._checkpoint_step = 0
 
     def _pfsp_branch(self):
@@ -136,9 +136,9 @@ class HistoricalPlayer(Player):
 
     def __init__(self, agent, payoff):
         super().__init__()
-        self._agent = Agent(agent.race, agent.get_weights())
+        self._agent = Agent(agent.team_plan, agent.get_weights())
         self._payoff = payoff
-        self._race = agent.race
+        self._team_plan = agent.team_plan
         self._parent = agent
 
     @property
