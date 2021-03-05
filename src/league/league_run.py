@@ -1,9 +1,12 @@
 from time import time
 
+from multiagent.core import RoleTypes, UnitAttackTypes
+
 from league.rl import Trajectory, loss_function
 from multiagent.environment import MAEnv
 
 from league.league import League
+from league.utils.team_composer import TeamComposer
 from runners.league_runner import ActorLoop
 
 LOOPS_PER_ACTOR = 1000
@@ -54,13 +57,13 @@ class Learner:
 
 def main():
     """Trains the league."""
+    team_size = 3
+    team_compositions = TeamComposer(RoleTypes, UnitAttackTypes).compose_unique_teams(team_size)
     league = League(initial_agents={}) # TODO how to initialize
     coordinator = Coordinator(league)
     learners = []
     actors = []
-    RACES = 3 # TODO: no races
-    INITIAL_AGENTS_PER_RACE = 4
-    for idx in range(INITIAL_AGENTS_PER_RACE * RACES):
+    for idx in range(league.roles_per_initial_agent() * len(team_compositions)):
         player = league.get_player(idx)
         learner = Learner(player)
         learners.append(learner)
