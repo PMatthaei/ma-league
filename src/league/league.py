@@ -1,8 +1,3 @@
-"""Library for multiagent concerns."""
-import collections
-
-import numpy as np
-
 from league.payoff import Payoff
 from league.roles.exploiters import MainExploiter, LeagueExploiter
 from league.roles.players import MainPlayer, Player
