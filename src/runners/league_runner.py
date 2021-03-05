@@ -11,57 +11,6 @@ import numpy as np
 import torch as th
 
 
-class ActorLoop:
-    """A single actor loop that generates trajectories.
-
-    We don't use batched inference here, but it was used in practice.
-    """
-
-    def __init__(self, player, coordinator):
-        self.player = player
-        self.teacher = get_supervised_agent(player.get_race())  # TODO: how to get teacher?
-        self.environment = MAEnv()  # TODO: add our env configured with yaml
-        self.coordinator = coordinator
-
-    def run(self):
-        while True:
-            opponent = self.player.get_match()
-            trajectory = []
-            start_time = time()  # in seconds.
-            while time() - start_time < 60 * 60:
-                home_observation, away_observation, is_final, z = self.environment.reset()
-                student_state = self.player.initial_state()
-                opponent_state = opponent.initial_state()
-                teacher_state = self.teacher.initial_state()
-
-                while not is_final:
-                    student_action, student_logits, student_state = self.player.step(home_observation, student_state)
-                    # We mask out the logits of unused action arguments.
-                    action_masks = get_mask(student_action)
-                    opponent_action, _, _ = opponent.step(away_observation, opponent_state)
-                    teacher_logits = self.teacher(observation, student_action, teacher_state)
-
-                    observation, is_final, rewards = self.environment.step(student_action, opponent_action)
-                    trajectory.append(Trajectory(
-                        observation=home_observation,
-                        opponent_observation=away_observation,
-                        state=student_state,
-                        is_final=is_final,
-                        behavior_logits=student_logits,
-                        teacher_logits=teacher_logits,
-                        masks=action_masks,
-                        action=student_action,
-                        z=z,
-                        reward=rewards,
-                    ))
-
-                    if len(trajectory) > TRAJECTORY_LENGTH:
-                        trajectory = stack_namedtuple(trajectory)
-                        self.learner.send_trajectory(trajectory)
-                        trajectory = []
-                self.coordinator.send_outcome(student, opponent, self.environment.outcome())
-
-
 def _update_stats(cur_stats, k, env_info):
     if k in env_info:
         stat_type = type(env_info[k])
@@ -148,24 +97,7 @@ class LeagueRunner:
         #
         #
         while not terminated:
-            state = self.env.get_state()
-            actions = self.env.get_avail_actions()
-            obs = self.env.get_obs()
-
-            home_avail_actions = actions[:len(actions) // 2]
-            home_obs = obs[:len(obs) // 2]
-            home_pre_transition_data = {
-                "state": [state],
-                "avail_actions": [home_avail_actions],
-                "obs": [home_obs]
-            }
-            opponent_avail_actions = actions[len(actions) // 2:]
-            opponent_obs = obs[len(obs) // 2:]
-            opponent_pre_transition_data = {
-                "state": [state],
-                "avail_actions": [opponent_avail_actions],
-                "obs": [opponent_obs]
-            }
+            home_pre_transition_data, opponent_pre_transition_data = self._build_pre_transition_data()
 
             self.home_batch.update(home_pre_transition_data, ts=self.t)
             self.opponent_batch.update(opponent_pre_transition_data, ts=self.t)
@@ -187,20 +119,23 @@ class LeagueRunner:
             #
             self.env.render()
 
-            home_reward = reward[0]  # TODO: Assumes global reward and team size of 2
-            opponent_reward = reward[1]
+            assert len(reward) == 2, \
+                "League runner expects to receive global rewards for home and opponent. " \
+                "More or less than 2 rewards f.e. local rewards per agent are currently not supported."
+
+            home_reward, opponent_reward = reward
             home_episode_return += home_reward
             opp_episode_return += opponent_reward
 
             home_post_transition_data = {
                 "actions": home_actions,
                 "reward": [(home_reward,)],
-                "terminated": [(any(terminated),)],  # TODO: terminated correctly used and set by env?
+                "terminated": [(terminated != env_info.get("episode_limit", False),)],
             }
             opponent_post_transition_data = {
                 "actions": opponent_actions,
                 "reward": [(opponent_reward,)],
-                "terminated": [(any(terminated),)],
+                "terminated": [(terminated != env_info.get("episode_limit", False),)],
             }
             self.home_batch.update(home_post_transition_data, ts=self.t)
             self.opponent_batch.update(opponent_post_transition_data, ts=self.t)
@@ -217,28 +152,10 @@ class LeagueRunner:
 
         #
         #
-        # Last (state,action) pair per learner
+        # Last (state,action) transition pair per learner
         #
         #
-        state = self.env.get_state()
-        actions = self.env.get_avail_actions()
-        obs = self.env.get_obs()
-
-        home_avail_actions = actions[:len(actions) // 2]
-        home_obs = obs[:len(obs) // 2]
-        home_last_data = {
-            "state": [state],
-            "avail_actions": [home_avail_actions],
-            "obs": [home_obs]
-        }
-
-        opponent_avail_actions = actions[len(actions) // 2:]
-        opponent_obs = obs[len(obs) // 2:]
-        opponent_last_data = {
-            "state": [state],
-            "avail_actions": [opponent_avail_actions],
-            "obs": [opponent_obs]
-        }
+        home_last_data, opponent_last_data = self._build_pre_transition_data()
 
         self.home_batch.update(home_last_data, ts=self.t)
         self.opponent_batch.update(opponent_last_data, ts=self.t)
@@ -285,6 +202,27 @@ class LeagueRunner:
             self.log_train_stats_t = self.t_env
 
         return self.home_batch, self.opponent_batch
+
+    def _build_pre_transition_data(self):
+        state = self.env.get_state()
+        actions = self.env.get_avail_actions()
+        obs = self.env.get_obs()
+        # TODO: only supports same team sizes!
+        home_avail_actions = actions[:len(actions) // 2]
+        home_obs = obs[:len(obs) // 2]
+        home_pre_transition_data = {
+            "state": [state],
+            "avail_actions": [home_avail_actions],
+            "obs": [home_obs]
+        }
+        opponent_avail_actions = actions[len(actions) // 2:]
+        opponent_obs = obs[len(obs) // 2:]
+        opponent_pre_transition_data = {
+            "state": [state],
+            "avail_actions": [opponent_avail_actions],
+            "obs": [opponent_obs]
+        }
+        return home_pre_transition_data, opponent_pre_transition_data
 
     def _log_returns(self, returns, prefix):
         self.logger.log_stat(prefix + "return_mean", np.mean(returns), self.t_env)
