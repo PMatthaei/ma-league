@@ -1,14 +1,12 @@
-from time import time
-
 from multiagent.core import RoleTypes, UnitAttackTypes
 
-from league.rl import Trajectory, loss_function
-from multiagent.environment import MAEnv
+from league.rl import loss_function
 
 from league.league import League
 from league.utils.team_composer import TeamComposer
 from runners.league_runner import ActorLoop
 
+# TODO use before?!?
 LOOPS_PER_ACTOR = 1000
 BATCH_SIZE = 512
 TRAJECTORY_LENGTH = 64
@@ -59,23 +57,25 @@ def main():
     """Trains the league."""
     team_size = 3
     team_compositions = TeamComposer(RoleTypes, UnitAttackTypes).compose_unique_teams(team_size)
-    league = League(initial_agents={}) # TODO how to initialize
+    league = League(initial_agents={}) # TODO how to initialize. alphastar inserts supervised agents here
     coordinator = Coordinator(league)
     learners = []
     actors = []
-    for idx in range(league.roles_per_initial_agent() * len(team_compositions)):
+    players_n = league.roles_per_initial_agent() * len(team_compositions)
+    for idx in range(players_n):
         player = league.get_player(idx)
         learner = Learner(player)
         learners.append(learner)
         # Add 16000 loops per initial player
         actors.extend([ActorLoop(player, coordinator) for _ in range(16000)])
 
+    # TODO This needs to be replaced with runners since they incorporate the learner and a actor loop
     for learner in learners:
         learner.run()
     for actor in actors:
         actor.run()
 
-    # Wait for training to finish.
+    # Wait for all runners to finish training.
     join()
 
 
