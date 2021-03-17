@@ -113,7 +113,7 @@ class LeagueRunner:
             #
             # Environment Step
             #
-            obs, reward, terminated, env_info = self.env.step(all_actions)
+            obs, reward, done_n, env_info = self.env.step(all_actions)
             #
             #
             #
@@ -130,13 +130,15 @@ class LeagueRunner:
             home_post_transition_data = {
                 "actions": home_actions,
                 "reward": [(home_reward,)],
-                "terminated": [(terminated != env_info.get("episode_limit", False),)],
+                "terminated": [(done_n[0],)],
             }
             opponent_post_transition_data = {
                 "actions": opponent_actions,
                 "reward": [(opponent_reward,)],
-                "terminated": [(terminated != env_info.get("episode_limit", False),)],
+                "terminated": [(done_n[1],)],
             }
+            # Termination is dependent on all team-wise terminations
+            terminated = any(done_n)
             self.home_batch.update(home_post_transition_data, ts=self.t)
             self.opponent_batch.update(opponent_post_transition_data, ts=self.t)
 

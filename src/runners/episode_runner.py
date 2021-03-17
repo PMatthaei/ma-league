@@ -79,6 +79,8 @@ class EpisodeRunner:
 
         self.mac.init_hidden(batch_size=self.batch_size)
 
+        #self.env.render() # Uncomment for visualization
+
         while not terminated:
             pre_transition_data = {
                 "state": [self.env.get_state()],
@@ -92,17 +94,21 @@ class EpisodeRunner:
             # Receive the actions for each agent at this timestep in a batch of size 1
             actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
 
-            obs, reward, terminated, env_info = self.env.step(actions[0])
+            obs, reward, done_n, env_info = self.env.step(actions[0])
+            #self.env.render() # Uncomment for visualization
 
-            episode_return += reward[0]  # TODO Add reward of trained team
+            episode_return += reward[0]  # TODO Assumes policy team data at index = 0
 
             post_transition_data = {
                 "actions": actions,
-                "reward": [(reward[0],)],
-                "terminated": [(terminated != env_info.get("episode_limit", False),)],
+                "reward": [(reward[0],)], # TODO Assumes policy team data at index = 0
+                # TODO: why here done_n ?
+                "terminated": [(done_n[0],)], # TODO Assumes policy team data at index = 0
             }
 
             self.batch.update(post_transition_data, ts=self.t)
+            # Termination is dependent on all team-wise terminations
+            terminated = any(done_n) # TODO Assumes policy team data at index = 0
 
             self.t += 1
 
