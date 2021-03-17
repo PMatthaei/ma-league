@@ -6,7 +6,6 @@ from smac.env import StarCraft2Env
 
 from multiagent.environment import MAEnv
 from multiagent.scenarios import team
-from bin.team_plans_example import TWO_TEAMS_SIZE_TWO_SYMMETRIC_HETEROGENEOUS
 
 import sys
 import os
@@ -28,26 +27,18 @@ def ma_env(env, **kwargs) -> MAEnv:
             "units": [  # Team 1
                 {
                     "role": RoleTypes.TANK,
-                    "attack_type": UnitAttackTypes.MELEE
-                },
-                {
-                    "role": RoleTypes.TANK,
-                    "attack_type": UnitAttackTypes.MELEE
-                },
-            ]
+                    "attack_type": UnitAttackTypes.RANGED
+                }
+            ] * 3
         },
         {
             "is_scripted": False,
             "units": [  # Team 2
                 {
-                    "role": RoleTypes.ADC,
+                    "role": RoleTypes.TANK,
                     "attack_type": UnitAttackTypes.RANGED
-                },
-                {
-                    "role": RoleTypes.ADC,
-                    "attack_type": UnitAttackTypes.RANGED
-                },
-            ]
+                }
+            ] * 3
         },
     ]
     scenario = team.load('teams.py').TeamsScenario(T)
@@ -57,7 +48,7 @@ def ma_env(env, **kwargs) -> MAEnv:
     return env(world=world,
                reset_callback=scenario.reset_world, reward_callback=scenario.reward,
                observation_callback=scenario.observation, info_callback=None, done_callback=scenario.done,
-               log=True, log_level=logging.ERROR,
+               log=False, log_level=logging.ERROR,
                headless=True)
 
 
