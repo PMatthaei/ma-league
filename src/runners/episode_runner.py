@@ -73,7 +73,7 @@ class EpisodeRunner:
             actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
 
             obs, reward, done_n, env_info = self.env.step(actions[0])
-            # self.env.render() # Uncomment for visualization
+            self.env.render()
 
             episode_return += reward[0]  # TODO Assumes policy team data at index = 0
 
