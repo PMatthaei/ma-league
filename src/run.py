@@ -6,6 +6,7 @@ import threading
 import torch as th
 from types import SimpleNamespace as SN
 from utils.logging import Logger
+from utils.run_utils import args_sanity_check
 from utils.timehelper import time_left, time_str
 from os.path import dirname, abspath
 
@@ -209,18 +210,3 @@ def run_sequential(args, logger):
 
     runner.close_env()
     logger.console_logger.info("Finished Training")
-
-
-def args_sanity_check(config, _log):
-    # set CUDA flags
-    # config["use_cuda"] = True # Use cuda whenever possible!
-    if config["use_cuda"] and not th.cuda.is_available():
-        config["use_cuda"] = False
-        _log.warning("CUDA flag use_cuda was switched OFF automatically because no CUDA devices are available!")
-
-    if config["test_nepisode"] < config["batch_size_run"]:
-        config["test_nepisode"] = config["batch_size_run"]
-    else:
-        config["test_nepisode"] = (config["test_nepisode"] // config["batch_size_run"]) * config["batch_size_run"]
-
-    return config

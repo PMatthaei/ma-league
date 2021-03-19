@@ -2,6 +2,21 @@ from collections import defaultdict
 import logging
 import numpy as np
 
+
+def update_stats(cur_stats, k, env_info):
+    if k in env_info:
+        stat_type = type(env_info[k])
+    elif k in cur_stats:
+        stat_type = type(cur_stats[k])
+    else:
+        raise KeyError("Key not found in supplied env_info dict which is used to update the current stats.")
+
+    if stat_type is int or stat_type is float:
+        return cur_stats.get(k, 0) + env_info.get(k, 0)
+    elif stat_type is list:
+        return cur_stats.get(k, []) + env_info.get(k, [])
+
+
 class Logger:
     def __init__(self, console_logger):
         self.console_logger = console_logger

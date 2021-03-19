@@ -6,13 +6,13 @@ import threading
 import torch as th
 from types import SimpleNamespace as SN
 
-from runners.league_runner import LeagueRunner
+from runners.self_play_runner import SelfPlayRunner
 from utils.logging import Logger
+from utils.run_utils import args_sanity_check
 from utils.timehelper import time_left, time_str
 from os.path import dirname, abspath
 
 from learners import REGISTRY as le_REGISTRY
-from runners import REGISTRY as r_REGISTRY
 from controllers import REGISTRY as mac_REGISTRY
 from components.episode_buffer import ReplayBuffer
 from components.transforms import OneHot
@@ -76,7 +76,7 @@ def evaluate_sequential(args, runner):
 
 def run_sequential(args, logger):
     # Init runner so we can get env info
-    runner = LeagueRunner(args=args, logger=logger)
+    runner = SelfPlayRunner(args=args, logger=logger)
 
     # Set up schemes and groups here
     env_info = runner.get_env_info()
@@ -214,18 +214,3 @@ def run_sequential(args, logger):
 
     runner.close_env()
     logger.console_logger.info("Finished Training")
-
-
-def args_sanity_check(config, _log):
-    # set CUDA flags
-    # config["use_cuda"] = True # Use cuda whenever possible!
-    if config["use_cuda"] and not th.cuda.is_available():
-        config["use_cuda"] = False
-        _log.warning("CUDA flag use_cuda was switched OFF automatically because no CUDA devices are available!")
-
-    if config["test_nepisode"] < config["batch_size_run"]:
-        config["test_nepisode"] = config["batch_size_run"]
-    else:
-        config["test_nepisode"] = (config["test_nepisode"] // config["batch_size_run"]) * config["batch_size_run"]
-
-    return config

@@ -3,29 +3,7 @@ from functools import partial
 from components.episode_buffer import EpisodeBatch
 import numpy as np
 
-
-def _update_stats(cur_stats, k, env_info):
-    if k in env_info:
-        stat_type = type(env_info[k])
-    elif k in cur_stats:
-        stat_type = type(cur_stats[k])
-    else:
-        raise KeyError("Key not found in supplied env_info dict which is used to update the current stats.")
-
-    if stat_type is int or stat_type is float:
-        return cur_stats.get(k, 0) + env_info.get(k, 0)
-    elif stat_type is list:
-        if k == "battle_won":
-            # Count battles won via element-wise summation of boolean lists (contains win bool for each team)
-            cur_battle_wons = cur_stats.get(k, [])
-            battle_wons = env_info.get(k, [])
-            cur_battle_wons = [False] * len(battle_wons) if len(cur_battle_wons) == 0 else cur_battle_wons
-            battle_won_stats = [old + new for old, new in zip(cur_battle_wons, battle_wons)]
-            return battle_won_stats
-    else:
-        raise NotImplementedError()
-
-    return cur_stats.get(k, []) + env_info.get(k, [])
+from utils.logging import update_stats
 
 
 class EpisodeRunner:
@@ -79,7 +57,7 @@ class EpisodeRunner:
 
         self.mac.init_hidden(batch_size=self.batch_size)
 
-        #self.env.render() # Uncomment for visualization
+        # self.env.render() # Uncomment for visualization
 
         while not terminated:
             pre_transition_data = {
@@ -95,20 +73,20 @@ class EpisodeRunner:
             actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
 
             obs, reward, done_n, env_info = self.env.step(actions[0])
-            #self.env.render() # Uncomment for visualization
+            # self.env.render() # Uncomment for visualization
 
             episode_return += reward[0]  # TODO Assumes policy team data at index = 0
 
             post_transition_data = {
                 "actions": actions,
-                "reward": [(reward[0],)], # TODO Assumes policy team data at index = 0
+                "reward": [(reward[0],)],  # TODO Assumes policy team data at index = 0
                 # TODO: why here done_n ?
-                "terminated": [(done_n[0],)], # TODO Assumes policy team data at index = 0
+                "terminated": [(done_n[0],)],  # TODO Assumes policy team data at index = 0
             }
 
             self.batch.update(post_transition_data, ts=self.t)
             # Termination is dependent on all team-wise terminations
-            terminated = any(done_n) # TODO Assumes policy team data at index = 0
+            terminated = any(done_n)  # TODO Assumes policy team data at index = 0
 
             self.t += 1
 
@@ -127,7 +105,7 @@ class EpisodeRunner:
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
         log_prefix = "test_" if test_mode else ""
-        cur_stats.update({k: _update_stats(cur_stats, k, env_info) for k in set(cur_stats) | set(env_info)})
+        cur_stats.update({k: update_stats(cur_stats, k, env_info) for k in set(cur_stats) | set(env_info)})
         cur_stats["n_episodes"] = 1 + cur_stats.get("n_episodes", 0)
         cur_stats["ep_length"] = self.t + cur_stats.get("ep_length", 0)
 

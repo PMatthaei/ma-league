@@ -12,8 +12,6 @@ import torch as th
 from utils.logging import get_logger
 import yaml
 
-
-
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
 logger = get_logger()
 
@@ -32,10 +30,13 @@ def my_main(_run, _config, _log):
     th.manual_seed(config["seed"])
     config['env_args']['seed'] = config["seed"]
 
-    if config['self_play']:
-        from self_play_run import run
+    if config['league_play']:
+        from league.run.league_run import run
+    elif config['self_play']:
+        from league.run.self_play_run import run
     else:
         from run import run
+
     # run the framework
     run(_run, config, _log)
 

@@ -1,5 +1,4 @@
-from league.league import Agent
-from league.roles.exploiters import MainExploiter
+from league.roles.agent import Agent
 from league.utils.pfsp import prioritized_fictitious_self_play
 import numpy as np
 
@@ -19,14 +18,14 @@ class Player(object):
         return False
 
     def _create_checkpoint(self):
-        return HistoricalPlayer(self, self.payoff)
+        return HistoricalPlayer(self.agent, self._payoff)
 
     @property
     def payoff(self):
         return self._payoff
 
     @property
-    def race(self):
+    def team_plan(self):
         return self._team_plan
 
     def checkpoint(self):
@@ -68,6 +67,8 @@ class MainPlayer(Player):
 
     def _verification_branch(self, opponent):
         # Check exploitation
+        from league.roles.exploiters import MainExploiter
+
         exploiters = set([
             player for player in self._payoff.players
             if isinstance(player, MainExploiter)

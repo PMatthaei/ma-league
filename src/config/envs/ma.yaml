@@ -1,5 +1,6 @@
 env: ma
-self_play: True
+self_play: False
+league_play: False
 
 env_args:
   headless: True
