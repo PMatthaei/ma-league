@@ -7,9 +7,9 @@ import torch as th
 from utils.logging import update_stats
 
 
-class LeagueRunner:
+class SelfPlayRunner:
 
-    def __init__(self, args):
+    def __init__(self, args, logger):
         """
         Runner to train two multi-agents (home and opponent) in the same environment.
         The runner steps the environment and creates batches of episodes which are supplied to action selection.
@@ -18,6 +18,7 @@ class LeagueRunner:
         :param logger:
         """
         self.args = args
+        self.logger = logger
         self.batch_size = self.args.batch_size_run
         assert self.batch_size == 1
 
@@ -130,9 +131,6 @@ class LeagueRunner:
         #
         #
 
-        # TODO: send episode result to coordinator
-        # self.coordinator.send_outcome(student, opponent, self.environment.outcome())
-
         #
         #
         # Last (state,action) transition pair per learner
@@ -169,20 +167,20 @@ class LeagueRunner:
         cur_returns["home"].append(home_episode_return)
         cur_returns["opponent"].append(opp_episode_return)
 
-        # if test_mode and (len(self.test_returns) == self.args.test_nepisode):
-        #     self._log_returns(cur_returns["home"], "home_" + log_prefix)
-        #     self._log_returns(cur_returns["opponent"], "opponent_" + log_prefix)
-        #     self._log_stats(cur_stats, log_prefix)
-        # elif self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
-        #     self._log_returns(cur_returns["home"], "home_" + log_prefix)
-        #     self._log_returns(cur_returns["opponent"], "opponent_" + log_prefix)
-        #     self._log_stats(cur_stats, log_prefix)
-        #
-        #     if hasattr(self.home_mac.action_selector, "epsilon"):
-        #         self.logger.log_stat("home_epsilon", self.home_mac.action_selector.epsilon, self.t_env)
-        #     if hasattr(self.opponent_mac.action_selector, "epsilon"):
-        #         self.logger.log_stat("opponent_epsilon", self.opponent_mac.action_selector.epsilon, self.t_env)
-        #     self.log_train_stats_t = self.t_env
+        if test_mode and (len(self.test_returns) == self.args.test_nepisode):
+            self._log_returns(cur_returns["home"], "home_" + log_prefix)
+            self._log_returns(cur_returns["opponent"], "opponent_" + log_prefix)
+            self._log_stats(cur_stats, log_prefix)
+        elif self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
+            self._log_returns(cur_returns["home"], "home_" + log_prefix)
+            self._log_returns(cur_returns["opponent"], "opponent_" + log_prefix)
+            self._log_stats(cur_stats, log_prefix)
+
+            if hasattr(self.home_mac.action_selector, "epsilon"):
+                self.logger.log_stat("home_epsilon", self.home_mac.action_selector.epsilon, self.t_env)
+            if hasattr(self.opponent_mac.action_selector, "epsilon"):
+                self.logger.log_stat("opponent_epsilon", self.opponent_mac.action_selector.epsilon, self.t_env)
+            self.log_train_stats_t = self.t_env
 
         return self.home_batch, self.opponent_batch
 
@@ -207,16 +205,16 @@ class LeagueRunner:
         }
         return home_pre_transition_data, opponent_pre_transition_data
 
-    # def _log_returns(self, returns, prefix):
-    #     self.logger.log_stat(prefix + "return_mean", np.mean(returns), self.t_env)
-    #     self.logger.log_stat(prefix + "return_std", np.std(returns), self.t_env)
-    #     returns.clear()
-    #
-    # def _log_stats(self, stats, prefix):
-    #     for k, v in stats.items():
-    #         if k == "battle_won":
-    #             self.logger.log_stat("home_" + prefix + k + "_mean", v[0] / stats["n_episodes"], self.t_env)
-    #             self.logger.log_stat("opponent_" + prefix + k + "_mean", v[1] / stats["n_episodes"], self.t_env)
-    #         elif k != "n_episodes":
-    #             self.logger.log_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
-    #     stats.clear()
+    def _log_returns(self, returns, prefix):
+        self.logger.log_stat(prefix + "return_mean", np.mean(returns), self.t_env)
+        self.logger.log_stat(prefix + "return_std", np.std(returns), self.t_env)
+        returns.clear()
+
+    def _log_stats(self, stats, prefix):
+        for k, v in stats.items():
+            if k == "battle_won":
+                self.logger.log_stat("home_" + prefix + k + "_mean", v[0] / stats["n_episodes"], self.t_env)
+                self.logger.log_stat("opponent_" + prefix + k + "_mean", v[1] / stats["n_episodes"], self.t_env)
+            elif k != "n_episodes":
+                self.logger.log_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
+        stats.clear()
