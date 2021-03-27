@@ -15,7 +15,7 @@ import torch as th
 from types import SimpleNamespace as SN
 
 from runners.league_runner import LeagueRunner
-from utils.logging import Logger
+from utils.logging import LeagueLogger
 from utils.run_utils import args_sanity_check
 from utils.timehelper import time_left, time_str
 
@@ -89,7 +89,7 @@ def evaluate_sequential(args, runner):
 
 def run_sequential(data):
     player, args ,_log = data
-    logger = Logger(_log)
+    logger = LeagueLogger(_log)
     # Init runner so we can get env info
     runner = LeagueRunner(args=args)
 
@@ -218,8 +218,8 @@ def run_sequential(data):
 
         # Log
         if (runner.t_env - last_log_T) >= args.log_interval:
-            logger.log_stat("episode", episode, runner.t_env)
-            logger.print_recent_stats()
+            logger.add_stat("episode", episode, runner.t_env)
+            logger.log_recent_stats()
             last_log_T = runner.t_env
     #
     #

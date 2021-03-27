@@ -1,14 +1,9 @@
-import threading
-
-import multiagent
 from bin.controls.headless_controls import HeadlessControls
 
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
-import numpy as np
-
-from utils.logging import update_stats
+from exceptions.runner_exceptions import RunnerMACNotInitialized
 
 
 class EpisodeRunner:
@@ -16,8 +11,9 @@ class EpisodeRunner:
     def __init__(self, args, logger):
         """
         Runs a single episode and returns the gathered step data as episode batch to feed into a single learner.
-        :param args:
-        :param logger:
+        This runner is only supported one training agent against a AI/environment.
+        :param args: args passed from main
+        :param logger: logger
         """
         self.args = args
         self.logger = logger
@@ -25,26 +21,23 @@ class EpisodeRunner:
         assert self.batch_size == 1
 
         self.env = env_REGISTRY[self.args.env](**self.args.env_args)
+        self.policy_team_id = 0
         controls = HeadlessControls(env=self.env)
         controls.daemon = True
         controls.start()
 
         self.episode_limit = self.env.episode_limit
-        self.t = 0
+        self.t = 0  # current time step within the episode
 
-        self.t_env = 0
+        self.t_env = 0  # total time steps for this runner in the provided environment across multiple episodes
 
-        self.train_returns = []
-        self.test_returns = []
-        self.train_stats = {}
-        self.test_stats = {}
+        self.batch = None
+        self.mac = None
+        self.new_batch_fn = None
 
-        # Log the first run
-        self.log_train_stats_t = -1000000
-
-    def setup(self, scheme, groups, preprocess, mac):
-        self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,
-                                 preprocess=preprocess, device=self.args.device)
+    def initialize(self, scheme, groups, preprocess, mac):
+        self.new_batch_fn = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,  # last step
+                                    preprocess=preprocess, device=self.args.device)
         self.mac = mac
 
     def get_env_info(self):
@@ -52,26 +45,38 @@ class EpisodeRunner:
 
     def save_replay(self):
         raise NotImplementedError()
-        # self.env.save_replay()
 
     def close_env(self):
-        raise NotImplementedError()
-        # self.env.close()
+        self.env.close()
 
     def reset(self):
-        self.batch = self.new_batch()
+        self.batch = self.new_batch_fn()
         self.env.reset()
         self.t = 0
 
+    @property
+    def epsilon(self):
+        return getattr(self.mac.action_selector, "epsilon", None)
+
     def run(self, test_mode=False):
+
         self.reset()
+
+        if self.mac is None:
+            raise RunnerMACNotInitialized()
 
         terminated = False
         episode_return = 0
 
         self.mac.init_hidden(batch_size=self.batch_size)
 
+        self.logger.test_mode = test_mode
+        self.logger.test_n_episode = self.args.test_nepisode
+        self.logger.runner_log_interval = self.args.runner_log_interval
+
         self.env.render()
+
+        env_info = {}
 
         while not terminated:
             pre_transition_data = {
@@ -89,18 +94,17 @@ class EpisodeRunner:
             obs, reward, done_n, env_info = self.env.step(actions[0])
             self.env.render()
 
-            episode_return += reward[0]  # TODO Assumes policy team data at index = 0
+            episode_return += reward[self.policy_team_id]
 
             post_transition_data = {
                 "actions": actions,
-                "reward": [(reward[0],)],  # TODO Assumes policy team data at index = 0
-                # TODO: why here done_n ?
-                "terminated": [(done_n[0],)],  # TODO Assumes policy team data at index = 0
+                "reward": [(reward[self.policy_team_id],)],
+                "terminated": [(done_n[self.policy_team_id],)],
             }
 
             self.batch.update(post_transition_data, ts=self.t)
-            # Termination is dependent on all team-wise terminations
-            terminated = any(done_n)  # TODO Assumes policy team data at index = 0
+            # Termination is dependent on all team-wise terminations - AI or policy controlled teams
+            terminated = any(done_n)
 
             self.t += 1
 
@@ -116,38 +120,12 @@ class EpisodeRunner:
         actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
         self.batch.update({"actions": actions}, ts=self.t)
 
-        cur_stats = self.test_stats if test_mode else self.train_stats
-        cur_returns = self.test_returns if test_mode else self.train_returns
-        log_prefix = "test_" if test_mode else ""
-        cur_stats.update({k: update_stats(cur_stats, k, env_info) for k in set(cur_stats) | set(env_info)})
-        cur_stats["n_episodes"] = 1 + cur_stats.get("n_episodes", 0)
-        cur_stats["ep_length"] = self.t + cur_stats.get("ep_length", 0)
-
         if not test_mode:
             self.t_env += self.t
 
-        cur_returns.append(episode_return)
+        self.logger.collect_episode_returns(episode_return)
+        self.logger.collect_episode_stats(env_info, self.t)
 
-        if test_mode and (len(self.test_returns) == self.args.test_nepisode):
-            self._log(cur_returns, cur_stats, log_prefix)
-        elif self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
-            self._log(cur_returns, cur_stats, log_prefix)
-            if hasattr(self.mac.action_selector, "epsilon"):
-                self.logger.log_stat("epsilon", self.mac.action_selector.epsilon, self.t_env)
-            self.log_train_stats_t = self.t_env
+        self.logger.add_stats(self.t_env, epsilon=self.epsilon)
 
         return self.batch
-
-    def _log(self, returns, stats, prefix):
-        self.logger.log_stat(prefix + "return_mean", np.mean(returns), self.t_env)
-        self.logger.log_stat(prefix + "return_std", np.std(returns), self.t_env)
-        returns.clear()
-
-        for k, v in stats.items():
-            if k == "battle_won": # TODO 0 selects which team!?!
-                self.logger.log_stat(prefix + k + "_mean", v[0] / stats["n_episodes"], self.t_env)
-            elif k == "draw":
-                self.logger.log_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
-            elif k != "n_episodes":
-                self.logger.log_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
-        stats.clear()
