@@ -11,11 +11,12 @@ from sacred.utils import apply_backspaces_and_linefeeds
 import sys
 import torch as th
 
-from utils.logging import get_logger
 import yaml
 
+from utils.logging import LeagueLogger
+
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
-logger = get_logger()
+logger = LeagueLogger.console_logger()
 
 ex = Experiment("pymarl")
 ex.logger = logger
@@ -92,10 +93,10 @@ if __name__ == '__main__':
     # Load algorithm and env base configs
     env_config = _get_config(params, "--env-config", "envs")
 
+    # Load build plan if configured
     env_args = env_config['env_args']
     if "teams_build_plan" in env_args:
         import json
-
         with open(f'{os.path.join(os.path.dirname(__file__))}/config/teams/{env_args["teams_build_plan"]}.json') as f:
             env_args["teams_build_plan"] = json.load(f, object_hook=as_enum)
 

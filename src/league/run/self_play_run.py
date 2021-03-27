@@ -7,7 +7,7 @@ import torch as th
 from types import SimpleNamespace as SN
 
 from runners.self_play_runner import SelfPlayRunner
-from utils.logging import Logger
+from utils.logging import LeagueLogger
 from utils.run_utils import args_sanity_check
 from utils.timehelper import time_left, time_str
 from os.path import dirname, abspath
@@ -26,7 +26,7 @@ def run(_run, _config, _log):
     args.device = "cuda" if args.use_cuda else "cpu"
 
     # setup loggers
-    logger = Logger(_log)
+    logger = LeagueLogger(_log)
 
     _log.info("Experiment Parameters:")
     experiment_params = pprint.pformat(_config,
@@ -40,7 +40,7 @@ def run(_run, _config, _log):
     if args.use_tensorboard:
         tb_logs_direc = os.path.join(dirname(dirname(abspath(__file__))), "results", "tb_logs")
         tb_exp_direc = os.path.join(tb_logs_direc, "{}").format(unique_token)
-        logger.setup_tb(tb_exp_direc)
+        logger.setup_tensorboard(tb_exp_direc)
 
     # sacred is on by default
     logger.setup_sacred(_run)
@@ -203,8 +203,8 @@ def run_sequential(args, logger):
 
         # Log
         if (runner.t_env - last_log_T) >= args.log_interval:
-            logger.log_stat("episode", episode, runner.t_env)
-            logger.print_recent_stats()
+            logger.add_stat("episode", episode, runner.t_env)
+            logger.log_recent_stats()
             last_log_T = runner.t_env
     #
     #

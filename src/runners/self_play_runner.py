@@ -177,9 +177,9 @@ class SelfPlayRunner:
             self._log_stats(cur_stats, log_prefix)
 
             if hasattr(self.home_mac.action_selector, "epsilon"):
-                self.logger.log_stat("home_epsilon", self.home_mac.action_selector.epsilon, self.t_env)
+                self.logger.add_stat("home_epsilon", self.home_mac.action_selector.epsilon, self.t_env)
             if hasattr(self.opponent_mac.action_selector, "epsilon"):
-                self.logger.log_stat("opponent_epsilon", self.opponent_mac.action_selector.epsilon, self.t_env)
+                self.logger.add_stat("opponent_epsilon", self.opponent_mac.action_selector.epsilon, self.t_env)
             self.log_train_stats_t = self.t_env
 
         return self.home_batch, self.opponent_batch
@@ -206,15 +206,15 @@ class SelfPlayRunner:
         return home_pre_transition_data, opponent_pre_transition_data
 
     def _log_returns(self, returns, prefix):
-        self.logger.log_stat(prefix + "return_mean", np.mean(returns), self.t_env)
-        self.logger.log_stat(prefix + "return_std", np.std(returns), self.t_env)
+        self.logger.add_stat(prefix + "return_mean", np.mean(returns), self.t_env)
+        self.logger.add_stat(prefix + "return_std", np.std(returns), self.t_env)
         returns.clear()
 
     def _log_stats(self, stats, prefix):
         for k, v in stats.items():
             if k == "battle_won":
-                self.logger.log_stat("home_" + prefix + k + "_mean", v[0] / stats["n_episodes"], self.t_env)
-                self.logger.log_stat("opponent_" + prefix + k + "_mean", v[1] / stats["n_episodes"], self.t_env)
+                self.logger.add_stat("home_" + prefix + k + "_mean", v[0] / stats["n_episodes"], self.t_env)
+                self.logger.add_stat("opponent_" + prefix + k + "_mean", v[1] / stats["n_episodes"], self.t_env)
             elif k != "n_episodes":
-                self.logger.log_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
+                self.logger.add_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
         stats.clear()
