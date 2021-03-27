@@ -11,7 +11,7 @@ def update_stats(cur_stats, k, env_info):
     else:
         raise KeyError("Key not found in supplied env_info dict which is used to update the current stats.")
 
-    if stat_type is int or stat_type is float:
+    if stat_type is int or stat_type is float or stat_type is bool:
         return cur_stats.get(k, 0) + env_info.get(k, 0)
     elif stat_type is list:
         return cur_stats.get(k, []) + env_info.get(k, [])

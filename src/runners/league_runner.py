@@ -11,9 +11,7 @@ class LeagueRunner:
 
     def __init__(self, args):
         """
-        Runner to train two multi-agents (home and opponent) in the same environment.
-        The runner steps the environment and creates batches of episodes which are supplied to action selection.
-        The resulting batches are return per run()-cycle and served to the Learner and ReplayBuffer.
+        Similar to the SelfPlayRunner. This runner is exclusively used in league-play.
         :param args:
         :param logger:
         """

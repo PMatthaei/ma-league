@@ -3,6 +3,7 @@ import os
 import pprint
 import time
 import threading
+
 import torch as th
 from types import SimpleNamespace as SN
 from utils.logging import Logger
@@ -18,7 +19,7 @@ from components.transforms import OneHot
 
 
 def run(_run, _config, _log):
-    # check args sanity
+    # check args sanityr
     _config = args_sanity_check(_config, _log)
 
     args = SN(**_config)

@@ -12,8 +12,8 @@ class SelfPlayRunner:
     def __init__(self, args, logger):
         """
         Runner to train two multi-agents (home and opponent) in the same environment.
-        The runner steps the environment and creates batches of episodes which are supplied to action selection.
-        The resulting batches are return per run()-cycle and served to the Learner and ReplayBuffer.
+        The runner steps the environment and creates two batches of episode data one per agent.
+        The resulting batches are returned per run()-cycle and served to its corresponding learner and replay buffer.
         :param args:
         :param logger:
         """

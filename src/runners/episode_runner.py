@@ -1,3 +1,8 @@
+import threading
+
+import multiagent
+from bin.controls.headless_controls import HeadlessControls
+
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
@@ -9,12 +14,21 @@ from utils.logging import update_stats
 class EpisodeRunner:
 
     def __init__(self, args, logger):
+        """
+        Runs a single episode and returns the gathered step data as episode batch to feed into a single learner.
+        :param args:
+        :param logger:
+        """
         self.args = args
         self.logger = logger
         self.batch_size = self.args.batch_size_run
         assert self.batch_size == 1
 
         self.env = env_REGISTRY[self.args.env](**self.args.env_args)
+        controls = HeadlessControls(env=self.env)
+        controls.daemon = True
+        controls.start()
+
         self.episode_limit = self.env.episode_limit
         self.t = 0
 
@@ -57,7 +71,7 @@ class EpisodeRunner:
 
         self.mac.init_hidden(batch_size=self.batch_size)
 
-        # self.env.render() # Uncomment for visualization
+        self.env.render()
 
         while not terminated:
             pre_transition_data = {
@@ -130,8 +144,10 @@ class EpisodeRunner:
         returns.clear()
 
         for k, v in stats.items():
-            if k == "battle_won":
+            if k == "battle_won": # TODO 0 selects which team!?!
                 self.logger.log_stat(prefix + k + "_mean", v[0] / stats["n_episodes"], self.t_env)
+            elif k == "draw":
+                self.logger.log_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
             elif k != "n_episodes":
                 self.logger.log_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
         stats.clear()
