@@ -3,6 +3,8 @@ import os
 import collections
 from os.path import dirname, abspath
 from copy import deepcopy
+
+from multiagent.utils.enums import as_enum
 from sacred import Experiment, SETTINGS
 from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
@@ -89,6 +91,14 @@ if __name__ == '__main__':
 
     # Load algorithm and env base configs
     env_config = _get_config(params, "--env-config", "envs")
+
+    env_args = env_config['env_args']
+    if "teams_build_plan" in env_args:
+        import json
+
+        with open(f'{os.path.join(os.path.dirname(__file__))}/config/teams/{env_args["teams_build_plan"]}.json') as f:
+            env_args["teams_build_plan"] = json.load(f, object_hook=as_enum)
+
     alg_config = _get_config(params, "--config", "algs")
     # config_dict = {**config_dict, **env_config, **alg_config}
     config_dict = recursive_dict_update(config_dict, env_config)

@@ -8,8 +8,9 @@ env_args:
   fps: 30
   draw_grid: False
   infos: True
-  seed: null
   global_reward: True
+  grid_size: 10
+  teams_build_plan: medium
 
 test_greedy: True
 test_nepisode: 32
