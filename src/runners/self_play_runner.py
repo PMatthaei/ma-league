@@ -4,8 +4,6 @@ from components.episode_buffer import EpisodeBatch
 import numpy as np
 import torch as th
 
-from utils.logging import update_stats
-
 
 class SelfPlayRunner:
 
@@ -24,16 +22,15 @@ class SelfPlayRunner:
 
         self.env = env_REGISTRY[self.args.env](**self.args.env_args)
         self.episode_limit = self.env.episode_limit
-        self.t = 0
+        self.t = 0  # current time step within the episode
 
-        self.t_env = 0
+        self.t_env = 0  # total time steps for this runner in the provided environment across multiple episodes
 
         self.train_returns = {"home": [], "opponent": []}
         self.test_returns = {"home": [], "opponent": []}
         self.train_stats = {}
         self.test_stats = {}
 
-        # Log the first run
         self.log_train_stats_t = -1000000
 
         self.new_batch = None
@@ -47,6 +44,11 @@ class SelfPlayRunner:
                                  preprocess=preprocess, device=self.args.device)
         self.home_mac = home_mac
         self.opponent_mac = opponent_mac
+
+    @property
+    def epsilons(self):
+        return getattr(self.home_mac.action_selector, "epsilon", None), \
+               getattr(self.opponent_mac.action_selector, "epsilon", None)
 
     def get_env_info(self):
         return self.env.get_env_info()
@@ -70,8 +72,14 @@ class SelfPlayRunner:
         home_episode_return = 0
         opp_episode_return = 0
 
+        self.logger.test_mode = test_mode
+        self.logger.test_n_episode = self.args.test_nepisode
+        self.logger.runner_log_interval = self.args.runner_log_interval
+
         self.home_mac.init_hidden(batch_size=self.batch_size)
         self.opponent_mac.init_hidden(batch_size=self.batch_size)
+
+        env_info = {}
 
         #
         #
@@ -84,21 +92,13 @@ class SelfPlayRunner:
             self.home_batch.update(home_pre_transition_data, ts=self.t)
             self.opponent_batch.update(opponent_pre_transition_data, ts=self.t)
 
-            # Pass the entire batch of experiences up till now to the agents
-            # Receive the actions for each agent at this timestep in a batch of size 1
             home_actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
                                                         test_mode=test_mode)
             opponent_actions = self.opponent_mac.select_actions(self.opponent_batch, t_ep=self.t, t_env=self.t_env,
                                                                 test_mode=test_mode)
 
             all_actions = th.cat((home_actions[0], opponent_actions[0]))
-            #
-            # Environment Step
-            #
             obs, reward, done_n, env_info = self.env.step(all_actions)
-            #
-            #
-            #
             self.env.render()
 
             assert len(reward) == 2, \
@@ -125,11 +125,6 @@ class SelfPlayRunner:
             self.opponent_batch.update(opponent_post_transition_data, ts=self.t)
 
             self.t += 1
-        #
-        #
-        #
-        #
-        #
 
         #
         #
@@ -150,37 +145,15 @@ class SelfPlayRunner:
                                                test_mode=test_mode)
         self.opponent_batch.update({"actions": actions}, ts=self.t)
 
+        if not test_mode:
+            self.t_env += self.t
         #
         # Stats and Logging for two learners
         #
-        cur_stats = self.test_stats if test_mode else self.train_stats
-        cur_returns = self.test_returns if test_mode else self.train_returns
-        log_prefix = "test_" if test_mode else ""
-
-        cur_stats.update({k: update_stats(cur_stats, k, env_info) for k in set(cur_stats) | set(env_info)})
-        cur_stats["n_episodes"] = 1 + cur_stats.get("n_episodes", 0)
-        cur_stats["ep_length"] = self.t + cur_stats.get("ep_length", 0)
-
-        if not test_mode:
-            self.t_env += self.t
-
-        cur_returns["home"].append(home_episode_return)
-        cur_returns["opponent"].append(opp_episode_return)
-
-        if test_mode and (len(self.test_returns) == self.args.test_nepisode):
-            self._log_returns(cur_returns["home"], "home_" + log_prefix)
-            self._log_returns(cur_returns["opponent"], "opponent_" + log_prefix)
-            self._log_stats(cur_stats, log_prefix)
-        elif self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
-            self._log_returns(cur_returns["home"], "home_" + log_prefix)
-            self._log_returns(cur_returns["opponent"], "opponent_" + log_prefix)
-            self._log_stats(cur_stats, log_prefix)
-
-            if hasattr(self.home_mac.action_selector, "epsilon"):
-                self.logger.add_stat("home_epsilon", self.home_mac.action_selector.epsilon, self.t_env)
-            if hasattr(self.opponent_mac.action_selector, "epsilon"):
-                self.logger.add_stat("opponent_epsilon", self.opponent_mac.action_selector.epsilon, self.t_env)
-            self.log_train_stats_t = self.t_env
+        self.logger.collect_episode_returns(home_episode_return, originator="home")
+        self.logger.collect_episode_returns(opp_episode_return, originator="opponent")
+        self.logger.collect_episode_stats(env_info, self.t)
+        self.logger.add_stats(self.t_env, epsilons=self.epsilons)
 
         return self.home_batch, self.opponent_batch
 
