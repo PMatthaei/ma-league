@@ -1,6 +1,17 @@
 from collections import defaultdict
 import logging
+from enum import Enum
+
 import numpy as np
+
+
+class Originator(str, Enum):
+    HOME = "home",
+    OPPONENT = "opponent"
+
+    @classmethod
+    def list(cls):
+        return list(map(lambda c: c.value, cls))
 
 
 class LeagueLogger:
@@ -30,9 +41,10 @@ class LeagueLogger:
 
         self.tb_logger = None
         self.sacred_info = None
-
-        self.train_returns = []
-        self.test_returns = []
+        self.train_returns = {"home": [], "opponent": []}
+        self.test_returns = {"home": [], "opponent": []}
+        # self.train_returns = []
+        # self.test_returns = []
         self.train_stats = {}
         self.test_stats = {}
 
@@ -42,7 +54,7 @@ class LeagueLogger:
 
         self.log_train_stats_t = -1000000  # Log first run
 
-        self.ep_returns = []
+        self.ep_returns = {"home": [], "opponent": []}
         self.ep_stats = {}
 
     def setup_tensorboard(self, dir):
@@ -72,9 +84,10 @@ class LeagueLogger:
             log_str += "\n" if i % 4 == 0 else "\t"
         self.console_logger.info(log_str)
 
-    def add_stats(self, t_env, epsilon=None):
+    def add_stats(self, t_env, epsilons=None):
         """
         Add all episodal stats depending on the mode and logging intervals.
+        :param epsilons:
         :param t_env:
         :return:
         """
@@ -83,8 +96,12 @@ class LeagueLogger:
             self.add_episodal_stats(log_prefix, t_env)
         elif t_env - self.log_train_stats_t >= self.runner_log_interval:
             self.add_episodal_stats(log_prefix, t_env)
-            if epsilon:
-                self.add_stat("epsilon", epsilon, t_env)
+            if epsilons and type(epsilons) is not tuple:
+                self.add_stat("epsilon", epsilons, t_env)
+            else:
+                self.add_stat("home_epsilon", epsilons[0], t_env)
+                self.add_stat("opponent_epsilon", epsilons[1], t_env)
+
             self.log_train_stats_t = t_env
 
     def add_episodal_stats(self, prefix, t_env):
@@ -94,9 +111,10 @@ class LeagueLogger:
         :param t_env:
         :return:
         """
-        self.add_stat(prefix + "return_mean", np.mean(self.ep_returns), t_env)
-        self.add_stat(prefix + "return_std", np.std(self.ep_returns), t_env)
-        self.ep_returns.clear()
+        for origin in Originator.list():
+            self.add_stat(prefix + f"{origin}_return_mean", np.mean(self.ep_returns[origin]), t_env)
+            self.add_stat(prefix + f"{origin}_return_std", np.std(self.ep_returns[origin]), t_env)
+            self.ep_returns[origin].clear()
 
         for k, v in self.ep_stats.items():
             if k == "battle_won":  # TODO 0 selects which team!?!
@@ -129,14 +147,16 @@ class LeagueLogger:
                 self.sacred_info["{}_T".format(key)] = [t_env]
                 self.sacred_info[key] = [value]
 
-    def collect_episode_returns(self, episode_return):
+    def collect_episode_returns(self, episode_return, originator: Originator = "home"):
         """
         Collect episodal returns depending on the current mode.
+        :param originator: Originator of the incoming return data - home or opponent
         :param episode_return:
         :return:
         """
-        self.ep_returns = self.test_returns if self.test_mode else self.train_returns
-        self.ep_returns.append(episode_return)
+        self.ep_returns[originator] = self.test_returns[originator] if self.test_mode else self.train_returns[
+            originator]
+        self.ep_returns[originator].append(episode_return)
 
     def collect_episode_stats(self, env_info, t):
         """

@@ -1,19 +1,17 @@
 import numpy as np
 import os
-import collections
 from os.path import dirname, abspath
 from copy import deepcopy
 
-from multiagent.utils.enums import as_enum
 from sacred import Experiment, SETTINGS
 from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
 import sys
 import torch as th
 
-import yaml
-
 from utils.logging import LeagueLogger
+from utils.main_utils import config_copy, get_config, recursive_dict_update, get_default_config, load_match_build_plan, \
+    set_agents_only
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
 logger = LeagueLogger.console_logger()
@@ -33,9 +31,12 @@ def my_main(_run, _config, _log):
     th.manual_seed(config["seed"])
     config['env_args']['seed'] = config["seed"]
 
-    if config['league_play']:
+    play_mode = config['play_mode']
+    if play_mode != "normal":
+        set_agents_only(config)
+    if play_mode == "league":
         from league.run.league_run import run
-    elif config['self_play']:
+    elif play_mode == "self":
         from league.run.self_play_run import run
     else:
         from run import run
@@ -44,64 +45,22 @@ def my_main(_run, _config, _log):
     run(_run, config, _log)
 
 
-def _get_config(params, arg_name, subfolder):
-    config_name = None
-    for _i, _v in enumerate(params):
-        if _v.split("=")[0] == arg_name:
-            config_name = _v.split("=")[1]
-            del params[_i]
-            break
-
-    if config_name is not None:
-        with open(os.path.join(os.path.dirname(__file__), "config", subfolder, "{}.yaml".format(config_name)),
-                  "r") as f:
-            try:
-                config_dict = yaml.load(f)
-            except yaml.YAMLError as exc:
-                assert False, "{}.yaml error: {}".format(config_name, exc)
-        return config_dict
-
-
-def recursive_dict_update(d, u):
-    for k, v in u.items():
-        if isinstance(v, collections.Mapping):
-            d[k] = recursive_dict_update(d.get(k, {}), v)
-        else:
-            d[k] = v
-    return d
-
-
-def config_copy(config):
-    if isinstance(config, dict):
-        return {k: config_copy(v) for k, v in config.items()}
-    elif isinstance(config, list):
-        return [config_copy(v) for v in config]
-    else:
-        return deepcopy(config)
-
-
 if __name__ == '__main__':
     params = deepcopy(sys.argv)
 
     # Get the defaults from default.yaml
-    with open(os.path.join(os.path.dirname(__file__), "config", "default.yaml"), "r") as f:
-        try:
-            config_dict = yaml.load(f)
-        except yaml.YAMLError as exc:
-            assert False, "default.yaml error: {}".format(exc)
+    main_path = os.path.dirname(__file__)
+    config_dict = get_default_config(main_path)
 
     # Load algorithm and env base configs
-    env_config = _get_config(params, "--env-config", "envs")
+    env_config = get_config(params, "--env-config", "envs", path=main_path)
 
     # Load build plan if configured
     env_args = env_config['env_args']
-    if "teams_build_plan" in env_args:
-        import json
-        with open(f'{os.path.join(os.path.dirname(__file__))}/config/teams/{env_args["teams_build_plan"]}.json') as f:
-            env_args["teams_build_plan"] = json.load(f, object_hook=as_enum)
+    if "match_build_plan" in env_args:
+        load_match_build_plan(main_path, env_args)
 
-    alg_config = _get_config(params, "--config", "algs")
-    # config_dict = {**config_dict, **env_config, **alg_config}
+    alg_config = get_config(params, "--config", "algs", path=main_path)
     config_dict = recursive_dict_update(config_dict, env_config)
     config_dict = recursive_dict_update(config_dict, alg_config)
 
