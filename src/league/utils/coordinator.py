@@ -1,13 +1,24 @@
+from league.league import League
+from league.roles.players import Player
+
+
 class Coordinator:
 
-    def __init__(self, league):
+    def __init__(self, league: League):
         """
         Central worker that maintains payoff matrix and assigns new matches.
         :param league:
         """
         self.league = league
 
-    def send_outcome(self, home_player, away_player, outcome):
-        self.league.update(home_player, away_player, outcome)
-        if home_player.ready_to_checkpoint():
-            self.league.add_player(home_player.checkpoint())
+    def send_outcome(self, home: Player, opponent: Player, outcome):
+        """
+        Update the payoff matrix
+        :param home:
+        :param opponent:
+        :param outcome:
+        :return:
+        """
+        self.league.update(home, opponent, outcome)
+        if home.ready_to_checkpoint():
+            self.league.add_player(opponent.checkpoint())

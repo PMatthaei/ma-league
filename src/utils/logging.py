@@ -43,8 +43,6 @@ class LeagueLogger:
         self.sacred_info = None
         self.train_returns = {"home": [], "opponent": []}
         self.test_returns = {"home": [], "opponent": []}
-        # self.train_returns = []
-        # self.test_returns = []
         self.train_stats = {}
         self.test_stats = {}
 

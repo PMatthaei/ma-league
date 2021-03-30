@@ -15,7 +15,7 @@ class Payoff:
         self._games = collections.defaultdict(lambda: 0)
         self._decay = 0.99
 
-    def _win_rate(self, _home, _away):
+    def _win_rate(self, _home: Player, _away: Player):
         if self._games[_home, _away] == 0:
             return 0.5
 
@@ -36,7 +36,14 @@ class Payoff:
 
         return win_rates
 
-    def update(self, home, away, result):
+    def update(self, home: Player, away: Player, result: str):
+        """
+        Integrate the result into its corresponding payoff matrix cell defined by home and away.
+        :param home:
+        :param away:
+        :param result:
+        :return:
+        """
         for stats in (self._games, self._wins, self._draws, self._losses):
             stats[home, away] *= self._decay
             stats[away, home] *= self._decay
@@ -53,7 +60,7 @@ class Payoff:
             self._wins[away, home] += 1
             self._losses[home, away] += 1
 
-    def add_player(self, player):
+    def add_player(self, player: Player):
         self._players.append(player)
 
     @property
