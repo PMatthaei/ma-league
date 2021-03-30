@@ -1,11 +1,10 @@
 from functools import partial
 
-from smac.env import StarCraft2Env
-
-from multiagent.environment import TeamsEnv
-
 import sys
 import os
+
+from multiagent.environment import TeamsEnv
+from smac.env import StarCraft2Env
 
 if sys.platform == "linux":
     os.environ.setdefault("SC2PATH", os.path.join(os.getcwd(), "3rdparty", "StarCraftII"))

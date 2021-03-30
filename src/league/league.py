@@ -1,7 +1,6 @@
-from league.payoff import Payoff
 from league.roles.agent import Agent
 from league.roles.exploiters import MainExploiter, LeagueExploiter
-from league.roles.players import MainPlayer
+from league.roles.players import MainPlayer, Player
 
 
 class League(object):
@@ -10,8 +9,9 @@ class League(object):
                  initial_agents,
                  main_agents_n=1,
                  main_exploiters_n=1,
-                 league_exploiters_n=2):
-        self._payoff = Payoff()
+                 league_exploiters_n=2,
+                 payoff=None):
+        self._payoff = payoff
         self._learning_agents = []
         self._main_agents_n = main_agents_n
         self._main_exploiters_n = main_exploiters_n
@@ -38,11 +38,11 @@ class League(object):
     def roles_per_initial_agent(self):
         return self._main_agents_n + self._main_exploiters_n + self._league_exploiters_n
 
-    def update(self, home, away, result):
+    def update(self, home: Player, away: Player, result: str):
         return self._payoff.update(home, away, result)
 
-    def get_player(self, idx):
+    def get_player(self, idx) -> Player:
         return self._learning_agents[idx]
 
-    def add_player(self, player):
+    def add_player(self, player: Player):
         self._payoff.add_player(player)

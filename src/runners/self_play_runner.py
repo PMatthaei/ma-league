@@ -1,22 +1,31 @@
+from multiprocessing.connection import Connection
+
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
-import numpy as np
 import torch as th
+
+from league.roles.players import Player
 
 
 class SelfPlayRunner:
 
-    def __init__(self, args, logger):
+    def __init__(self, args, logger, conn: Connection = None, home: Player = None):
         """
         Runner to train two multi-agents (home and opponent) in the same environment.
         The runner steps the environment and creates two batches of episode data one per agent.
         The resulting batches are returned per run()-cycle and served to its corresponding learner and replay buffer.
+
         :param args:
         :param logger:
+        :param conn:
+        :param home:
         """
         self.args = args
         self.logger = logger
+        self.conn: Connection = conn
+        self.home: Player = home
+        self.opponent: Player = None
         self.batch_size = self.args.batch_size_run
         assert self.batch_size == 1
 
@@ -25,13 +34,6 @@ class SelfPlayRunner:
         self.t = 0  # current time step within the episode
 
         self.t_env = 0  # total time steps for this runner in the provided environment across multiple episodes
-
-        self.train_returns = {"home": [], "opponent": []}
-        self.test_returns = {"home": [], "opponent": []}
-        self.train_stats = {}
-        self.test_stats = {}
-
-        self.log_train_stats_t = -1000000
 
         self.new_batch = None
         self.home_mac = None
@@ -65,7 +67,14 @@ class SelfPlayRunner:
         self.env.reset()
         self.t = 0
 
+    def league_run(self):
+        while True:
+            self.opponent = self.home.get_match()
+            self.run()
+
     def run(self, test_mode=False):
+        if self.conn:
+            self.conn.send({"event": "started", })
         self.reset()
 
         terminated = False
@@ -101,10 +110,6 @@ class SelfPlayRunner:
             obs, reward, done_n, env_info = self.env.step(all_actions)
             self.env.render()
 
-            assert len(reward) == 2, \
-                "League runner expects to receive global rewards for home and opponent. " \
-                "More or less than 2 rewards f.e. local rewards per agent are currently not supported."
-
             home_reward, opponent_reward = reward
             home_episode_return += home_reward
             opp_episode_return += opponent_reward
@@ -126,6 +131,10 @@ class SelfPlayRunner:
 
             self.t += 1
 
+        if self.conn:
+            while not self.conn.writable:
+                pass  # wait to write
+            self.conn.send(env_info)
         #
         #
         # Last (state,action) transition pair per learner
@@ -177,17 +186,3 @@ class SelfPlayRunner:
             "obs": [opponent_obs]
         }
         return home_pre_transition_data, opponent_pre_transition_data
-
-    def _log_returns(self, returns, prefix):
-        self.logger.add_stat(prefix + "return_mean", np.mean(returns), self.t_env)
-        self.logger.add_stat(prefix + "return_std", np.std(returns), self.t_env)
-        returns.clear()
-
-    def _log_stats(self, stats, prefix):
-        for k, v in stats.items():
-            if k == "battle_won":
-                self.logger.add_stat("home_" + prefix + k + "_mean", v[0] / stats["n_episodes"], self.t_env)
-                self.logger.add_stat("opponent_" + prefix + k + "_mean", v[1] / stats["n_episodes"], self.t_env)
-            elif k != "n_episodes":
-                self.logger.add_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
-        stats.clear()

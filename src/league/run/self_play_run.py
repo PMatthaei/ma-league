@@ -3,9 +3,12 @@ import os
 import pprint
 import time
 import threading
+from multiprocessing.connection import Connection
+
 import torch as th
 from types import SimpleNamespace as SN
 
+from league.roles.players import Player
 from runners.self_play_runner import SelfPlayRunner
 from utils.logging import LeagueLogger
 from utils.run_utils import args_sanity_check
@@ -74,13 +77,18 @@ def evaluate_sequential(args, runner):
     runner.close_env()
 
 
-def run_sequential(args, logger):
+def run_sequential_league(args, console_logger, conn: Connection, player: Player = None):
+    run_sequential(args=args, logger=LeagueLogger(console_logger), conn=conn, player=player)
+    conn.send("close")
+
+
+def run_sequential(args, logger, conn=None, player=None):
     # Init runner so we can get env info
-    runner = SelfPlayRunner(args=args, logger=logger)
+    runner = SelfPlayRunner(args=args, logger=logger, conn=conn, home=player)
 
     # Set up schemes and groups here
     env_info = runner.get_env_info()
-    args.n_agents = int(env_info["n_agents"] / 2) # TODO: assuming same team size
+    args.n_agents = int(env_info["n_agents"] / 2)  # TODO: assuming same team size
     args.n_actions = env_info["n_actions"]
     args.state_shape = env_info["state_shape"]
 
@@ -102,12 +110,12 @@ def run_sequential(args, logger):
 
     # Buffers
     opponent_buffer = ReplayBuffer(scheme, groups, args.buffer_size, env_info["episode_limit"] + 1,
-                          preprocess=preprocess,
-                          device="cpu" if args.buffer_cpu_only else args.device)
+                                   preprocess=preprocess,
+                                   device="cpu" if args.buffer_cpu_only else args.device)
 
     home_buffer = ReplayBuffer(scheme, groups, args.buffer_size, env_info["episode_limit"] + 1,
-                          preprocess=preprocess,
-                          device="cpu" if args.buffer_cpu_only else args.device)
+                               preprocess=preprocess,
+                               device="cpu" if args.buffer_cpu_only else args.device)
 
     # Setup multi-agent controller here
     home_mac = mac_REGISTRY[args.mac](home_buffer.scheme, groups, args)

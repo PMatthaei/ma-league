@@ -4,12 +4,12 @@ import enum
 
 from multiagent.core import RoleTypes, UnitAttackTypes
 
-from utils.logging import get_logger
+from utils.logging import LeagueLogger
 
 
 class TeamComposer:
     def __init__(self, *characteristics: [enum.EnumMeta]):
-        self.logger = get_logger()
+        self.logger = LeagueLogger.console_logger()
         assert characteristics is not None and len(
             characteristics) > 0, "Please supply characteristics to create units from."
         self.characteristics = characteristics
