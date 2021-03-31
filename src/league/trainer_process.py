@@ -6,35 +6,24 @@ from multiprocessing.connection import Connection
 from league.roles.players import Player
 
 
-def run(idx, payoff: dict, conn: Connection):
-    terminated = False
-    while not terminated:
+def run(idx: int, player: Player, conn: Connection):
+    j = 0
+    while j < 5:
         # Generate new opponent to train against
-        opponent = random.randint(0, 3)
+        opponent, flag = player.get_match()
+        print(f"Playing against opponent {opponent.player_id} in {idx}")
 
-        start_time = time.time()
-        run_time = 0
+        i = 0
+        # Run training with current opponent 100 times
+        while i < 100:
+            # Fake episode play with sleep and fake result
+            result = random.choice(["win", "draw", "loos"])
+            conn.send({"result": (player.player_id, opponent.player_id, result)})
+            i += 1
 
-        # Run training with current opponent
-        while run_time < 2:
-            run_time = time.time() - start_time
+        j += 1
 
-            # Fake episode play with sleep
-            time.sleep(.1)
-
-            # Random result
-            result = random.choice(["win", "draw", "loose"])
-
-            # Save result in payoff matrix
-            _update_result(idx, opponent, payoff, result)
-            # Save games played in payoff matrix
-            _update_episodes_played(idx, opponent, payoff)
-
-            conn.send((idx, opponent, result))
-            terminated = True
-
-    print("Finished", idx)
-    conn.send("close")
+    conn.send({"close": idx})
     conn.close()
 
 
