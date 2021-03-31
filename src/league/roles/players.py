@@ -13,6 +13,9 @@ from league.utils.various import remove_monotonic_suffix
 class Player(object):
 
     def __init__(self):
+        """
+
+        """
         self.player_id = None
         self.agent = None
         self._payoff = None
@@ -42,6 +45,13 @@ class Player(object):
 class MainPlayer(Player):
 
     def __init__(self, player_id, team_plan, agent, payoff):
+        """
+
+        :param player_id:
+        :param team_plan:
+        :param agent:
+        :param payoff:
+        """
         super().__init__()
         self.player_id = player_id
         self.agent = Agent(team_plan, agent.get_weights())
@@ -50,6 +60,10 @@ class MainPlayer(Player):
         self._checkpoint_step = 0
 
     def _pfsp_branch(self) -> Tuple[Player, bool]:
+        """
+
+        :return:
+        """
         historical = [
             player.player_id for player in self._payoff.players
             if isinstance(player, HistoricalPlayer)
@@ -59,6 +73,11 @@ class MainPlayer(Player):
         return self._payoff.players[chosen_id], True
 
     def _selfplay_branch(self, opponent: Player) -> Tuple[Player, bool]:
+        """
+
+        :param opponent:
+        :return:
+        """
         # Play self-play match
         if self._payoff[self.player_id, opponent.player_id] > 0.3:
             return opponent, False
@@ -77,6 +96,11 @@ class MainPlayer(Player):
         return self._payoff.players[chosen_id], True
 
     def _verification_branch(self, opponent) -> Union[Tuple[None, None], Tuple[Player, bool]]:
+        """
+
+        :param opponent:
+        :return:
+        """
         # Check exploitation
         from league.roles.exploiters import MainExploiter
 
@@ -109,6 +133,10 @@ class MainPlayer(Player):
         return None, None
 
     def get_match(self) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
+        """
+
+        :return:
+        """
         coin_toss = np.random.random()
 
         # Make sure you can beat the League
@@ -129,6 +157,10 @@ class MainPlayer(Player):
         return self._selfplay_branch(opponent)
 
     def ready_to_checkpoint(self) -> bool:
+        """
+
+        :return:
+        """
         steps_passed = self.agent.get_steps() - self._checkpoint_step
         if steps_passed < 2e9:
             return False
@@ -141,6 +173,10 @@ class MainPlayer(Player):
         return win_rates.min() > 0.7 or steps_passed > 4e9
 
     def checkpoint(self):
+        """
+
+        :return:
+        """
         self._checkpoint_step = self.agent.get_steps()
         return self._create_checkpoint()
 
@@ -148,6 +184,12 @@ class MainPlayer(Player):
 class HistoricalPlayer(Player):
 
     def __init__(self, player_id, agent, payoff):
+        """
+
+        :param player_id:
+        :param agent:
+        :param payoff:
+        """
         super().__init__()
         self.player_id = player_id
         self._agent = Agent(agent.team_plan, agent.get_weights())
