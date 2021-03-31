@@ -1,5 +1,7 @@
 from multiprocessing.connection import Connection
 
+from bin.controls.headless_controls import HeadlessControls
+
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
@@ -22,8 +24,11 @@ class SelfPlayRunner:
         self.logger = logger
         self.batch_size = self.args.batch_size_run
         assert self.batch_size == 1
-
         self.env = env_REGISTRY[self.args.env](**self.args.env_args)
+        controls = HeadlessControls(env=self.env)
+        controls.daemon = True
+        controls.start()
+
         self.episode_limit = self.env.episode_limit
         self.t = 0  # current time step within the episode
 
