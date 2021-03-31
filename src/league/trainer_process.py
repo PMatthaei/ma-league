@@ -1,5 +1,6 @@
 import random
 import time
+from logging import warning
 from multiprocessing import Process
 from multiprocessing.connection import Connection
 
@@ -11,7 +12,10 @@ def run(idx: int, player: Player, conn: Connection):
     while j < 5:
         # Generate new opponent to train against
         opponent, flag = player.get_match()
-        print(f"Playing against opponent {opponent.player_id} in {idx}")
+        if opponent is None:
+            warning("Opponent was none")
+            continue
+        print(f"{type(player).__name__} {player.player_id} playing against opponent {type(opponent).__name__} {opponent.player_id} in Process {idx}")
 
         i = 0
         # Run training with current opponent 100 times

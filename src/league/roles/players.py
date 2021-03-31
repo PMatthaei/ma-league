@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Tuple, Union, Any
+
 from league.payoff import Payoff
 from league.roles.agent import Agent
 from league.utils.pfsp import prioritized_fictitious_self_play
@@ -12,6 +14,7 @@ class Player(object):
 
     def __init__(self):
         self.player_id = None
+        self.agent = None
         self._payoff = None
         self._team_plan = None
 
@@ -46,7 +49,7 @@ class MainPlayer(Player):
         self._team_plan = agent.team_plan
         self._checkpoint_step = 0
 
-    def _pfsp_branch(self) -> (Player, bool):
+    def _pfsp_branch(self) -> Tuple[Player, bool]:
         historical = [
             player.player_id for player in self._payoff.players
             if isinstance(player, HistoricalPlayer)
@@ -55,7 +58,7 @@ class MainPlayer(Player):
         chosen_id = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
         return self._payoff.players[chosen_id], True
 
-    def _selfplay_branch(self, opponent: Player) -> (Player, bool):
+    def _selfplay_branch(self, opponent: Player) -> Tuple[Player, bool]:
         # Play self-play match
         if self._payoff[self.player_id, opponent.player_id] > 0.3:
             return opponent, False
@@ -66,14 +69,14 @@ class MainPlayer(Player):
             if isinstance(player, HistoricalPlayer) and player.parent == opponent
         ]
 
-        if len(historical) == 0: # no new historical opponents found # TODO
+        if len(historical) == 0:  # no new historical opponents found # TODO
             return opponent, False
 
         win_rates = self._payoff[self.player_id, historical]
         chosen_id = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="variance"))
-        return self._payoff.players[chosen_id], chosen_id, True
+        return self._payoff.players[chosen_id], True
 
-    def _verification_branch(self, opponent):
+    def _verification_branch(self, opponent) -> Union[Tuple[None, None], Tuple[Player, bool]]:
         # Check exploitation
         from league.roles.exploiters import MainExploiter
 
@@ -87,7 +90,8 @@ class MainPlayer(Player):
         ]
         win_rates = self._payoff[self.player_id, exp_historical]
         if len(win_rates) and win_rates.min() < 0.3:
-            chosen_id = np.random.choice(exp_historical, p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
+            chosen_id = np.random.choice(exp_historical,
+                                         p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
             return self._payoff.players[chosen_id], True
 
         # Check forgetting
@@ -101,9 +105,10 @@ class MainPlayer(Player):
             chosen_id = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
             return self._payoff.players[chosen_id], True
 
-        return None
+        # TODO: when and why do we get here?
+        return None, None
 
-    def get_match(self):
+    def get_match(self) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
         coin_toss = np.random.random()
 
         # Make sure you can beat the League
@@ -123,7 +128,7 @@ class MainPlayer(Player):
 
         return self._selfplay_branch(opponent)
 
-    def ready_to_checkpoint(self):
+    def ready_to_checkpoint(self) -> bool:
         steps_passed = self.agent.get_steps() - self._checkpoint_step
         if steps_passed < 2e9:
             return False
@@ -154,11 +159,11 @@ class HistoricalPlayer(Player):
     def parent(self):
         return self._parent
 
-    def get_match(self):
+    def get_match(self) -> Tuple[Player, bool]:
         raise ValueError("Historical players should not request matches")
 
     def checkpoint(self):
         raise NotImplementedError
 
-    def ready_to_checkpoint(self):
+    def ready_to_checkpoint(self) -> bool:
         return False
