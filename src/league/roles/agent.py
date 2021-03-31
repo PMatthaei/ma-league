@@ -5,7 +5,7 @@ class Agent(object):
         pass
 
     def get_weights(self):
-        pass
+        return 0
 
     def get_steps(self):
-        pass
+        return 0

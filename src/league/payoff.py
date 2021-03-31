@@ -8,19 +8,19 @@ from league.roles.players import Player
 class Payoff:
 
     def __init__(self):
-        self._players = []
-        self._wins = collections.defaultdict(lambda: 0)
-        self._draws = collections.defaultdict(lambda: 0)
-        self._losses = collections.defaultdict(lambda: 0)
-        self._games = collections.defaultdict(lambda: 0)
-        self._decay = 0.99
+        self.players = []
+        self.wins = collections.defaultdict(lambda: 0)
+        self.draws = collections.defaultdict(lambda: 0)
+        self.losses = collections.defaultdict(lambda: 0)
+        self.games = collections.defaultdict(lambda: 0)
+        self.decay = 0.99
 
     def _win_rate(self, _home: Player, _away: Player):
-        if self._games[_home, _away] == 0:
+        if self.games[_home, _away] == 0:
             return 0.5
 
-        return (self._wins[_home, _away] +
-                0.5 * self._draws[_home, _away]) / self._games[_home, _away]
+        return (self.wins[_home, _away] +
+                0.5 * self.draws[_home, _away]) / self.games[_home, _away]
 
     def __getitem__(self, match):
         home, away = match
@@ -44,25 +44,21 @@ class Payoff:
         :param result:
         :return:
         """
-        for stats in (self._games, self._wins, self._draws, self._losses):
-            stats[home, away] *= self._decay
-            stats[away, home] *= self._decay
+        for stats in (self.games, self.wins, self.draws, self.losses):
+            stats[home, away] *= self.decay
+            stats[away, home] *= self.decay
 
-        self._games[home, away] += 1
-        self._games[away, home] += 1
+        self.games[home, away] += 1
+        self.games[away, home] += 1
         if result == "win":
-            self._wins[home, away] += 1
-            self._losses[away, home] += 1
+            self.wins[home, away] += 1
+            self.losses[away, home] += 1
         elif result == "draw":
-            self._draws[home, away] += 1
-            self._draws[away, home] += 1
+            self.draws[home, away] += 1
+            self.draws[away, home] += 1
         else:
-            self._wins[away, home] += 1
-            self._losses[home, away] += 1
+            self.wins[away, home] += 1
+            self.losses[home, away] += 1
 
     def add_player(self, player: Player):
-        self._players.append(player)
-
-    @property
-    def players(self):
-        return self._players
+        self.players.append(player)

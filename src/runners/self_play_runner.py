@@ -5,12 +5,10 @@ from functools import partial
 from components.episode_buffer import EpisodeBatch
 import torch as th
 
-from league.roles.players import Player
-
 
 class SelfPlayRunner:
 
-    def __init__(self, args, logger, conn: Connection = None, home: Player = None):
+    def __init__(self, args, logger):
         """
         Runner to train two multi-agents (home and opponent) in the same environment.
         The runner steps the environment and creates two batches of episode data one per agent.
@@ -19,13 +17,9 @@ class SelfPlayRunner:
         :param args:
         :param logger:
         :param conn:
-        :param home:
         """
         self.args = args
         self.logger = logger
-        self.conn: Connection = conn
-        self.home: Player = home
-        self.opponent: Player = None
         self.batch_size = self.args.batch_size_run
         assert self.batch_size == 1
 
@@ -67,14 +61,7 @@ class SelfPlayRunner:
         self.env.reset()
         self.t = 0
 
-    def league_run(self):
-        while True:
-            self.opponent = self.home.get_match()
-            self.run()
-
     def run(self, test_mode=False):
-        if self.conn:
-            self.conn.send({"event": "started", })
         self.reset()
 
         terminated = False
@@ -130,11 +117,6 @@ class SelfPlayRunner:
             self.opponent_batch.update(opponent_post_transition_data, ts=self.t)
 
             self.t += 1
-
-        if self.conn:
-            while not self.conn.writable:
-                pass  # wait to write
-            self.conn.send(env_info)
         #
         #
         # Last (state,action) transition pair per learner
@@ -156,6 +138,7 @@ class SelfPlayRunner:
 
         if not test_mode:
             self.t_env += self.t
+
         #
         # Stats and Logging for two learners
         #

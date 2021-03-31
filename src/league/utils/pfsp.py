@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def prioritized_fictitious_self_play(win_rates, weighting="linear"):
     weightings = {
         "variance": lambda x: x * (1 - x),

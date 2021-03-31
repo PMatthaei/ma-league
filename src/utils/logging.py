@@ -117,6 +117,7 @@ class LeagueLogger:
         for k, v in self.ep_stats.items():
             if k == "battle_won":  # TODO 0 selects which team!?!
                 self.add_stat(prefix + k + "_mean", v[0] / self.ep_stats["n_episodes"], t_env)
+                self.add_stat(prefix + "battle_lost_mean", v[1] / self.ep_stats["n_episodes"], t_env)
             elif k == "draw":
                 self.add_stat(prefix + k + "_mean", v / self.ep_stats["n_episodes"], t_env)
             elif k != "n_episodes":
@@ -164,6 +165,7 @@ class LeagueLogger:
         :return:
         """
         self.ep_stats = self.test_stats if self.test_mode else self.train_stats
+        # Integrate the new env_info into the stats
         self.ep_stats.update({k: self.update_stats(k, env_info) for k in set(self.ep_stats) | set(env_info)})
         self.ep_stats["n_episodes"] = 1 + self.ep_stats.get("n_episodes", 0)
         self.ep_stats["ep_length"] = t + self.ep_stats.get("ep_length", 0)
@@ -185,4 +187,4 @@ class LeagueLogger:
         if stat_type is int or stat_type is float or stat_type is bool:
             return self.ep_stats.get(k, 0) + env_info.get(k, 0)
         elif stat_type is list:
-            return self.ep_stats.get(k, []) + env_info.get(k, [])
+            return np.array(self.ep_stats.get(k, np.zeros_like(env_info.get(k))), dtype=int) + np.array(env_info.get(k, []), dtype=int)
