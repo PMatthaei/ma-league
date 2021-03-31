@@ -7,17 +7,18 @@ from multiprocessing.dummy import Manager, Process
 from league.league import League
 from league.payoff import Payoff
 from league.trainer_process import run
+from league.utils.coordinator import Coordinator
 from league.utils.team_composer import TeamComposer
 
 
-def _handle_messages(parent_conn: Connection, payoff: Payoff):
+def _handle_messages(parent_conn: Connection, coordinator: Coordinator):
     msg = parent_conn.recv()
     if "close" in msg:
         print(f"Closing connection to process {msg['close']}")
         parent_conn.close()
     elif "result" in msg:
         home, away, result = msg["result"]
-        payoff.update(home, away, result)
+        coordinator.send_outcome(home, away, result)
     else:
         raise Exception("Unknown message.")
 
@@ -39,6 +40,7 @@ def main():
     # Create league
     payoff = Payoff(p_matrix=p_matrix, players=players)
     league = League(initial_agents=team_compositions, payoff=payoff)
+    coordinator = Coordinator(league)
 
     players_n = league.roles_per_initial_agent() * len(team_compositions)
 
@@ -54,9 +56,11 @@ def main():
         proc.start()
 
     # Receive messages from all processes
-    while any(not parent_conn.closed for parent_conn in league_conns):
-        [_handle_messages(league_conn, payoff) for league_conn in league_conns if
-         not league_conn.closed and league_conn.poll()]
+    while any(not league_conn.closed for league_conn in league_conns):
+        [
+            _handle_messages(league_conn, coordinator) for league_conn in league_conns
+            if not league_conn.closed and league_conn.poll()
+        ]
 
     print(payoff.p_matrix)
 

@@ -11,7 +11,7 @@ class Coordinator:
         """
         self.league = league
 
-    def send_outcome(self, home: Player, opponent: Player, outcome):
+    def send_outcome(self, home: int, opponent: int, outcome):
         """
         Update the payoff matrix
         :param home:
@@ -19,6 +19,6 @@ class Coordinator:
         :param outcome:
         :return:
         """
-        self.league.update(home, opponent, outcome)
-        if home.ready_to_checkpoint():
-            self.league.add_player(opponent.checkpoint())
+        home_player, away = self.league.update(home, opponent, outcome)
+        if home_player.ready_to_checkpoint():
+            self.league.add_player(home_player.checkpoint())
