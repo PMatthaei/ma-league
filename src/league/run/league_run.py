@@ -4,14 +4,12 @@ from multiprocessing import Pipe
 from multiprocessing import Process
 from multiprocessing import Pool
 from multiprocessing.connection import Connection
-from multiprocessing.managers import BaseManager
-from multiprocessing.queues import Queue
-
-import numpy as np
+from multiprocessing.managers import SyncManager
 
 from multiagent.core import RoleTypes, UnitAttackTypes
+
 from league.league import League
-from league.payoff import Payoff
+from league.payoff import Payoff, PayoffProxy
 from league.run.self_play_run import run_sequential_league
 from league.utils.coordinator import Coordinator
 from league.utils.team_composer import TeamComposer
@@ -35,15 +33,22 @@ def run(_run, _config, _log):
     # League Training
     #
     #
+    mp.set_start_method('spawn')
+
     team_size = 3
     team_composer = TeamComposer(RoleTypes, UnitAttackTypes)
     team_compositions = [team_composer.compose_unique_teams(team_size)[0]]  # TODO change back to all comps
-    league = League(initial_agents=team_compositions, payoff=Payoff())
+
+    SyncManager.register("Payoff", Payoff, PayoffProxy)
+    manager = SyncManager()
+    manager.start()
+    payoff = manager.Payoff()
+
+    league = League(initial_agents=team_compositions, payoff=payoff)
     coordinator = Coordinator(league)
 
-    # players_n = league.roles_per_initial_agent() * len(team_compositions)
+    # players_n = league.roles_per_initial_agent() * len(team_compositions) TODO: Uncomment if running on bigger hardware
     players_n = len(team_compositions)
-    mp.set_start_method('spawn')
     processes = []  # processes list - each representing a runner playing a match
     parent_conns = []  # parent connections
 
@@ -51,7 +56,8 @@ def run(_run, _config, _log):
         parent_conn, child_conn = Pipe()
         parent_conns.append(parent_conn)
 
-        proc = Process(target=run_sequential_league, args=(args, _log, child_conn, idx))
+        player = league.get_player(idx)
+        proc = Process(target=run_sequential_league, args=(args, _log, child_conn, player))
         processes.append(proc)
         proc.start()
 

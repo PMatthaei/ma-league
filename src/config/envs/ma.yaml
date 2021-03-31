@@ -2,7 +2,7 @@ env: ma
 play_mode: normal
 
 env_args:
-  headless: True
+  headless: False
   record: False
   fps: 30
   draw_grid: False

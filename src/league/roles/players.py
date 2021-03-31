@@ -101,7 +101,6 @@ class MainPlayer(Player):
         # Make sure you can beat the League
         if coin_toss < 0.5:
             return self._pfsp_branch()
-
         main_agents = [
             player for player in self._payoff.players
             if isinstance(player, MainPlayer)

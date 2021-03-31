@@ -125,7 +125,6 @@ class EpisodeRunner:
 
         self.logger.collect_episode_returns(episode_return)
         self.logger.collect_episode_stats(env_info, self.t)
-
         self.logger.add_stats(self.t_env, epsilons=self.epsilon)
 
         return self.batch

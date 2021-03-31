@@ -77,14 +77,17 @@ def evaluate_sequential(args, runner):
     runner.close_env()
 
 
-def run_sequential_league(args, console_logger, conn: Connection, player: Player = None):
+def run_sequential_league(args, console_logger, conn: Connection, player: Player):
     run_sequential(args=args, logger=LeagueLogger(console_logger), conn=conn, player=player)
     conn.send("close")
 
 
 def run_sequential(args, logger, conn=None, player=None):
     # Init runner so we can get env info
-    runner = SelfPlayRunner(args=args, logger=logger, conn=conn, home=player)
+    runner = SelfPlayRunner(args=args, logger=logger)
+
+    if player:
+        opponent = player.get_match()
 
     # Set up schemes and groups here
     env_info = runner.get_env_info()
@@ -133,7 +136,38 @@ def run_sequential(args, logger, conn=None, player=None):
         home_learner.cuda()
         opponent_learner.cuda()
 
-    # TODO: re-add checkpoint
+    if args.checkpoint_path != "":
+
+        timesteps = []
+        timestep_to_load = 0
+
+        if not os.path.isdir(args.checkpoint_path):
+            logger.console_logger.info("Checkpoint directiory {} doesn't exist".format(args.checkpoint_path))
+            return
+
+        # Go through all files in args.checkpoint_path
+        for name in os.listdir(args.checkpoint_path):
+            full_name = os.path.join(args.checkpoint_path, name)
+            # Check if they are dirs the names of which are numbers
+            if os.path.isdir(full_name) and name.isdigit():
+                timesteps.append(int(name))
+
+        if args.load_step == 0:
+            # choose the max timestep
+            timestep_to_load = max(timesteps)
+        else:
+            # choose the timestep closest to load_step
+            timestep_to_load = min(timesteps, key=lambda x: abs(x - args.load_step))
+
+        model_path = os.path.join(args.checkpoint_path, str(timestep_to_load))
+
+        logger.console_logger.info("Loading model from {}".format(model_path))
+        opponent_learner.load_models(model_path)
+        runner.t_env = timestep_to_load
+
+        if args.evaluate or args.save_replay:
+            evaluate_sequential(args, runner)
+            return
 
     # start training
     episode = 0
@@ -155,6 +189,10 @@ def run_sequential(args, logger, conn=None, player=None):
 
         # Run for a whole episode at a time
         home_batch, opponent_batch = runner.run(test_mode=False)
+
+        if conn:
+            conn.send("EPISODE RESULTS TODO")
+
         home_buffer.insert_episode_batch(home_batch)
         opponent_buffer.insert_episode_batch(opponent_batch)
 
@@ -193,6 +231,9 @@ def run_sequential(args, logger, conn=None, player=None):
             for _ in range(n_test_runs):
                 runner.run(test_mode=True)
 
+        if conn:
+            conn.send("SAVE NEW CHECKPOINT OF AGENT")
+
         # Model saving
         if args.save_model and (runner.t_env - model_save_time >= args.save_model_interval or model_save_time == 0):
             model_save_time = runner.t_env
@@ -203,8 +244,7 @@ def run_sequential(args, logger, conn=None, player=None):
 
             # learner should handle saving/loading -- delegate actor save/load to mac,
             # use appropriate filenames to do critics, optimizer states
-            # TODO: re-add save model for learners
-            # learner.save_models(save_path)
+            home_learner.save_models(save_path)
 
         # Batch size == how many episodes are run -> add on top of episode counter
         episode += args.batch_size_run
