@@ -63,8 +63,8 @@ class Payoff:
 
         self._apply_decay(home, away)
 
-        self.p_matrix[home, away, result] += 1
-        self.p_matrix[away, home, result] += 1
+        self.p_matrix[home, away] += 1
+        self.p_matrix[away, home] += 1
 
         if result == "win":
             self.p_matrix[home, away, "win"] += 1
