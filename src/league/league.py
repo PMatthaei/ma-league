@@ -53,3 +53,7 @@ class League(object):
 
     def add_player(self, player: Player):
         self._payoff.add_player(player)
+
+    @property
+    def size(self):
+        return len(self._learning_agents)

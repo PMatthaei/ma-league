@@ -42,10 +42,8 @@ def main():
     league = League(initial_agents=team_compositions, payoff=payoff)
     coordinator = Coordinator(league)
 
-    players_n = league.roles_per_initial_agent() * len(team_compositions)
-
     # Start league training
-    for idx in range(players_n):
+    for idx in range(league.size):
         league_conn, conn = Pipe()
         league_conns.append(league_conn)
 
