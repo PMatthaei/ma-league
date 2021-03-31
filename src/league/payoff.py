@@ -61,6 +61,7 @@ class Payoff:
         self.p_matrix[away, home, "loss"] *= self.decay
         self.p_matrix[home, away, "draw"] *= self.decay
         self.p_matrix[away, home, "draw"] *= self.decay
+        self.p_matrix[home, away] *= self.decay
         self.p_matrix[away, home] *= self.decay
 
     def add_player(self, player):
@@ -95,4 +96,5 @@ class Payoff:
         self.p_matrix[away, home, "loss"] = 0
         self.p_matrix[home, away, "draw"] = 0
         self.p_matrix[away, home, "draw"] = 0
+        self.p_matrix[home, away] = 0
         self.p_matrix[away, home] = 0

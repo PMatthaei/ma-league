@@ -11,16 +11,15 @@ from league.utils.team_composer import TeamComposer
 
 
 def _handle_messages(parent_conn: Connection, payoff: Payoff):
-    if parent_conn.poll():
-        msg = parent_conn.recv()
-        if "close" in msg:
-            print(f"Closing connection to process {msg['close']}")
-            parent_conn.close()
-        elif "result" in msg:
-            home, away, result = msg["result"]
-            payoff.update(home, away, result)
-        else:
-            raise Exception("Unknown message.")
+    msg = parent_conn.recv()
+    if "close" in msg:
+        print(f"Closing connection to process {msg['close']}")
+        parent_conn.close()
+    elif "result" in msg:
+        home, away, result = msg["result"]
+        payoff.update(home, away, result)
+    else:
+        raise Exception("Unknown message.")
 
 
 def main():
@@ -34,29 +33,30 @@ def main():
     p_matrix = manager.dict()
     players = manager.list()
 
-    # players_n = league.roles_per_initial_agent() * len(team_compositions)
-    players_n = len(team_compositions)
     processes = []  # processes list - each representing a runner playing a match
-    parent_conns = []  # parent connections
+    league_conns = []  # parent connections
 
     # Create league
     payoff = Payoff(p_matrix=p_matrix, players=players)
     league = League(initial_agents=team_compositions, payoff=payoff)
 
+    players_n = league.roles_per_initial_agent() * len(team_compositions)
+
     # Start league training
     for idx in range(players_n):
-        parent_conn, child_conn = Pipe()
-        parent_conns.append(parent_conn)
+        league_conn, conn = Pipe()
+        league_conns.append(league_conn)
 
         player = league.get_player(idx)
 
-        proc = Process(target=run, args=(idx, player, child_conn))
+        proc = Process(target=run, args=(idx, player, conn))
         processes.append(proc)
         proc.start()
 
     # Receive messages from all processes
-    while any(not parent_conn.closed for parent_conn in parent_conns):
-        [_handle_messages(parent_conn, payoff) for parent_conn in parent_conns if not parent_conn.closed]
+    while any(not parent_conn.closed for parent_conn in league_conns):
+        [_handle_messages(league_conn, payoff) for league_conn in league_conns if
+         not league_conn.closed and league_conn.poll()]
 
     print(payoff.p_matrix)
 
