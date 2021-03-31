@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from league.roles.agent import Agent
 from league.roles.exploiters import MainExploiter, LeagueExploiter
 from league.roles.players import MainPlayer, Player
@@ -43,7 +45,7 @@ class League(object):
     def roles_per_initial_agent(self):
         return self._main_agents_n + self._main_exploiters_n + self._league_exploiters_n
 
-    def update(self, home: Player, away: Player, result: str):
+    def update(self, home: int, away: int, result: str) -> Tuple[Player, Player]:
         return self._payoff.update(home, away, result)
 
     def get_player(self, idx) -> Player:

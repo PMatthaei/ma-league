@@ -28,6 +28,7 @@ class Player(object):
         return False
 
     def _create_checkpoint(self) -> HistoricalPlayer:
+        print("Saving checkpoint as HistoricalPlayer")
         return HistoricalPlayer(self.player_id, self.agent, self._payoff)
 
     @property

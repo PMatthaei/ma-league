@@ -23,7 +23,7 @@ def run(idx: int, player: Player, conn: Connection):
         # Run training with current opponent 100 times
         while i < 100:
             # Fake episode play with sleep and fake result
-            result = random.choice(["win", "draw", "loos"])
+            result = random.choice(["win", "draw", "loss"])
             conn.send({"result": (player.player_id, opponent.player_id, result)})
             i += 1
 
