@@ -15,7 +15,9 @@ def run(idx: int, player: Player, conn: Connection):
         if opponent is None:
             warning("Opponent was none")
             continue
-        print(f"{type(player).__name__} {player.player_id} playing against opponent {type(opponent).__name__} {opponent.player_id} in Process {idx}")
+        player_str = f"{type(player).__name__} {player.player_id}"
+        opponent_str = f"{type(opponent).__name__} {opponent.player_id} "
+        print(f"{player_str} playing against opponent {opponent_str} in Process {idx}")
 
         i = 0
         # Run training with current opponent 100 times
@@ -29,17 +31,3 @@ def run(idx: int, player: Player, conn: Connection):
 
     conn.send({"close": idx})
     conn.close()
-
-
-def _update_result(idx, opponent, payoff, result):
-    if (idx, opponent, result) in payoff:
-        payoff[idx, opponent, result] += 1
-    else:
-        payoff[idx, opponent, result] = 1
-
-
-def _update_episodes_played(idx, opponent, payoff):
-    if (idx, opponent) in payoff:
-        payoff[idx, opponent] += 1
-    else:
-        payoff[idx, opponent] = 1
