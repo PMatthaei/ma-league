@@ -4,7 +4,7 @@ from typing import Tuple, Union, Any
 
 from league.components.payoff import Payoff
 from league.roles.agent import Agent
-from league.utils.pfsp import prioritized_fictitious_self_play
+from league.components.pfsp import prioritized_fictitious_self_play
 import numpy as np
 
 from league.utils.various import remove_monotonic_suffix

@@ -9,10 +9,10 @@ class League(object):
 
     def __init__(self,
                  initial_agents,
+                 payoff,
                  main_agents_n=1,
                  main_exploiters_n=1,
-                 league_exploiters_n=2,
-                 payoff=None):
+                 league_exploiters_n=2):
         self._payoff = payoff
         self._learning_agents = {}
         self._main_agents_n = main_agents_n
@@ -38,21 +38,27 @@ class League(object):
                 self._learning_agents[player_id] = league_exploiter
                 player_id += 1
 
-        for player_id, player in self._learning_agents.items():
+        for player in self._learning_agents.values():
             self._payoff.add_player(player)
 
-    def roles_per_initial_agent(self):
+    def roles_per_initial_agent(self) -> int:
         return self._main_agents_n + self._main_exploiters_n + self._league_exploiters_n
 
     def update(self, home: int, away: int, result: str) -> Tuple[Player, Player]:
         return self._payoff.update(home, away, result)
 
-    def get_player(self, idx) -> Player:
+    def get_player(self, idx: int) -> Player:
         return self._learning_agents[idx]
 
     def add_player(self, player: Player):
         self._payoff.add_player(player)
 
+    def print_payoff(self):
+        player_ids = list(range(self.size))
+        for player_id in player_ids:
+            print(f"Win rates for player {player_id}:")
+            print(self._payoff[player_id, player_ids])
+
     @property
-    def size(self):
+    def size(self) -> int:
         return len(self._learning_agents)

@@ -11,7 +11,7 @@ class ProcessMessageTypes(Enum):
     RESULT = 1
 
 
-class ProcessMessageHandler(Process):
+class MessageHandler(Process):
     def __init__(self, coordinator, conns):
         """
         Handles messages sent from learner processes to the main league process.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Tuple, Union, List
 
 import numpy as np
 
@@ -29,7 +29,7 @@ class Payoff:
         return (self.p_matrix[_home, _away, 'win'] +
                 0.5 * self.p_matrix[_home, _away, 'draw']) / self.p_matrix[_home, _away]
 
-    def __getitem__(self, match: Tuple[int, int]):
+    def __getitem__(self, match: Union[Tuple[int, List[int]], Tuple[int, int]]):
         """
         Get the win rates of the home player against one or more away teams.
         Away teams can be passed as list.
