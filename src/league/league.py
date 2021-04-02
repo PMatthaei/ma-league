@@ -22,7 +22,6 @@ class League(object):
         player_id = 0
         # Setup initial learning agents
         for i, plan in enumerate(initial_agents):
-            # TODO: how to build a set of initial agents so that initial_agents[plan] makes sense?
             for _ in range(self._main_agents_n):
                 main_agent = MainPlayer(player_id, team_plan=plan, agent=Agent(plan, 0), payoff=self._payoff)
                 self._learning_agents[player_id] = main_agent

@@ -34,9 +34,8 @@ def my_main(_run, _config, _log):
     play_mode = config['play_mode']
     if play_mode != "normal":
         set_agents_only(config)
-    if play_mode == "league":
-        from league.run.league_run import run
-    elif play_mode == "self":
+
+    if play_mode == "self":
         from league.run.self_play_run import run
     else:
         from run import run
