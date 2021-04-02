@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def remove_monotonic_suffix(win_rates, players):
     if not win_rates:
         return win_rates, players

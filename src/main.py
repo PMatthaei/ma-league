@@ -24,7 +24,7 @@ results_path = os.path.join(dirname(dirname(abspath(__file__))), "results")
 
 
 @ex.main
-def my_main(_run, _config, _log):
+def main(_run, _config, _log):
     # Setting the random seed throughout the modules
     config = config_copy(_config)
     np.random.seed(config["seed"])
@@ -36,7 +36,7 @@ def my_main(_run, _config, _log):
         set_agents_only(config)
 
     if play_mode == "self":
-        from league.run.self_play_run import run
+        from self_play_run import run
     else:
         from run import run
 

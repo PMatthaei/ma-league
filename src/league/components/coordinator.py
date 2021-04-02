@@ -1,5 +1,4 @@
 from league.league import League
-from league.roles.players import Player
 
 
 class Coordinator:
