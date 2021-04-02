@@ -7,6 +7,8 @@ from functools import partial
 from components.episode_buffer import EpisodeBatch
 import torch as th
 
+from utils.logging import Originator
+
 
 class SelfPlayRunner:
 
@@ -147,8 +149,8 @@ class SelfPlayRunner:
         #
         # Stats and Logging for two learners
         #
-        self.logger.collect_episode_returns(home_episode_return, originator="home")
-        self.logger.collect_episode_returns(opp_episode_return, originator="opponent")
+        self.logger.collect_episode_returns(home_episode_return, org=Originator.HOME)
+        self.logger.collect_episode_returns(opp_episode_return, org=Originator.AWAY)
         self.logger.collect_episode_stats(env_info, self.t)
         self.logger.add_stats(self.t_env, epsilons=self.epsilons)
 
