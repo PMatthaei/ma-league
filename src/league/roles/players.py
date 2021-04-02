@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Tuple, Union, Any
 
-from league.payoff import Payoff
+from league.components.payoff import Payoff
 from league.roles.agent import Agent
 from league.utils.pfsp import prioritized_fictitious_self_play
 import numpy as np
