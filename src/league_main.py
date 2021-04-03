@@ -13,12 +13,18 @@ from sacred.utils import apply_backspaces_and_linefeeds
 
 from league.components.payoff import Payoff
 from league.league import League
-from league.processes.trainer_process import TrainerProcess
+from league.processes.league_process import LeagueProcess
 from league.components.coordinator import Coordinator
-from league.processes.message_handler_process import MessageHandler
+from league.processes.league_message_handler_process import LeagueMessageHandler
 from league.utils.team_composer import TeamComposer
 from utils.logging import LeagueLogger
-from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update
+from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy
+
+import numpy as np
+import torch as th
+from types import SimpleNamespace
+
+from utils.run_utils import args_sanity_check
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
 logger = LeagueLogger.console_logger()
@@ -31,7 +37,20 @@ results_path = os.path.join(dirname(dirname(abspath(__file__))), "results")
 
 
 @ex.main
-def league_main(_config):
+def league_main(_config, _log):
+    # Load config and logger
+    config = config_copy(_config)
+    np.random.seed(config["seed"])
+    th.manual_seed(config["seed"])
+    config['env_args']['seed'] = config["seed"]
+
+    _config = args_sanity_check(config, _log)
+
+    args = SimpleNamespace(**_config)
+    args.device = "cuda" if args.use_cuda else "cpu"
+
+    logger = LeagueLogger(_log)
+
     # Build league teams
     team_size = _config["team_size"]
     team_composer = TeamComposer(RoleTypes, UnitAttackTypes)
@@ -53,17 +72,17 @@ def league_main(_config):
 
     # Start league training
     for idx in range(league.size):
-        league_conn, conn = Pipe()
+        league_conn, conn = Pipe() # TODO: downgrade to queue in league process to provide info if no msg from here to child conn needed
         league_conns.append(league_conn)
 
         player = league.get_player(idx)
 
-        proc = TrainerProcess(idx, player, conn)
+        proc = LeagueProcess(player, conn, args, logger)
         processes.append(proc)
         proc.start()
 
     # Handle message communication within the league
-    handler = MessageHandler(coordinator, league_conns)
+    handler = LeagueMessageHandler(coordinator, league_conns)
     handler.start()
     handler.join()
 
