@@ -1,8 +1,8 @@
 from typing import Tuple
 
-from league.roles.agent import Agent
 from league.roles.exploiters import MainExploiter, LeagueExploiter
 from league.roles.players import MainPlayer, Player
+from learners.learner import Learner
 
 
 class League(object):
@@ -23,18 +23,18 @@ class League(object):
         # Setup initial learning agents
         for i, plan in enumerate(initial_agents):
             for _ in range(self._main_agents_n):
-                main_agent = MainPlayer(player_id, team_plan=plan, agent=Agent(plan, 0), payoff=self._payoff)
+                main_agent = MainPlayer(player_id, learner=Learner(), payoff=self._payoff)
                 self._learning_agents[player_id] = main_agent
                 self._payoff.add_player(main_agent.checkpoint())
                 player_id += 1
 
             for _ in range(self._main_exploiters_n):
-                exploiter = MainExploiter(player_id, team_plan=plan, agent=Agent(plan, 0), payoff=self._payoff)
+                exploiter = MainExploiter(player_id, learner=Learner(), payoff=self._payoff)
                 self._learning_agents[player_id] = exploiter
                 player_id += 1
 
             for _ in range(self._league_exploiters_n):
-                league_exploiter = LeagueExploiter(player_id, team_plan=plan, agent=Agent(plan, 0), payoff=self._payoff)
+                league_exploiter = LeagueExploiter(player_id, learner=Learner(), payoff=self._payoff)
                 self._learning_agents[player_id] = league_exploiter
                 player_id += 1
 

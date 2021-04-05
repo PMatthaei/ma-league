@@ -54,7 +54,7 @@ def league_main(_config, _log):
     # Build league teams
     team_size = _config["team_size"]
     team_composer = TeamComposer(RoleTypes, UnitAttackTypes)
-    team_compositions = team_composer.compose_unique_teams(team_size)[:2]  # TODO change back to all comps
+    team_compositions = team_composer.compose_unique_teams(team_size)[0]  # TODO change back to all comps
 
     # Shared objects
     manager = Manager()
@@ -77,7 +77,7 @@ def league_main(_config, _log):
 
         player = league.get_player(idx)
 
-        proc = LeagueProcess(player, conn, args, logger)
+        proc = LeagueProcess(player, conn, args=args, logger=logger)
         processes.append(proc)
         proc.start()
 

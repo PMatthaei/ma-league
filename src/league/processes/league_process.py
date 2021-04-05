@@ -10,6 +10,7 @@ import torch as th
 from types import SimpleNamespace
 
 from league.roles.players import Player
+from learners.learner import Learner
 from runners.self_play_runner import SelfPlayRunner
 from utils.logging import LeagueLogger
 from utils.timehelper import time_left, time_str
@@ -27,7 +28,9 @@ class LeagueProcess(Process):
         self.conn = conn
         self.args = args
         self.logger = logger
+
         self.away = None
+        self.terminated = False
 
     def run_2(self):
         j = 0
@@ -100,16 +103,14 @@ class LeagueProcess(Process):
 
         # Learners
         home_learner = le_REGISTRY[self.args.learner](home_mac, home_buffer.scheme, self.logger, self.args, name="home")
-        away_learner = le_REGISTRY[self.args.learner](away_mac, away_buffer.scheme, self.logger, self.args,
-                                                      name="opponent")
+        away_learner = le_REGISTRY[self.args.learner](away_mac, away_buffer.scheme, self.logger, self.args, name="away")
 
         # Activate CUDA mode if supported
         if self.args.use_cuda:
             home_learner.cuda()
             away_learner.cuda()
 
-        j = 0
-        while j < 5:
+        while not self.terminated:  # TODO end condition
             # Generate new opponent to train against and load his current checkpoint
             self.away, flag = self.home.get_match()
 
@@ -117,11 +118,9 @@ class LeagueProcess(Process):
                 warning("Opponent was none")
                 continue
 
-            self.load_checkpoint(self.away, away_learner)
+            self.load_checkpoint(self.away, away_learner, runner)
 
-            player_str = f"{type(self.home).__name__} {self.home.player_id}"
-            opponent_str = f"{type(self.away).__name__} {self.away.player_id} "
-            self.logger.console_logger.info(f"{player_str} playing against opponent {opponent_str} in Process {self.home.player_id}")
+            self.logger.console_logger.info(self._get_match_str())
 
             # start training
             episode = 0
@@ -215,21 +214,20 @@ class LeagueProcess(Process):
             #
             #
 
-            j += 1
         runner.close_env()
         self.logger.console_logger.info("Finished Training")
         self.conn.send({"close": self.home.player_id})
         self.conn.close()
 
-    def load_checkpoint(self, player: Player, learner):
-        runner = None
+    def load_checkpoint(self, player: Player, learner: Learner, runner: SelfPlayRunner):
         if player.checkpoint_path != "":  # TODO move to agent code
 
             timesteps = []
             timestep_to_load = 0
 
             if not os.path.isdir(player.checkpoint_path):
-                self.logger.console_logger.info("Checkpoint directory {} doesn't exist".format(self.args.checkpoint_path))
+                self.logger.console_logger.info(
+                    "Checkpoint directory {} doesn't exist".format(self.args.checkpoint_path))
                 return
 
             # Go through all files in self.args.checkpoint_path
@@ -251,3 +249,8 @@ class LeagueProcess(Process):
             self.logger.console_logger.info("Loading model from {}".format(model_path))
             learner.load_models(model_path)
             runner.t_env = timestep_to_load
+
+    def _get_match_str(self):
+        player_str = f"{type(self.home).__name__} {self.home.player_id}"
+        opponent_str = f"{type(self.away).__name__} {self.away.player_id} "
+        return f"{player_str} playing against opponent {opponent_str} in Process {self.home.player_id}"

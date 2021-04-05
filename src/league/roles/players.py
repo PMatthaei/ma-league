@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import Tuple, Union, Any
 
 from league.components.payoff import Payoff
-from league.roles.agent import Agent
 from league.components.pfsp import prioritized_fictitious_self_play
 import numpy as np
 
 from league.utils.various import remove_monotonic_suffix
+from learners.learner import Learner
 
 
 class Player(object):
@@ -17,11 +17,14 @@ class Player(object):
 
         """
         self.player_id = None
-        self.agent = None
         self._payoff = None
-        self._team_plan = None
+        self._learner = None
+        self.checkpoint_path = ""
 
     def get_match(self) -> Player:
+        pass
+
+    def get_current_step(self) -> int:
         pass
 
     def ready_to_checkpoint(self) -> bool:
@@ -29,35 +32,29 @@ class Player(object):
 
     def _create_checkpoint(self) -> HistoricalPlayer:
         print("Saving checkpoint as HistoricalPlayer")
-        return HistoricalPlayer(self.player_id, self.agent, self._payoff)
+        return HistoricalPlayer(self.player_id, self._payoff, self._learner)
 
     @property
     def payoff(self) -> Payoff:
         return self._payoff
 
-    @property
-    def team_plan(self):
-        return self._team_plan
-
-    def checkpoint(self):
+    def checkpoint(self) -> HistoricalPlayer:
         raise NotImplementedError
 
 
 class MainPlayer(Player):
 
-    def __init__(self, player_id, team_plan, agent, payoff):
+    def __init__(self, player_id: int, payoff: Payoff, learner: Learner):
         """
 
         :param player_id:
         :param team_plan:
-        :param agent:
         :param payoff:
         """
         super().__init__()
         self.player_id = player_id
-        self.agent = Agent(team_plan, agent.get_weights())
         self._payoff = payoff
-        self._team_plan = agent.team_plan
+        self.learner = learner
         self._checkpoint_step = 0
 
     def _pfsp_branch(self) -> Tuple[Player, bool]:
@@ -162,7 +159,7 @@ class MainPlayer(Player):
 
         :return:
         """
-        steps_passed = self.agent.get_steps() - self._checkpoint_step
+        steps_passed = self.learner.get_current_step() - self._checkpoint_step
         if steps_passed < 2e9:
             return False
 
@@ -173,39 +170,36 @@ class MainPlayer(Player):
         win_rates = self._payoff[self.player_id, historical]
         return win_rates.min() > 0.7 or steps_passed > 4e9
 
-    def checkpoint(self):
+    def checkpoint(self) -> HistoricalPlayer:
         """
 
         :return:
         """
-        self._checkpoint_step = self.agent.get_steps()
+        self._checkpoint_step = self.learner.get_current_step()
         return self._create_checkpoint()
 
 
 class HistoricalPlayer(Player):
 
-    def __init__(self, player_id, agent, payoff):
+    def __init__(self, player_id: int, payoff: Payoff, learner: Learner):
         """
 
         :param player_id:
-        :param agent:
         :param payoff:
         """
         super().__init__()
         self.player_id = player_id
-        self._agent = Agent(agent.team_plan, agent.get_weights())
         self._payoff = payoff
-        self._team_plan = agent.team_plan
-        self._parent = agent
+        self._parent = learner
 
     @property
-    def parent(self):
+    def parent(self) -> Learner:
         return self._parent
 
     def get_match(self) -> Tuple[Player, bool]:
         raise ValueError("Historical players should not request matches")
 
-    def checkpoint(self):
+    def checkpoint(self) -> HistoricalPlayer:
         raise NotImplementedError
 
     def ready_to_checkpoint(self) -> bool:
