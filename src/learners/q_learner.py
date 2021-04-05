@@ -2,12 +2,13 @@ import copy
 import torch as th
 from torch.optim import RMSprop
 
+from learners.learner import Learner
 from modules.mixers.qmix import QMixer
 from modules.mixers.vdn import VDNMixer
 from components.episode_buffer import EpisodeBatch
 
 
-class QLearner:
+class QLearner(Learner):
     def __init__(self, mac, scheme, logger, args, name=None):
         self.args = args
         self.mac = mac
@@ -35,7 +36,10 @@ class QLearner:
 
         self.log_stats_t = -self.args.learner_log_interval - 1
 
+        self.trained_steps = 0
+
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
+        self.trained_steps += batch.batch_size
         # Get the relevant quantities
         rewards = batch["reward"][:, :-1]
         actions = batch["actions"][:, :-1]
@@ -147,3 +151,6 @@ class QLearner:
         if self.mixer is not None:
             self.mixer.load_state_dict(th.load("{}/mixer.th".format(path), map_location=lambda storage, loc: storage))
         self.optimiser.load_state_dict(th.load("{}/opt.th".format(path), map_location=lambda storage, loc: storage))
+
+    def get_current_step(self):
+        return self.trained_steps
