@@ -18,7 +18,6 @@ class CheckpointManager:
     def save(self, t_env, learners: List[Learner]) -> str:
         save_path = os.path.join(results_path, "models", self.unique_token, str(t_env))
         os.makedirs(save_path, exist_ok=True)
-        self.logger.console_logger.info("Saving models to {}".format(save_path))
 
         [learner.save_models(save_path, learner.name) for learner in learners]
         return save_path

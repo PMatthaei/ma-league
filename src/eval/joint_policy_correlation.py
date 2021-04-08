@@ -9,6 +9,11 @@ from self_play_run import SelfPlayRun
 
 class PolicyPair:
     def __init__(self, one: Learner, two: Learner):
+        """
+        Represents a pair of policies which learned together in training.
+        :param one:
+        :param two:
+        """
         self.one = one
         self.two = two
 
