@@ -32,6 +32,9 @@ results_path = os.path.join(dirname(dirname(abspath(__file__))), "results")
 def run(_run, _config, _log):
     # check args sanity
     _config = args_sanity_check(_config, _log)
+    play_mode = _config['play_mode']
+    if play_mode != "normal":
+        set_agents_only(_config)
 
     args = SimpleNamespace(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"
@@ -89,10 +92,6 @@ def main(_run, _config, _log):
     np.random.seed(config["seed"])
     th.manual_seed(config["seed"])
     config['env_args']['seed'] = config["seed"]
-
-    play_mode = _config['play_mode']
-    if play_mode != "normal":
-        set_agents_only(_config)
 
     # run the framework
     run(_run, config, _log)
