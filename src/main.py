@@ -61,10 +61,18 @@ def run(_run, _config, _log):
 
     # Run and train
     if _config['play_mode'] == "self":
-        from self_play_run import SelfPlayRun
-        play = SelfPlayRun(args=args, logger=logger)
+        eval_method = _config['eval']
+        if not eval_method:
+            from runs.self_play_run import SelfPlayRun
+            play = SelfPlayRun(args=args, logger=logger)
+        elif eval_method == "jpc":
+            from eval.jpc_eval_run import JointPolicyCorrelationEvaluationRun
+            play = JointPolicyCorrelationEvaluationRun(args=args, logger=logger)
+        else:
+            from runs.self_play_run import SelfPlayRun
+            play = SelfPlayRun(args=args, logger=logger)
     else:
-        from run import NormalPlayRun
+        from runs.run import NormalPlayRun
         play = NormalPlayRun(args=args, logger=logger)
 
     play.start()

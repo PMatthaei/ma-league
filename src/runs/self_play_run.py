@@ -1,9 +1,5 @@
-import time
-
-from run import NormalPlayRun
+from runs.run import NormalPlayRun
 from steppers.self_play_stepper import SelfPlayStepper
-from utils.checkpoint_manager import CheckpointManager
-from utils.timehelper import time_left, time_str
 
 from learners import REGISTRY as le_REGISTRY
 from controllers import REGISTRY as mac_REGISTRY
