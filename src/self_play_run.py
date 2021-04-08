@@ -138,7 +138,7 @@ def run_sequential(args, logger, conn=None, player=None):
         timestep_to_load = 0
 
         if not os.path.isdir(args.checkpoint_path):
-            logger.console_logger.info("Checkpoint directiory {} doesn't exist".format(args.checkpoint_path))
+            logger.console_logger.info("Checkpoint directory {} doesn't exist".format(args.checkpoint_path))
             return
 
         # Go through all files in args.checkpoint_path
@@ -159,6 +159,7 @@ def run_sequential(args, logger, conn=None, player=None):
 
         logger.console_logger.info("Loading model from {}".format(model_path))
         opponent_learner.load_models(model_path)
+        home_learner.load_models(model_path)
         runner.t_env = timestep_to_load
 
         if args.evaluate or args.save_replay:
@@ -235,6 +236,7 @@ def run_sequential(args, logger, conn=None, player=None):
             # learner should handle saving/loading -- delegate actor save/load to mac,
             # use appropriate filenames to do critics, optimizer states
             home_learner.save_models(save_path)
+            opponent_learner.save_models(save_path)
 
         # Batch size == how many episodes are run -> add on top of episode counter
         episode += args.batch_size_run
