@@ -100,17 +100,22 @@ class NormalPlayRun:
             if (self.stepper.t_env - self.last_test_T) / self.args.test_interval >= 1.0:
                 self._test(n_test_runs)
 
+            # Save model if configured
             if self.args.save_model and (self.stepper.t_env - self.model_save_time >= self.args.save_model_interval or self.model_save_time == 0):
                 self.model_save_time = self.stepper.t_env
-                self.checkpoint_manager.save(self.model_save_time, learners=self.learners)
+                out_path = self.checkpoint_manager.save(self.model_save_time, learners=self.learners)
+                self.logger.console_logger.info("Saving models to {}".format(out_path))
 
+            # Update episode counter with number of episodes run in the batch
             episode += self.args.batch_size_run
 
+            # Log metrics and learner stats once in a while
             if (self.stepper.t_env - self.last_log_T) >= self.args.log_interval:
                 self.logger.add_stat("episode", episode, self.stepper.t_env)
                 self.logger.log_recent_stats()
                 self.last_log_T = self.stepper.t_env
 
+        # Finish and clean up
         self.stepper.close_env()
         self.logger.console_logger.info("Finished Training")
 
