@@ -1,5 +1,5 @@
 import random
-from typing import Tuple, List
+from typing import Tuple, List, Union
 
 import numpy as np
 
@@ -13,11 +13,10 @@ class PolicyPair:
 
 
 class JointPolicyCorrelationEvaluation:
-    def __init__(self, instances: int = 5, training_episodes=20000, eval_episodes=100):
+    def __init__(self, instances: int = 5, eval_episodes=100):
         self.instances = instances
-        self.training_episodes = training_episodes
         self.eval_episodes = eval_episodes
-        self.policies: List[PolicyPair] = []
+        self.policies: Union[List[PolicyPair], List[None]] = [None] * self.instances
         self.jpc_matrix = np.ones((instances, instances))
 
     def eval(self) -> np.array:
@@ -27,14 +26,10 @@ class JointPolicyCorrelationEvaluation:
         """
         # Train policies
         for i in range(self.instances):
-            episode = 0
-            policies = PolicyPair(one=Learner(), two=Learner())
+            policy_pair = PolicyPair(one=Learner(), two=Learner())
             # TODO train
-            while episode < self.training_episodes:
-                print("Run episode")
-                episode += 1
             # TODO: save checkpoints from policies
-            self.policies.append(policies)
+            self.policies[i] = policy_pair
 
         # Evaluate policies
         for i in range(self.instances):  # Build all policy pairs (diag are policies trained together)

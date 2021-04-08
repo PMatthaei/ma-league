@@ -136,13 +136,13 @@ class QLearner(Learner):
             self.mixer.cuda()
             self.target_mixer.cuda()
 
-    def save_models(self, path):
+    def save_models(self, path, name):
         self.mac.save_models(path, name=self.name)
         if self.mixer is not None:
             th.save(self.mixer.state_dict(), "{}/{}mixer.th".format(path, self.name))
         th.save(self.optimiser.state_dict(), "{}/{}opt.th".format(path, self.name))
 
-    def load_models(self, path):
+    def load_models(self, path, name):
         self.mac.load_models(path, self.name)
         # Not quite right but I don't want to save target networks
         self.target_mac.load_models(path, self.name)
