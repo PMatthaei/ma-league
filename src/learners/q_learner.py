@@ -139,18 +139,18 @@ class QLearner(Learner):
             self.target_mixer.cuda()
 
     def save_models(self, path):
-        self.mac.save_models(path)
+        self.mac.save_models(path, name=self.name)
         if self.mixer is not None:
-            th.save(self.mixer.state_dict(), "{}/mixer.th".format(path))
-        th.save(self.optimiser.state_dict(), "{}/opt.th".format(path))
+            th.save(self.mixer.state_dict(), "{}/{}mixer.th".format(path, self.name))
+        th.save(self.optimiser.state_dict(), "{}/{}opt.th".format(path, self.name))
 
     def load_models(self, path):
-        self.mac.load_models(path)
+        self.mac.load_models(path, self.name)
         # Not quite right but I don't want to save target networks
-        self.target_mac.load_models(path)
+        self.target_mac.load_models(path, self.name)
         if self.mixer is not None:
-            self.mixer.load_state_dict(th.load("{}/mixer.th".format(path), map_location=lambda storage, loc: storage))
-        self.optimiser.load_state_dict(th.load("{}/opt.th".format(path), map_location=lambda storage, loc: storage))
+            self.mixer.load_state_dict(th.load("{}/{}mixer.th".format(path, self.name), map_location=lambda storage, loc: storage))
+        self.optimiser.load_state_dict(th.load("{}/{}opt.th".format(path, self.name), map_location=lambda storage, loc: storage))
 
     def get_current_step(self):
         return self.trained_steps

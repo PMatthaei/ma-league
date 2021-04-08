@@ -76,11 +76,11 @@ class BasicMAC:
     def cuda(self):
         self.agent.cuda()
 
-    def save_models(self, path):
-        th.save(self.agent.state_dict(), "{}/agent.th".format(path))
+    def save_models(self, path, name):
+        th.save(self.agent.state_dict(), "{}/{}agent.th".format(path, name))
 
-    def load_models(self, path):
-        self.agent.load_state_dict(th.load("{}/agent.th".format(path), map_location=lambda storage, loc: storage))
+    def load_models(self, path, name):
+        self.agent.load_state_dict(th.load("{}/{}agent.th".format(path, name), map_location=lambda storage, loc: storage))
 
     def _build_agents(self, input_shape):
         return agent_REGISTRY[self.args.agent](input_shape, self.args)
