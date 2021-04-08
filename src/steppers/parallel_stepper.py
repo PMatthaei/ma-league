@@ -5,7 +5,7 @@ from multiprocessing import Pipe, Process
 import numpy as np
 
 
-class ParallelRunner:
+class ParallelStepper:
     def __init__(self, args, logger):
         """
         Based (very) heavily on SubprocVecEnv from OpenAI Baselines
@@ -44,7 +44,7 @@ class ParallelRunner:
 
         self.log_train_stats_t = -100000
 
-    def setup(self, scheme, groups, preprocess, mac):
+    def initialize(self, scheme, groups, preprocess, mac):
         self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,
                                  preprocess=preprocess, device=self.args.device)
         self.mac = mac

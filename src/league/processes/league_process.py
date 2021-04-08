@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 from league.roles.players import Player
 from learners.learner import Learner
-from runners.self_play_runner import SelfPlayRunner
+from steppers.self_play_stepper import SelfPlayStepper
 from utils.logging import LeagueLogger
 from utils.timehelper import time_left, time_str
 
@@ -33,11 +33,11 @@ class LeagueProcess(Process):
         self.terminated = False
 
     def run(self):
-        # Init runner so we can get env info
-        runner = SelfPlayRunner(args=self.args, logger=self.logger)
+        # Init stepper so we can get env info
+        stepper = SelfPlayStepper(args=self.args, logger=self.logger)
 
         # Set up schemes and groups here
-        env_info = runner.get_env_info()
+        env_info = stepper.get_env_info()
         self.args.n_agents = int(env_info["n_agents"] / 2)  # TODO: assuming same team size
         self.args.n_actions = env_info["n_actions"]
         self.args.state_shape = env_info["state_shape"]
@@ -71,8 +71,8 @@ class LeagueProcess(Process):
         home_mac = mac_REGISTRY[self.args.mac](home_buffer.scheme, groups, self.args)
         away_mac = mac_REGISTRY[self.args.mac](away_buffer.scheme, groups, self.args)
 
-        # Give runner the scheme
-        runner.setup(scheme=scheme, groups=groups, preprocess=preprocess, home_mac=home_mac, opponent_mac=away_mac)
+        # Give stepper the scheme
+        stepper.initialize(scheme=scheme, groups=groups, preprocess=preprocess, home_mac=home_mac, opponent_mac=away_mac)
 
         # Learners
         home_learner = le_REGISTRY[self.args.learner](home_mac, home_buffer.scheme, self.logger, self.args, name="home")
@@ -91,7 +91,7 @@ class LeagueProcess(Process):
                 warning("Opponent was none")
                 continue
 
-            self.load_checkpoint(self.away, away_learner, runner)
+            self.load_checkpoint(self.away, away_learner, stepper)
 
             self.logger.console_logger.info(self._get_match_str())
 
@@ -111,10 +111,10 @@ class LeagueProcess(Process):
             # Main Loop
             #
             #
-            while runner.t_env <= self.args.t_max:
+            while stepper.t_env <= self.args.t_max:
 
                 # Run for a whole episode at a time
-                home_batch, opponent_batch = runner.run(test_mode=False)
+                home_batch, opponent_batch = stepper.run(test_mode=False)
 
                 # Fake episode play with sleep and fake result TODO
                 result = random.choice(["win", "draw", "loss"])
@@ -140,31 +140,31 @@ class LeagueProcess(Process):
                     if opponent_sample.device != self.args.device:
                         opponent_sample.to(self.args.device)
 
-                    home_learner.train(home_sample, runner.t_env, episode)
-                    away_learner.train(opponent_sample, runner.t_env, episode)
+                    home_learner.train(home_sample, stepper.t_env, episode)
+                    away_learner.train(opponent_sample, stepper.t_env, episode)
 
                 #
                 # Execute test runs once in a while
                 #
-                n_test_runs = max(1, self.args.test_nepisode // runner.batch_size)
-                if (runner.t_env - last_test_T) / self.args.test_interval >= 1.0:
+                n_test_runs = max(1, self.args.test_nepisode // stepper.batch_size)
+                if (stepper.t_env - last_test_T) / self.args.test_interval >= 1.0:
 
-                    self.logger.console_logger.info("t_env: {} / {}".format(runner.t_env, self.args.t_max))
+                    self.logger.console_logger.info("t_env: {} / {}".format(stepper.t_env, self.args.t_max))
                     self.logger.console_logger.info("Estimated time left: {}. Time passed: {}".format(
-                        time_left(last_time, last_test_T, runner.t_env, self.args.t_max),
+                        time_left(last_time, last_test_T, stepper.t_env, self.args.t_max),
                         time_str(time.time() - start_time)))
                     last_time = time.time()
 
-                    last_test_T = runner.t_env
+                    last_test_T = stepper.t_env
                     for _ in range(n_test_runs):
-                        runner.run(test_mode=True)
+                        stepper.run(test_mode=True)
 
                 # Model saving
                 if self.args.save_model and (
-                        runner.t_env - model_save_time >= self.args.save_model_interval or model_save_time == 0):
-                    model_save_time = runner.t_env
+                        stepper.t_env - model_save_time >= self.args.save_model_interval or model_save_time == 0):
+                    model_save_time = stepper.t_env
                     save_path = os.path.join(self.args.local_results_path, "models", self.args.unique_token,
-                                             str(runner.t_env))
+                                             str(stepper.t_env))
                     # "results/models/{}".format(unique_token)
                     os.makedirs(save_path, exist_ok=True)
                     self.logger.console_logger.info("Saving models to {}".format(save_path))
@@ -177,22 +177,22 @@ class LeagueProcess(Process):
                 episode += self.args.batch_size_run
 
                 # Log
-                if (runner.t_env - last_log_T) >= self.args.log_interval:
-                    self.logger.add_stat("episode", episode, runner.t_env)
+                if (stepper.t_env - last_log_T) >= self.args.log_interval:
+                    self.logger.add_stat("episode", episode, stepper.t_env)
                     self.logger.log_recent_stats()
-                    last_log_T = runner.t_env
+                    last_log_T = stepper.t_env
             #
             #
             #
             #
             #
 
-        runner.close_env()
+        stepper.close_env()
         self.logger.console_logger.info("Finished Training")
         self.conn.send({"close": self.home.player_id})
         self.conn.close()
 
-    def load_checkpoint(self, player: Player, learner: Learner, runner: SelfPlayRunner):
+    def load_checkpoint(self, player: Player, learner: Learner, runner: SelfPlayStepper):
         if player.checkpoint_path != "":  # TODO move to agent code
 
             timesteps = []

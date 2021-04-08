@@ -6,7 +6,7 @@ from components.episode_buffer import EpisodeBatch
 from exceptions.runner_exceptions import RunnerMACNotInitialized
 
 
-class EpisodeRunner:
+class EpisodeStepper:
 
     def __init__(self, args, logger):
         """

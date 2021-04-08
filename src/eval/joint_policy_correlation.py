@@ -4,6 +4,7 @@ from typing import Tuple, List, Union
 import numpy as np
 
 from learners.learner import Learner
+from self_play_run import SelfPlayRun
 
 
 class PolicyPair:
@@ -26,13 +27,12 @@ class JointPolicyCorrelationEvaluation:
         """
         # Train policies
         for i in range(self.instances):
-            policy_pair = PolicyPair(one=Learner(), two=Learner())
-            # TODO train
-            # TODO: save checkpoints from policies
-            self.policies[i] = policy_pair
+            play = SelfPlayRun()
+            play.start()
+            self.policies[i] = PolicyPair(one=play.home_learner, two=play.opponent_learner)
 
         # Evaluate policies
-        for i in range(self.instances):  # Build all policy pairs (diag are policies trained together)
+        for i in range(self.instances):  # Let all instances play against each other
             for j in range(self.instances):
                 # TODO: load checkpoints from chosen policies
                 policy_one, policy_two = self.policies[i].one, self.policies[j].two

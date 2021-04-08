@@ -10,7 +10,7 @@ import torch as th
 from utils.logging import Originator
 
 
-class SelfPlayRunner:
+class SelfPlayStepper:
 
     def __init__(self, args, logger):
         """
@@ -42,7 +42,7 @@ class SelfPlayRunner:
         self.home_batch = None
         self.opponent_batch = None
 
-    def setup(self, scheme, groups, preprocess, home_mac, opponent_mac):
+    def initialize(self, scheme, groups, preprocess, home_mac, opponent_mac):
         self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,
                                  preprocess=preprocess, device=self.args.device)
         self.home_mac = home_mac
