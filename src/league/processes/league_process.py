@@ -32,33 +32,6 @@ class LeagueProcess(Process):
         self.away = None
         self.terminated = False
 
-    def run_2(self):
-        j = 0
-        while j < 5:
-            # Generate new opponent to train against
-            self.away, flag = self.home.get_match()
-
-            if self.away is None:
-                self.logger.console_logger.info("Opponent was none")
-                continue
-
-            player_str = f"{type(self.home).__name__} {self.home.player_id}"
-            opponent_str = f"{type(self.away).__name__} {self.away.player_id} "
-            print(f"{player_str} playing against opponent {opponent_str} in Process {self.home.player_id}")
-
-            i = 0
-            # Run training with current opponent 100 times
-            while i < 100:
-                # Fake episode play with sleep and fake result
-                result = random.choice(["win", "draw", "loss"])
-                self.conn.send({"result": (self.home.player_id, self.away.player_id, result)})
-                i += 1
-
-            j += 1
-
-        self.conn.send({"close": self.home.player_id})
-        self.conn.close()
-
     def run(self):
         # Init runner so we can get env info
         runner = SelfPlayRunner(args=self.args, logger=self.logger)
