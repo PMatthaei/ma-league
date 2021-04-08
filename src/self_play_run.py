@@ -78,11 +78,7 @@ def evaluate_sequential(args, runner):
     runner.close_env()
 
 
-def run_sequential_league(args, console_logger, conn: Connection, player: Player):
-    run_sequential(args=args, logger=LeagueLogger(console_logger), conn=conn, player=player)
-
-
-def run_sequential(args, logger, conn=None, player=None):
+def run_sequential(args, logger):
     # Init runner so we can get env info
     runner = SelfPlayRunner(args=args, logger=logger)
 
