@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from eval.joint_policy_correlation import JointPolicyCorrelationEvaluation
+from eval.jpc_eval_run import JointPolicyCorrelationEvaluation
 
 
 class JointPolicyCorrelationTestCases(unittest.TestCase):

@@ -18,7 +18,7 @@ class CheckpointManager:
     def save(self, t_env, learners: List[Learner]) -> str:
         save_path = os.path.join(results_path, "models", self.unique_token, str(t_env))
         os.makedirs(save_path, exist_ok=True)
-
+        # Save all provided learners in the same path
         [learner.save_models(save_path, learner.name) for learner in learners]
         return save_path
 
@@ -48,7 +48,7 @@ class CheckpointManager:
         model_path = os.path.join(path, str(timestep_to_load))
 
         self.logger.console_logger.info("Loading model from {}".format(model_path))
-        [learner.save_models(model_path, learner.name) for learner in learners]
+        [learner.load_models(model_path, learner.name) for learner in learners]
 
         return timestep_to_load
 

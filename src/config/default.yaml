@@ -1,4 +1,5 @@
 # --- Defaults ---
+eval: False
 
 # --- pymarl options ---
 runner: "episode" # Runs 1 env for an episode

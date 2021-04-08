@@ -82,7 +82,7 @@ class NormalPlayRun:
             self.stepper.t_env = timestep_to_load
 
             if self.args.evaluate or self.args.save_replay:
-                self.evaluate_sequential()
+                self._evaluate_sequential()
                 return
 
         # start training
@@ -144,7 +144,7 @@ class NormalPlayRun:
         for _ in range(n_test_runs):
             self.stepper.run(test_mode=True)
 
-    def evaluate_sequential(self):
+    def _evaluate_sequential(self):
         self.logger.console_logger.info("Evaluate for {} steps.".format(self.args.test_nepisode))
         for _ in range(self.args.test_nepisode):
             self.stepper.run(test_mode=True)
