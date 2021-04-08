@@ -77,7 +77,7 @@ def league_main(_config, _log):
 
         player = league.get_player(idx)
 
-        proc = LeagueProcess(player, conn, args=args, logger=logger)
+        proc = LeagueProcess(home=player, conn=conn, args=args, logger=logger)
         processes.append(proc)
         proc.start()
 
