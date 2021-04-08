@@ -10,10 +10,8 @@ from components.episode_buffer import EpisodeBatch
 
 class QLearner(Learner):
     def __init__(self, mac, scheme, logger, args, name=None):
-        self.args = args
-        self.mac = mac
-        self.logger = logger
-        self.name = "" if name is None else name + "_qlearner_"
+        super().__init__(mac, scheme, logger, args, name)
+        self.name += "_qlearner_"
         self.params = list(mac.parameters())
 
         self.last_target_update_episode = 0

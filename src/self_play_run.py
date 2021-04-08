@@ -10,6 +10,7 @@ from types import SimpleNamespace as SN
 
 from league.roles.players import Player
 from runners.self_play_runner import SelfPlayRunner
+from utils.checkpoint_manager import CheckpointManager
 from utils.logging import LeagueLogger
 from utils.run_utils import args_sanity_check
 from utils.timehelper import time_left, time_str
@@ -132,34 +133,10 @@ def run_sequential(args, logger, conn=None, player=None):
         home_learner.cuda()
         opponent_learner.cuda()
 
+    checkpoint_manager = CheckpointManager(args=args, logger=logger)
+
     if args.checkpoint_path != "":
-
-        timesteps = []
-        timestep_to_load = 0
-
-        if not os.path.isdir(args.checkpoint_path):
-            logger.console_logger.info("Checkpoint directory {} doesn't exist".format(args.checkpoint_path))
-            return
-
-        # Go through all files in args.checkpoint_path
-        for name in os.listdir(args.checkpoint_path):
-            full_name = os.path.join(args.checkpoint_path, name)
-            # Check if they are dirs the names of which are numbers
-            if os.path.isdir(full_name) and name.isdigit():
-                timesteps.append(int(name))
-
-        if args.load_step == 0:
-            # choose the max timestep
-            timestep_to_load = max(timesteps)
-        else:
-            # choose the timestep closest to load_step
-            timestep_to_load = min(timesteps, key=lambda x: abs(x - args.load_step))
-
-        model_path = os.path.join(args.checkpoint_path, str(timestep_to_load))
-
-        logger.console_logger.info("Loading model from {}".format(model_path))
-        opponent_learner.load_models(model_path)
-        home_learner.load_models(model_path)
+        timestep_to_load = checkpoint_manager.load(learners=[home_learner, opponent_learner])
         runner.t_env = timestep_to_load
 
         if args.evaluate or args.save_replay:
@@ -228,15 +205,7 @@ def run_sequential(args, logger, conn=None, player=None):
         # Model saving
         if args.save_model and (runner.t_env - model_save_time >= args.save_model_interval or model_save_time == 0):
             model_save_time = runner.t_env
-            save_path = os.path.join(args.local_results_path, "models", args.unique_token, str(runner.t_env))
-            # "results/models/{}".format(unique_token)
-            os.makedirs(save_path, exist_ok=True)
-            logger.console_logger.info("Saving models to {}".format(save_path))
-
-            # learner should handle saving/loading -- delegate actor save/load to mac,
-            # use appropriate filenames to do critics, optimizer states
-            home_learner.save_models(save_path)
-            opponent_learner.save_models(save_path)
+            checkpoint_manager.save(model_save_time, learners=[home_learner, opponent_learner])
 
         # Batch size == how many episodes are run -> add on top of episode counter
         episode += args.batch_size_run
