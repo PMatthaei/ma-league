@@ -20,7 +20,6 @@ class SelfPlayStepper:
 
         :param args:
         :param logger:
-        :param conn:
         """
         self.args = args
         self.logger = logger
@@ -154,7 +153,7 @@ class SelfPlayStepper:
         self.logger.collect_episode_stats(env_info, self.t)
         self.logger.add_stats(self.t_env, epsilons=self.epsilons)
 
-        return self.home_batch, self.opponent_batch
+        return self.home_batch, self.opponent_batch, env_info
 
     def _build_pre_transition_data(self):
         state = self.env.get_state()

@@ -3,6 +3,7 @@ from typing import List, Union
 
 import numpy as np
 
+from eval.methods import avg_proportional_loss
 from learners.learner import Learner
 from runs.self_play_run import SelfPlayRun
 from steppers.self_play_stepper import SelfPlayStepper
@@ -57,7 +58,7 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
                 episode = 0
                 home_ep_rewards, away_ep_rewards = [], []
                 while episode < self.eval_episodes:
-                    home_batch, away_batch = self.stepper.run()
+                    home_batch, away_batch, last_env_info = self.stepper.run()
                     home_ep_rewards.append(np.sum(home_batch["reward"].flatten().cpu().numpy()))
                     away_ep_rewards.append(np.sum(away_batch["reward"].flatten().cpu().numpy()))
                     episode += 1
@@ -67,11 +68,4 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         self.stepper.close_env()
         self.logger.console_logger.info("Finished JPC Evaluation")
 
-        self.logger.console_logger.info("Avg. Proportional Loss: {}".format(self.avg_proportional_loss(jpc_matrix)))
-
-    def avg_proportional_loss(self, jpc_matrix) -> float:
-        diag_mask = np.eye(*jpc_matrix.shape, dtype=bool)
-        d = np.mean(jpc_matrix[diag_mask])
-        off_mask = ~diag_mask
-        o = np.mean(jpc_matrix[off_mask])
-        return (d - o) / d
+        self.logger.console_logger.info("Avg. Proportional Loss: {}".format(avg_proportional_loss(jpc_matrix)))

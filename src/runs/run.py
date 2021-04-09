@@ -116,6 +116,9 @@ class NormalPlayRun:
                 self.last_log_T = self.stepper.t_env
 
         # Finish and clean up
+        self._finish()
+
+    def _finish(self):
         self.stepper.close_env()
         self.logger.console_logger.info("Finished Training")
 
