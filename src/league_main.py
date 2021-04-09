@@ -1,4 +1,6 @@
+import datetime
 import os
+import pprint
 import sys
 from copy import deepcopy
 from os.path import dirname, abspath
@@ -18,7 +20,8 @@ from league.components.coordinator import Coordinator
 from league.processes.league_message_handler_process import LeagueMessageHandler
 from league.utils.team_composer import TeamComposer
 from utils.logging import LeagueLogger
-from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy
+from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy, \
+    set_agents_only
 
 import numpy as np
 import torch as th
@@ -36,20 +39,31 @@ ex.captured_out_filter = apply_backspaces_and_linefeeds
 results_path = os.path.join(dirname(dirname(abspath(__file__))), "results")
 
 
-@ex.main
-def league_main(_config, _log):
-    # Load config and logger
-    config = config_copy(_config)
-    np.random.seed(config["seed"])
-    th.manual_seed(config["seed"])
-    config['env_args']['seed'] = config["seed"]
-
-    _config = args_sanity_check(config, _log)
+def run(_run, _config, _log):
+    _config = args_sanity_check(_config, _log)
+    _config['play_mode'] = "self"
+    set_agents_only(_config)
 
     args = SimpleNamespace(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"
 
     logger = LeagueLogger(_log)
+    _log.info("Experiment Parameters:")
+    experiment_params = pprint.pformat(_config,
+                                       indent=4,
+                                       width=1)
+    _log.info("\n\n" + experiment_params + "\n")
+
+    # configure tensorboard logger
+    unique_token = "{}__{}".format(args.name, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    args.unique_token = unique_token
+    if args.use_tensorboard:
+        tb_logs_direc = os.path.join(dirname(dirname(abspath(__file__))), "results", "tb_logs")
+        tb_exp_direc = os.path.join(tb_logs_direc, "{}").format(unique_token)
+        logger.setup_tensorboard(tb_exp_direc)
+
+    # sacred is on by default
+    logger.setup_sacred(_run)
 
     # Build league teams
     team_size = _config["team_size"]
@@ -72,7 +86,7 @@ def league_main(_config, _log):
 
     # Start league training
     for idx in range(league.size):
-        league_conn, conn = Pipe() # TODO: downgrade to queue in league process to provide info if no msg from here to child conn needed
+        league_conn, conn = Pipe()  # TODO: downgrade to queue in league process to provide info if no msg from here to child conn needed
         league_conns.append(league_conn)
 
         player = league.get_player(idx)
@@ -91,6 +105,18 @@ def league_main(_config, _log):
 
     # Wait for processes to finish
     [proc.join() for proc in processes]
+
+
+@ex.main
+def league_main(_run, _config, _log):
+    # Load config and logger
+    config = config_copy(_config)
+    np.random.seed(config["seed"])
+    th.manual_seed(config["seed"])
+    config['env_args']['seed'] = config["seed"]
+
+    # run the framework
+    run(_run, config, _log)
 
 
 if __name__ == '__main__':

@@ -8,11 +8,12 @@ from components.episode_buffer import ReplayBuffer
 
 class SelfPlayRun(NormalPlayRun):
 
-    def __init__(self, args, logger):
+    def __init__(self, args, logger, finish_callback=None, episode_callback=None):
         super().__init__(args, logger)
         self.args = args
         self.logger = logger
-
+        self.finish_callback = finish_callback
+        self.episode_callback = episode_callback
         # Init runner so we can get env info
         self.stepper: SelfPlayStepper = SelfPlayStepper(args=args, logger=logger)
 
@@ -64,9 +65,16 @@ class SelfPlayRun(NormalPlayRun):
             self.home_learner.cuda()
             self.opponent_learner.cuda()
 
+    def _finish(self):
+        super()._finish()
+        if self.finish_callback is not None:
+            self.finish_callback()
+
     def _train_episode(self, episode_num):
         # Run for a whole episode at a time
-        home_batch, opponent_batch = self.stepper.run(test_mode=False)
+        home_batch, opponent_batch, last_env_info = self.stepper.run(test_mode=False)
+        if self.episode_callback is not None:
+            self.episode_callback(last_env_info)
 
         self.home_buffer.insert_episode_batch(home_batch)
         self.opponent_buffer.insert_episode_batch(opponent_batch)

@@ -22,4 +22,4 @@ class Learner:
         raise NotImplementedError()
 
     def get_current_step(self) -> int:
-        raise NotImplementedError()
+        return 0 # TODO
