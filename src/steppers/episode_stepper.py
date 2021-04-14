@@ -22,9 +22,10 @@ class EpisodeStepper:
 
         self.env = env_REGISTRY[self.args.env](**self.args.env_args)
         self.policy_team_id = 0
-        controls = HeadlessControls(env=self.env)
-        controls.daemon = True
-        controls.start()
+        if self.args.headless_controls:
+            controls = HeadlessControls(env=self.env)
+            controls.daemon = True
+            controls.start()
 
         self.episode_limit = self.env.episode_limit
         self.t = 0  # current time step within the episode

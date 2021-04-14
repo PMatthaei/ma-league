@@ -26,13 +26,13 @@ class LeagueProcess(Process):
         while not self.terminated:
             # Generate new opponent to train against and load his current checkpoint
             self.away, flag = self.home.get_match()  # TODO load away and home into selfplayrun
-            self.logger.console_logger.info(self._get_match_str())
             if self.away is None:
                 warning("Opponent was none")
                 continue
 
-            play = SelfPlayRun(args=self.args, logger=self.logger,
-                               episode_callback=self.send_episode_result)
+            self.logger.console_logger.info(self._get_match_str())
+
+            play = SelfPlayRun(args=self.args, logger=self.logger, episode_callback=self.send_episode_result)
             play.start()
 
         self.send_run_finished()
