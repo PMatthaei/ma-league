@@ -7,9 +7,12 @@ from multiprocessing import Pipe
 import numpy as np
 
 from steppers.env_worker_process import EnvWorker
+import torch as th
+
+from utils.logging import Originator
 
 
-class ParallelStepper:
+class SelfPlayParallelStepper:
     def __init__(self, args, logger):
         """
         Based (very) heavily on SubprocVecEnv from OpenAI Baselines
@@ -26,14 +29,14 @@ class ParallelStepper:
         # Make subprocesses for the envs
         self.parent_conns, self.worker_conns = zip(*[Pipe() for _ in range(self.batch_size)])
         env_fn = env_REGISTRY[self.args.env]
-        self.ps = [
+        self.workers = [
             EnvWorker(worker_conn, CloudpickleWrapper(partial(env_fn, **self.args.env_args)), self.policy_team_id)
             for worker_conn in self.worker_conns
         ]
 
-        for p in self.ps:
-            p.daemon = True
-            p.start()
+        for worker in self.workers:
+            worker.daemon = True
+            worker.start()
 
         self.parent_conns[0].send(("get_env_info", None))
         self.env_info = self.parent_conns[0].recv()
@@ -49,21 +52,30 @@ class ParallelStepper:
         self.test_stats = {}
 
         self.log_train_stats_t = -100000
-        self.batch = None
-        self.mac = None
         self.new_batch_fn = None
         self.scheme = None
         self.groups = None
         self.preprocess = None
         self.env_steps_this_run = 0
 
-    def initialize(self, scheme, groups, preprocess, mac):
+        self.home_mac = None
+        self.away_mac = None
+        self.home_batch = None
+        self.away_batch = None
+
+    def initialize(self, scheme, groups, preprocess, home_mac, opponent_mac):
         self.new_batch_fn = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,
                                     preprocess=preprocess, device=self.args.device)
-        self.mac = mac
         self.scheme = scheme
         self.groups = groups
         self.preprocess = preprocess
+        self.home_mac = home_mac
+        self.away_mac = opponent_mac
+
+    @property
+    def epsilons(self):
+        return getattr(self.home_mac.action_selector, "epsilon", None), \
+               getattr(self.away_mac.action_selector, "epsilon", None)
 
     def get_env_info(self):
         return self.env_info
@@ -76,36 +88,59 @@ class ParallelStepper:
             parent_conn.send(("close", None))
 
     def reset(self):
-        self.batch = self.new_batch_fn()
+        self.home_batch = self.new_batch_fn()
+        self.away_batch = self.new_batch_fn()
 
         # Reset the envs
         for parent_conn in self.parent_conns:
             parent_conn.send(("reset", None))
-
-        pre_transition_data = {
+        # Pre transition data
+        home_ptd = {
             "state": [],
             "avail_actions": [],
             "obs": []
         }
+        away_ptd = home_ptd.copy()
+
         # Get the obs, state and avail_actions back
         for parent_conn in self.parent_conns:
             data = parent_conn.recv()
-            pre_transition_data["state"].append(data["state"])
-            pre_transition_data["avail_actions"].append(data["avail_actions"])
-            pre_transition_data["obs"].append(data["obs"])
+            away_ptd, home_ptd = self._append_pre_transition_data(away_ptd, home_ptd, data)
 
-        self.batch.update(pre_transition_data, ts=0)
-
+        self.home_batch.update(home_ptd, ts=0)
+        self.away_batch.update(away_ptd, ts=0)
         self.t = 0
         self.env_steps_this_run = 0
+
+    def _append_pre_transition_data(self, away_pre_transition_data, home_pre_transition_data, data):
+        state = data["state"]
+        actions = data["avail_actions"]
+        obs = data["obs"]
+        # TODO: only supports same team sizes!
+        home_avail_actions = actions[:len(actions) // 2]
+        home_obs = obs[:len(obs) // 2]
+        home_pre_transition_data["state"].append(state)
+        home_pre_transition_data["avail_actions"].append(home_avail_actions)
+        home_pre_transition_data["obs"].append(home_obs)
+
+        away_avail_actions = actions[len(actions) // 2:]
+        away_obs = obs[len(obs) // 2:]
+        away_pre_transition_data["state"].append(state)
+        away_pre_transition_data["avail_actions"].append(away_avail_actions)
+        away_pre_transition_data["obs"].append(away_obs)
+        return away_pre_transition_data, home_pre_transition_data
 
     def run(self, test_mode=False):
         self.reset()
 
         all_terminated = False
-        episode_returns = [0 for _ in range(self.batch_size)]
+        home_episode_returns = [0 for _ in range(self.batch_size)]
+        away_episode_returns = [0 for _ in range(self.batch_size)]
         episode_lengths = [0 for _ in range(self.batch_size)]
-        self.mac.init_hidden(batch_size=self.batch_size)
+
+        self.home_mac.init_hidden(batch_size=self.batch_size)
+        self.away_mac.init_hidden(batch_size=self.batch_size)
+
         terminated = [False for _ in range(self.batch_size)]
         envs_not_terminated = [b_idx for b_idx, termed in enumerate(terminated) if not termed]
         final_env_infos = []  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
@@ -114,15 +149,23 @@ class ParallelStepper:
 
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch for each un-terminated env
-            actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, bs=envs_not_terminated,
-                                              test_mode=test_mode)
+            home_actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
+                                                        test_mode=test_mode)
+            away_actions = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env,
+                                                        test_mode=test_mode)
+            actions = th.cat((home_actions[0], away_actions[0]))
+
             cpu_actions = actions.to("cpu").numpy()
 
             # Update the actions taken
-            actions_chosen = {
-                "actions": actions.unsqueeze(1)
+            home_actions_chosen = {
+                "actions": home_actions.unsqueeze(1)
             }
-            self.batch.update(actions_chosen, bs=envs_not_terminated, ts=self.t, mark_filled=False)
+            away_actions_chosen = {
+                "actions": away_actions.unsqueeze(1)
+            }
+            self.home_batch.update(home_actions_chosen, bs=envs_not_terminated, ts=self.t, mark_filled=False)
+            self.away_batch.update(away_actions_chosen, bs=envs_not_terminated, ts=self.t, mark_filled=False)
 
             # Send actions to each env
             action_idx = 0
@@ -139,26 +182,32 @@ class ParallelStepper:
                 break
 
             # Post step data we will insert for the current timestep
-            post_transition_data = {
+            home_post_transition_data = {
                 "reward": [],
                 "terminated": []
             }
+            away_post_transition_data = home_post_transition_data.copy()
+
             # Data for the next step we will insert in order to select an action
-            pre_transition_data = {
+            home_pre_transition_data = {
                 "state": [],
                 "avail_actions": [],
                 "obs": []
             }
+            away_pre_transition_data = home_pre_transition_data.copy()
 
             # Receive data back for each unterminated env
             for idx, parent_conn in enumerate(self.parent_conns):
                 if not terminated[idx]:
                     data = parent_conn.recv()
                     # Remaining data for this current timestep
-                    post_transition_data["reward"].append((data["reward"],))
+                    home_post_transition_data["reward"].append((data["reward"][0],))
+                    away_post_transition_data["reward"].append((data["reward"][0],))
 
-                    episode_returns[idx] += data["reward"]
+                    home_episode_returns[idx] += data["reward"][0]
+                    away_episode_returns[idx] += data["reward"][1]
                     episode_lengths[idx] += 1
+
                     if not test_mode:
                         self.env_steps_this_run += 1
 
@@ -168,21 +217,22 @@ class ParallelStepper:
                     if data["terminated"] and not data["info"].get("episode_limit", False):
                         env_terminated = True
                     terminated[idx] = data["terminated"]
-                    post_transition_data["terminated"].append((env_terminated,))
+                    home_post_transition_data["terminated"].append((env_terminated,))
+                    away_post_transition_data["terminated"].append((env_terminated,))
 
                     # Data for the next timestep needed to select an action
-                    pre_transition_data["state"].append(data["state"])
-                    pre_transition_data["avail_actions"].append(data["avail_actions"])
-                    pre_transition_data["obs"].append(data["obs"])
+                    self._append_pre_transition_data(away_pre_transition_data, home_pre_transition_data, data)
 
             # Add post_transiton data into the batch
-            self.batch.update(post_transition_data, bs=envs_not_terminated, ts=self.t, mark_filled=False)
+            self.home_batch.update(home_post_transition_data, bs=envs_not_terminated, ts=self.t, mark_filled=False)
+            self.away_batch.update(away_post_transition_data, bs=envs_not_terminated, ts=self.t, mark_filled=False)
 
             # Move onto the next timestep
             self.t += 1
 
             # Add the pre-transition data
-            self.batch.update(pre_transition_data, bs=envs_not_terminated, ts=self.t, mark_filled=True)
+            self.home_batch.update(home_pre_transition_data, bs=envs_not_terminated, ts=self.t, mark_filled=False)
+            self.away_batch.update(away_pre_transition_data, bs=envs_not_terminated, ts=self.t, mark_filled=False)
 
         if not test_mode:
             self.t_env += self.env_steps_this_run
@@ -196,9 +246,10 @@ class ParallelStepper:
             env_stat = parent_conn.recv()
             env_stats.append(env_stat)
 
-        self.logger.collect_episode_returns(episode_returns, parallel=True)
+        self.logger.collect_episode_returns(home_episode_returns, parallel=True)
+        self.logger.collect_episode_returns(away_episode_returns, org=Originator.AWAY, parallel=True)
         self.logger.collect_episode_stats(final_env_infos, self.t, parallel=True, batch_size=self.batch_size,
                                           ep_lens=episode_lengths)
-        self.logger.add_stats(self.t_env, epsilons=self.mac.action_selector.epsilon)
+        self.logger.add_stats(self.t_env, epsilons=self.epsilons)
 
-        return self.batch
+        return self.home_batch, self.away_batch

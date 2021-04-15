@@ -148,7 +148,7 @@ class LeagueLogger:
                 self.sacred_info["{}_T".format(key)] = [t_env]
                 self.sacred_info[key] = [value]
 
-    def collect_episode_returns(self, episode_return, org: Originator = "home", parallel=False):
+    def collect_episode_returns(self, episode_return, org: Originator = Originator.HOME, parallel=False):
         """
         Collect episodal returns depending on the current mode.
         :param parallel: Collected returns are from a parallel process
@@ -172,7 +172,8 @@ class LeagueLogger:
         # Integrate the new env_info into the stats
         if parallel:
             infos = env_info if len(self.ep_stats) == 0 else [self.ep_stats] + env_info
-            self.ep_stats.update({k: np.sum(self.get_stat(k, d) for d in infos) for k in set.union(*[set(d) for d in infos])})
+            self.ep_stats.update(
+                {k: np.sum(self.get_stat(k, d) for d in infos) for k in set.union(*[set(d) for d in infos])})
             self.ep_stats["n_episodes"] = batch_size + self.ep_stats.get("n_episodes", 0)
             self.ep_stats["ep_length"] = sum(ep_lens) + self.ep_stats.get("ep_length", 0)
         else:

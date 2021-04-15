@@ -1,8 +1,8 @@
 from runs.run import NormalPlayRun
-from steppers.self_play_stepper import SelfPlayStepper
 
 from learners import REGISTRY as le_REGISTRY
 from controllers import REGISTRY as mac_REGISTRY
+from steppers import SELF_REGISTRY as self_steppers_REGISTRY
 from components.episode_buffer import ReplayBuffer
 
 
@@ -15,7 +15,7 @@ class SelfPlayRun(NormalPlayRun):
         self.finish_callback = finish_callback
         self.episode_callback = episode_callback
         # Init runner so we can get env info
-        self.stepper: SelfPlayStepper = SelfPlayStepper(args=args, logger=logger)
+        self.stepper = self_steppers_REGISTRY[args.runner](args=args, logger=logger)
 
         # Set up schemes and groups here
         env_info = self.stepper.get_env_info()
@@ -42,11 +42,6 @@ class SelfPlayRun(NormalPlayRun):
         self.home_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
         self.opponent_mac = mac_REGISTRY[self.args.mac](self.opponent_buffer.scheme, self.groups, self.args)
 
-        # Give runner the scheme
-        self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
-                                home_mac=self.home_mac,
-                                opponent_mac=self.opponent_mac)
-
         # Learners
         learner = self.args.learner
         self.home_learner = le_REGISTRY[learner](self.home_mac, self.scheme, logger, self.args, name="home")
@@ -58,6 +53,12 @@ class SelfPlayRun(NormalPlayRun):
         if self.args.use_cuda:
             self.home_learner.cuda()
             self.opponent_learner.cuda()
+
+    def _init_stepper(self):
+        # Give runner the scheme
+        self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
+                                home_mac=self.home_mac,
+                                opponent_mac=self.opponent_mac)
 
     def _finish(self):
         super()._finish()
