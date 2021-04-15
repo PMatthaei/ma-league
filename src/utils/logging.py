@@ -1,6 +1,7 @@
 from collections import defaultdict
 import logging
 from enum import Enum
+from typing import Dict
 
 import numpy as np
 
@@ -93,7 +94,7 @@ class LeagueLogger:
             self.add_episodal_stats(t_env)
         elif t_env - self.log_train_stats_t >= self.runner_log_interval:
             self.add_episodal_stats(t_env)
-            if epsilons and type(epsilons) is not tuple:
+            if type(epsilons) is float and type(epsilons) is not tuple:
                 self.add_stat("epsilon", epsilons, t_env)
             else:
                 self.add_stat("home_epsilon", epsilons[0], t_env)
@@ -147,17 +148,20 @@ class LeagueLogger:
                 self.sacred_info["{}_T".format(key)] = [t_env]
                 self.sacred_info[key] = [value]
 
-    def collect_episode_returns(self, episode_return, org: Originator = "home"):
+    def collect_episode_returns(self, episode_return, org: Originator = "home", parallel=False):
         """
         Collect episodal returns depending on the current mode.
+        :param parallel: Collected returns are from a parallel process
         :param org: Originator of the incoming return data - home or opponent
         :param episode_return:
         :return:
         """
         self.ep_returns[org] = self.test_returns[org] if self.test_mode else self.train_returns[org]
+        if parallel:
+            self.ep_returns[org].extend(episode_return)
         self.ep_returns[org].append(episode_return)
 
-    def collect_episode_stats(self, env_info: dict, t: int):
+    def collect_episode_stats(self, env_info: Dict, t: int, parallel=False, batch_size=None, ep_lens=None):
         """
         Collect episodal training stats from the environment depending on the current mode.
         :param env_info:
@@ -166,9 +170,28 @@ class LeagueLogger:
         """
         self.ep_stats = self.test_stats if self.test_mode else self.train_stats
         # Integrate the new env_info into the stats
-        self.ep_stats.update({k: self.update_stats(k, env_info) for k in set(self.ep_stats) | set(env_info)})
-        self.ep_stats["n_episodes"] = 1 + self.ep_stats.get("n_episodes", 0)
-        self.ep_stats["ep_length"] = t + self.ep_stats.get("ep_length", 0)
+        if parallel:
+            infos = env_info if len(self.ep_stats) == 0 else [self.ep_stats] + env_info
+            self.ep_stats.update({k: np.sum(self.get_stat(k, d) for d in infos) for k in set.union(*[set(d) for d in infos])})
+            self.ep_stats["n_episodes"] = batch_size + self.ep_stats.get("n_episodes", 0)
+            self.ep_stats["ep_length"] = sum(ep_lens) + self.ep_stats.get("ep_length", 0)
+        else:
+            self.ep_stats.update({k: self.update_stats(k, env_info) for k in set(self.ep_stats) | set(env_info)})
+            self.ep_stats["n_episodes"] = 1 + self.ep_stats.get("n_episodes", 0)
+            self.ep_stats["ep_length"] = t + self.ep_stats.get("ep_length", 0)
+
+    def get_stat(self, k, d):
+        if k in d:
+            stat_type = type(d[k])
+        elif k in self.ep_stats:
+            stat_type = type(self.ep_stats[k])
+        else:
+            raise KeyError(f"Key {k} not found in supplied env_info dict which is used to update the current stats.")
+
+        if stat_type is int or stat_type is float or stat_type is bool:
+            return d.get(k, 0)
+        elif stat_type is list:
+            return np.array(d.get(k, []), dtype=int)
 
     def update_stats(self, k, env_info):
         """
