@@ -19,6 +19,8 @@ class EnvWorker(Process):
         env = self.env.fn()
         # Handle incoming commands from the remote connection within another process
         while not self.closed:
+            if not self.remote.poll():
+                continue
             cmd, data = self.remote.recv()
             if cmd == "step":
                 actions = data

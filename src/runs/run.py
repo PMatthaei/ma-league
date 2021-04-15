@@ -21,7 +21,7 @@ class NormalPlayRun:
         self.logger = logger
 
         # Init runner so we can get env info
-        self.stepper: EpisodeStepper = stepper_REGISTRY[args.runner](args=args, logger=logger)
+        self.stepper = stepper_REGISTRY[args.runner](args=args, logger=logger)
 
         # Set up schemes and groups here
         env_info = self.stepper.get_env_info()
@@ -30,18 +30,15 @@ class NormalPlayRun:
         self.args.state_shape = env_info["state_shape"]
 
         # Default/Base scheme- call AFTER extracting env info
-        groups, preprocess, scheme = self._build_schemes()
+        self.groups, self.preprocess, self.scheme = self._build_schemes()
 
         # Buffers
-        self.buffer = ReplayBuffer(scheme, groups, self.args.buffer_size, env_info["episode_limit"] + 1,
-                                   preprocess=preprocess,
+        self.buffer = ReplayBuffer(self.scheme, self.groups, self.args.buffer_size, env_info["episode_limit"] + 1,
+                                   preprocess=self.preprocess,
                                    device="cpu" if self.args.buffer_cpu_only else self.args.device)
 
         # Setup multi-agent controller here
-        self.mac = mac_REGISTRY[args.mac](self.buffer.scheme, groups, self.args)
-
-        # Give runner the scheme
-        self.stepper.initialize(scheme=scheme, groups=groups, preprocess=preprocess, mac=self.mac)
+        self.mac = mac_REGISTRY[args.mac](self.buffer.scheme, self.groups, self.args)
 
         # Learners
         self.learner = le_REGISTRY[self.args.learner](self.mac, self.buffer.scheme, logger, self.args, name="home")
@@ -78,7 +75,13 @@ class NormalPlayRun:
         }
         return groups, preprocess, scheme
 
+    def _init_stepper(self):
+        # Give runner the scheme
+        self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess, mac=self.mac)
+
     def start(self):
+        self._init_stepper()
+
         if self.args.checkpoint_path != "":
             timestep_to_load = self.checkpoint_manager.load(learners=self.learners)
             self.stepper.t_env = timestep_to_load
