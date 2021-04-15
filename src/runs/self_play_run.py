@@ -25,38 +25,32 @@ class SelfPlayRun(NormalPlayRun):
         self.args.state_shape = env_info["state_shape"]
 
         # Default/Base scheme
-        groups, preprocess, scheme = self._build_schemes()
+        self.groups, self.preprocess, self.scheme = self._build_schemes()
 
         # Buffers
         buffer_size = self.args.buffer_size
         device = "cpu" if self.args.buffer_cpu_only else self.args.device
-        self.opponent_buffer = ReplayBuffer(scheme, groups, buffer_size, env_info["episode_limit"] + 1,
-                                            preprocess=preprocess,
+        self.opponent_buffer = ReplayBuffer(self.scheme, self.groups, buffer_size, env_info["episode_limit"] + 1,
+                                            preprocess=self.preprocess,
                                             device=device)
 
-        self.home_buffer = ReplayBuffer(scheme, groups, buffer_size, env_info["episode_limit"] + 1,
-                                        preprocess=preprocess,
+        self.home_buffer = ReplayBuffer(self.scheme, self.groups, buffer_size, env_info["episode_limit"] + 1,
+                                        preprocess=self.preprocess,
                                         device=device)
 
         # Setup multi-agent controller here
-        self.home_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, groups, self.args)
-        self.opponent_mac = mac_REGISTRY[self.args.mac](self.opponent_buffer.scheme, groups, self.args)
+        self.home_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
+        self.opponent_mac = mac_REGISTRY[self.args.mac](self.opponent_buffer.scheme, self.groups, self.args)
 
         # Give runner the scheme
-        self.stepper.initialize(scheme=scheme, groups=groups, preprocess=preprocess, home_mac=self.home_mac,
+        self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
+                                home_mac=self.home_mac,
                                 opponent_mac=self.opponent_mac)
 
         # Learners
-        self.home_learner = le_REGISTRY[self.args.learner](self.home_mac,
-                                                           scheme,
-                                                           logger,
-                                                           self.args,
-                                                           name="home")
-        self.opponent_learner = le_REGISTRY[self.args.learner](self.opponent_mac,
-                                                               scheme,
-                                                               logger,
-                                                               self.args,
-                                                               name="opponent")
+        learner = self.args.learner
+        self.home_learner = le_REGISTRY[learner](self.home_mac, self.scheme, logger, self.args, name="home")
+        self.opponent_learner = le_REGISTRY[learner](self.opponent_mac, self.scheme, logger, self.args, name="opponent")
 
         self.learners = [self.home_learner, self.opponent_learner]
 
