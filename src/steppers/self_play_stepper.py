@@ -134,12 +134,10 @@ class SelfPlayStepper:
         self.opponent_batch.update(opponent_last_data, ts=self.t)
 
         # Select actions in the last stored state
-        actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
-                                               test_mode=test_mode)
+        actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
         self.home_batch.update({"actions": actions}, ts=self.t)
 
-        actions = self.home_mac.select_actions(self.opponent_batch, t_ep=self.t, t_env=self.t_env,
-                                               test_mode=test_mode)
+        actions = self.home_mac.select_actions(self.opponent_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
         self.opponent_batch.update({"actions": actions}, ts=self.t)
 
         if not test_mode:
