@@ -155,10 +155,12 @@ class ParallelStepper:
                 if not terminated[idx]:
                     data = parent_conn.recv()
                     # Remaining data for this current timestep
-                    post_transition_data["reward"].append((data["reward"],))
+                    policy_team_reward = data["reward"][self.policy_team_id]
+                    post_transition_data["reward"].append((policy_team_reward,))
 
-                    episode_returns[idx] += data["reward"]
+                    episode_returns[idx] += policy_team_reward
                     episode_lengths[idx] += 1
+
                     if not test_mode:
                         self.env_steps_this_run += 1
 

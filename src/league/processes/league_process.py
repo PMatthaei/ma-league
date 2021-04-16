@@ -11,7 +11,7 @@ from runs.self_play_run import SelfPlayRun
 from utils.logging import LeagueLogger
 
 
-class LeagueProcess(Process):
+class LeagueRun(Process):
     def __init__(self, home: Player, conn: Connection, args: SimpleNamespace, logger: LeagueLogger):
         super().__init__()
         self.home = home
