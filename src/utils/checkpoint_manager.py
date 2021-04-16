@@ -1,6 +1,7 @@
 import os
 from typing import List
 
+from exceptions.checkpoint_exceptions import NoLearnersProvided
 from learners.learner import Learner
 from main import results_path
 
@@ -15,6 +16,8 @@ class CheckpointManager:
         pass
 
     def save(self, t_env, learners: List[Learner]) -> str:
+        if len(learners) == 0:
+            raise NoLearnersProvided()
         save_path = os.path.join(results_path, "models", self.unique_token, str(t_env))
         os.makedirs(save_path, exist_ok=True)
         # Save all provided learners in the same path

@@ -36,8 +36,8 @@ class EnvWorker(Process):
                     "avail_actions": avail_actions,
                     "obs": obs,
                     # Rest of the data for the current timestep
-                    "reward": reward[self.policy_team_id],
-                    "terminated": done_n[self.policy_team_id],
+                    "reward": reward,
+                    "terminated": done_n,
                     "info": env_info
                 })
             elif cmd == "reset":

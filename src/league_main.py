@@ -15,7 +15,7 @@ from sacred.utils import apply_backspaces_and_linefeeds
 
 from league.components.payoff import Payoff
 from league.league import League
-from league.processes.league_process import LeagueProcess
+from league.processes.league_process import LeagueRun
 from league.components.coordinator import Coordinator
 from league.processes.league_message_handler_process import LeagueMessageHandler
 from league.utils.team_composer import TeamComposer
@@ -91,7 +91,7 @@ def run(_run, _config, _log):
 
         player = league.get_player(idx)
 
-        proc = LeagueProcess(home=player, conn=conn, args=args, logger=logger)
+        proc = LeagueRun(home=player, conn=conn, args=args, logger=logger)
         processes.append(proc)
         proc.start()
 

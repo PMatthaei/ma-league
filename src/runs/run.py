@@ -6,11 +6,9 @@ from utils.checkpoint_manager import CheckpointManager
 from utils.timehelper import time_left, time_str
 
 from learners import REGISTRY as le_REGISTRY
-from steppers import EpisodeStepper
 from controllers import REGISTRY as mac_REGISTRY
 from components.episode_buffer import ReplayBuffer
 from components.transforms import OneHot
-
 from steppers import REGISTRY as stepper_REGISTRY
 
 
@@ -19,51 +17,59 @@ class NormalPlayRun:
     def __init__(self, args, logger):
         self.args = args
         self.logger = logger
+        self.last_test_T = -self.args.test_interval - 1
+        self.last_log_T = 0
+        self.model_save_time = 0
+        self.learners = []
+        self.start_time = time.time()
+        self.last_time = self.start_time
 
-        # Init runner so we can get env info
-        self.stepper = stepper_REGISTRY[args.runner](args=args, logger=logger)
+        # Init stepper so we can get env info
+        self._build_stepper()
 
-        # Set up schemes and groups here
-        env_info = self.stepper.get_env_info()
-        self.args.n_agents = int(env_info["n_agents"])
-        self.args.n_actions = env_info["n_actions"]
-        self.args.state_shape = env_info["state_shape"]
+        # Get env info from stepper
+        self.env_info = self.stepper.get_env_info()
+
+        # Retrieve important data from the env and set to build schemes
+        self._set_scheme_meta()
 
         # Default/Base scheme- call AFTER extracting env info
         self.groups, self.preprocess, self.scheme = self._build_schemes()
 
-        # Buffers
-        self.buffer = ReplayBuffer(self.scheme, self.groups, self.args.buffer_size, env_info["episode_limit"] + 1,
-                                   preprocess=self.preprocess,
-                                   device="cpu" if self.args.buffer_cpu_only else self.args.device)
-
-        # Setup multi-agent controller here
-        self.mac = mac_REGISTRY[args.mac](self.buffer.scheme, self.groups, self.args)
-
-        # Learners
-        self.learner = le_REGISTRY[self.args.learner](self.mac, self.buffer.scheme, logger, self.args, name="home")
+        self._build_learners()
 
         # Activate CUDA mode if supported
         if self.args.use_cuda:
-            self.learner.cuda()
+            [learner.cuda() for learner in self.learners]
 
-        self.learners = [self.learner]
         self.checkpoint_manager = CheckpointManager(args=self.args, logger=self.logger)
 
-        self.last_test_T = -self.args.test_interval - 1
-        self.last_log_T = 0
-        self.model_save_time = 0
+    def _build_learners(self):
+        # Buffers
+        self.home_buffer = ReplayBuffer(self.scheme, self.groups, self.args.buffer_size,
+                                        self.env_info["episode_limit"] + 1,
+                                        preprocess=self.preprocess,
+                                        device="cpu" if self.args.buffer_cpu_only else self.args.device)
+        # Setup multi-agent controller here
+        self.home_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
+        # Learners
+        self.home_learner = le_REGISTRY[self.args.learner](self.home_mac, self.home_buffer.scheme, self.logger,
+                                                           self.args,
+                                                           name="home")
+        # Register in list of learners
+        self.learners.append(self.home_learner)
 
-        self.start_time = time.time()
-        self.last_time = self.start_time
+    def _set_scheme_meta(self):
+        self.args.n_agents = int(self.env_info["n_agents"])
+        self.args.n_actions = self.env_info["n_actions"]
+        self.args.state_shape = self.env_info["state_shape"]
 
     def _build_schemes(self):
-        env_info = self.stepper.get_env_info()
         scheme = {
-            "state": {"vshape": env_info["state_shape"]},
-            "obs": {"vshape": env_info["obs_shape"], "group": "agents"},
+            "state": {"vshape": self.env_info["state_shape"]},
+            "obs": {"vshape": self.env_info["obs_shape"], "group": "agents"},
             "actions": {"vshape": (1,), "group": "agents", "dtype": th.long},
-            "avail_actions": {"vshape": (env_info["n_actions"],), "group": "agents", "dtype": th.int},
+            "avail_actions": {"vshape": (self.env_info["n_actions"],), "group": "agents", "dtype": th.int},
             "reward": {"vshape": (1,)},
             "terminated": {"vshape": (1,), "dtype": th.uint8},
         }
@@ -75,9 +81,12 @@ class NormalPlayRun:
         }
         return groups, preprocess, scheme
 
-    def _init_stepper(self):
+    def _build_stepper(self):
         # Give runner the scheme
-        self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess, mac=self.mac)
+        self.stepper = stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
+
+    def _init_stepper(self):
+        self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess, mac=self.home_mac)
 
     def start(self):
         self._init_stepper()
@@ -130,9 +139,9 @@ class NormalPlayRun:
 
     def _train_episode(self, episode_num):
         episode_batch = self.stepper.run(test_mode=False)
-        self.buffer.insert_episode_batch(episode_batch)
-        if self.buffer.can_sample(self.args.batch_size):
-            episode_sample = self.buffer.sample(self.args.batch_size)
+        self.home_buffer.insert_episode_batch(episode_batch)
+        if self.home_buffer.can_sample(self.args.batch_size):
+            episode_sample = self.home_buffer.sample(self.args.batch_size)
 
             # Truncate batch to only filled timesteps
             max_ep_t = episode_sample.max_t_filled()
@@ -141,7 +150,7 @@ class NormalPlayRun:
             if episode_sample.device != self.args.device:
                 episode_sample.to(self.args.device)
 
-            self.learner.train(episode_sample, self.stepper.t_env, episode_num)
+            self.home_learner.train(episode_sample, self.stepper.t_env, episode_num)
 
     def _test(self, n_test_runs):
         self.logger.console_logger.info("t_env: {} / {}".format(self.stepper.t_env, self.args.t_max))

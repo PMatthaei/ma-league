@@ -7,6 +7,7 @@ import numpy as np
 from eval.methods import avg_proportional_loss
 from learners.learner import Learner
 from runs.self_play_run import SelfPlayRun
+from steppers import SelfPlayParallelStepper
 from steppers.self_play_stepper import SelfPlayStepper
 
 
@@ -23,9 +24,12 @@ class PolicyPair:
 
 class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
     def __init__(self, args, logger, instances: int = 2, eval_episodes=100):
+        args.runner = "episode" # TODO parallel self play stepper breaks with EOF used in here
         super().__init__(args, logger)
         self.args = args
         self.logger = logger
+        self.child_run_args = args
+        self.child_run_args.runner = "episode"
         self.instances = instances
         self.eval_episodes = eval_episodes
         manager = Manager()
@@ -35,18 +39,19 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
     def run_training(self, instance: int, policies):
         # Start a self play run
         self.args.t_max = 100
-        play = SelfPlayRun(args=self.args, logger=self.logger)
+        play = SelfPlayRun(args=self.child_run_args, logger=self.logger)
         play.start()
 
         # Save policies for evaluation
         # TODO are these really saved or just references which are changed by another selfplayrun
-        policies[instance] = PolicyPair(one=play.home_learner, two=play.opponent_learner)
+        policies[instance] = PolicyPair(one=play.home_learner, two=play.away_learner)
 
     def start(self) -> None:
         """
         Evaluate a policy pair with joint policy correlation.
         Therefore the policy is playing against it`s training partner to measure if there is correlation in results.
         """
+        self._init_stepper()
         procs = []
         # Train policies
         for instance in range(self.instances):
@@ -100,11 +105,11 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         episode = 0
         home_ep_rewards, away_ep_rewards = [], []
         # Create a stepper per pool worker if parallel eval used else use the sequential default stepper
-        stepper = SelfPlayStepper(args=self.args, logger=self.logger) if parallel else self.stepper
+        stepper = SelfPlayParallelStepper(args=self.args, logger=self.logger) if parallel else self.stepper
         if parallel:
             stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
                                home_mac=self.home_mac,
-                               opponent_mac=self.opponent_mac)
+                               opponent_mac=self.away_mac)
         # Run certain amount of evaluation episodes on the provided learners above
         while episode < self.eval_episodes:
             home_batch, away_batch, last_env_info = stepper.run()
