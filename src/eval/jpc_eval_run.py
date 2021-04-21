@@ -8,7 +8,32 @@ from eval.methods import avg_proportional_loss
 from learners.learner import Learner
 from runs.self_play_run import SelfPlayRun
 from steppers import SelfPlayParallelStepper
-from steppers.self_play_stepper import SelfPlayStepper
+
+
+class TrainInstance(Process):
+    def __init__(self, args, logger, instance: int, policies):
+        """
+        A train instance under JPC performs self play and saves the resulting policies/learners in the policy collection
+        :param args:
+        :param logger:
+        :param instance:
+        :param policies:
+        """
+        super().__init__()
+        self.args = args
+        self.logger = logger
+        self.instance = instance
+        self.policies = policies
+
+    def run(self) -> None:
+        # Start a self play run
+        self.args.t_max = 100
+        play = SelfPlayRun(args=self.args, logger=self.logger)
+        play.start()
+
+        # Save policy pair for evaluation
+        # TODO are these really saved or just references which are changed by another selfplayrun
+        self.policies[self.instance] = PolicyPair(one=play.home_learner, two=play.away_learner)
 
 
 class PolicyPair:
@@ -24,7 +49,7 @@ class PolicyPair:
 
 class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
     def __init__(self, args, logger, instances: int = 2, eval_episodes=100):
-        args.runner = "episode" # TODO parallel self play stepper breaks with EOF used in here
+        args.runner = "episode"  # TODO parallel self play stepper breaks with EOF used in here
         super().__init__(args, logger)
         self.args = args
         self.logger = logger
@@ -36,16 +61,6 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         self.policies = manager.list([None] * self.instances)
         self.jpc_matrix = manager.list([[None] * self.instances for _ in range(self.instances)])
 
-    def run_training(self, instance: int, policies):
-        # Start a self play run
-        self.args.t_max = 100
-        play = SelfPlayRun(args=self.child_run_args, logger=self.logger)
-        play.start()
-
-        # Save policies for evaluation
-        # TODO are these really saved or just references which are changed by another selfplayrun
-        policies[instance] = PolicyPair(one=play.home_learner, two=play.away_learner)
-
     def start(self) -> None:
         """
         Evaluate a policy pair with joint policy correlation.
@@ -55,7 +70,7 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         procs = []
         # Train policies
         for instance in range(self.instances):
-            proc = Process(target=self.run_training, args=(instance, self.policies,))
+            proc = TrainInstance(args=self.child_run_args, logger=self.logger, instance=instance, policies=self.policies)
             proc.start()
             procs.append(proc)
 
@@ -76,6 +91,7 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         """
         pairs = list(itertools.product(range(self.instances), repeat=2))
         pool = Pool()
+        self.logger.console_logger.info("Evaluating {} pairings for {} episodes.".format(len(pairs), self.eval_episodes))
         pool.map(self.run_eval, pairs)
 
     def run_evals(self):
@@ -95,13 +111,12 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         :return:
         """
         i, j = instance_pair
-        self.logger.console_logger.info(
-            "Evaluating player one from instance {} against player two from instance {} for {} episodes"
-                .format(i, j, self.eval_episodes)
-        )
+        eval_descriptor = "Eval player 1 from instance {} against player 2 from instance {}".format(i, j)
+        self.logger.console_logger.info(eval_descriptor)
+
         # TODO are learners really persisted and the ones trained?
-        self.home_learner, self.opponent_learner = self.policies[i].one, self.policies[j].two
-        self.learners = [self.home_learner, self.opponent_learner]
+        self.home_learner, self.away_learner = self.policies[i].one, self.policies[j].two
+        self.learners = [self.home_learner, self.away_learner]
         episode = 0
         home_ep_rewards, away_ep_rewards = [], []
         # Create a stepper per pool worker if parallel eval used else use the sequential default stepper
@@ -117,3 +132,6 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
             away_ep_rewards.append(np.sum(away_batch["reward"].flatten().cpu().numpy()))
             episode += 1
         self.jpc_matrix[i][j] = np.mean(home_ep_rewards) + np.mean(away_ep_rewards)
+
+    def _build_eval_str(self, i, j):
+        return

@@ -5,10 +5,11 @@ from functools import partial
 from components.episode_buffer import EpisodeBatch
 import torch as th
 
+from steppers import EpisodeStepper
 from utils.logging import Originator
 
 
-class SelfPlayStepper:
+class SelfPlayStepper(EpisodeStepper):
 
     def __init__(self, args, logger):
         """
@@ -19,53 +20,22 @@ class SelfPlayStepper:
         :param args:
         :param logger:
         """
-        self.args = args
-        self.logger = logger
-        self.batch_size = self.args.batch_size_run
-        assert self.batch_size == 1
-        self.env = env_REGISTRY[self.args.env](**self.args.env_args)
-
-        if self.args.headless_controls:
-            controls = HeadlessControls(env=self.env)
-            controls.daemon = True
-            controls.start()
-
-        self.episode_limit = self.env.episode_limit
-        self.t = 0  # current time step within the episode
-
-        self.t_env = 0  # total time steps for this runner in the provided environment across multiple episodes
-
-        self.new_batch = None
-        self.home_mac = None
+        super().__init__(args, logger)
         self.away_mac = None
-        self.home_batch = None
         self.away_batch = None
 
-    def initialize(self, scheme, groups, preprocess, home_mac, opponent_mac):
-        self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,
-                                 preprocess=preprocess, device=self.args.device)
-        self.home_mac = home_mac
-        self.away_mac = opponent_mac
+    def initialize(self, scheme, groups, preprocess, home_mac, away_mac=None):
+        super().initialize(scheme, groups, preprocess, home_mac)
+        self.away_mac = away_mac
 
     @property
     def epsilons(self):
         return getattr(self.home_mac.action_selector, "epsilon", None), \
                getattr(self.away_mac.action_selector, "epsilon", None)
 
-    def get_env_info(self):
-        return self.env.get_env_info()
-
-    def save_replay(self):
-        raise NotImplementedError()
-
-    def close_env(self):
-        self.env.close()
-
     def reset(self):
-        self.home_batch = self.new_batch()
-        self.away_batch = self.new_batch()
-        self.env.reset()
-        self.t = 0
+        super().reset()
+        self.away_batch = self.new_batch_fn()
 
     def run(self, test_mode=False):
         """
@@ -77,7 +47,7 @@ class SelfPlayStepper:
 
         terminated = False
         home_episode_return = 0
-        opp_episode_return = 0
+        away_episode_return = 0
 
         self.logger.test_mode = test_mode
         self.logger.test_n_episode = self.args.test_nepisode
@@ -110,7 +80,7 @@ class SelfPlayStepper:
 
             home_reward, away_reward = reward
             home_episode_return += home_reward
-            opp_episode_return += away_reward
+            away_episode_return += away_reward
 
             home_post_transition_data = {
                 "actions": home_actions,
@@ -152,7 +122,7 @@ class SelfPlayStepper:
         # Stats and Logging for two learners
         #
         self.logger.collect_episode_returns(home_episode_return, org=Originator.HOME)
-        self.logger.collect_episode_returns(opp_episode_return, org=Originator.AWAY)
+        self.logger.collect_episode_returns(away_episode_return, org=Originator.AWAY)
         self.logger.collect_episode_stats(env_info, self.t)
         self.logger.add_stats(self.t_env, epsilons=self.epsilons)
 
@@ -162,7 +132,7 @@ class SelfPlayStepper:
         state = self.env.get_state()
         actions = self.env.get_avail_actions()
         obs = self.env.get_obs()
-        # TODO: only supports same team sizes!
+        # TODO: only supports same team sizes! and only two teams
         home_avail_actions = actions[:len(actions) // 2]
         home_obs = obs[:len(obs) // 2]
         home_pre_transition_data = {
