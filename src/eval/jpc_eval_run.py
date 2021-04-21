@@ -2,12 +2,11 @@ import itertools
 from multiprocessing.dummy import Process, Pool
 from multiprocessing.dummy import Manager
 
-import numpy as np
+import torch as th
 
 from eval.methods import avg_proportional_loss
 from learners.learner import Learner
 from runs.self_play_run import SelfPlayRun
-from steppers import SelfPlayParallelStepper
 
 
 class TrainInstance(Process):
@@ -49,7 +48,6 @@ class PolicyPair:
 
 class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
     def __init__(self, args, logger, instances: int = 2, eval_episodes=100):
-        args.runner = "episode"  # TODO parallel self play stepper breaks with EOF used in here
         super().__init__(args, logger)
         self.args = args
         self.logger = logger
@@ -70,7 +68,8 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         procs = []
         # Train policies
         for instance in range(self.instances):
-            proc = TrainInstance(args=self.child_run_args, logger=self.logger, instance=instance, policies=self.policies)
+            proc = TrainInstance(args=self.child_run_args, logger=self.logger, instance=instance,
+                                 policies=self.policies)
             proc.start()
             procs.append(proc)
 
@@ -81,7 +80,7 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
 
         self.stepper.close_env()
         self.logger.console_logger.info("Finished JPC Evaluation")
-        jpc_matrix = np.array(self.jpc_matrix)  # convert to numpy for calculations
+        jpc_matrix = th.tensor(self.jpc_matrix)  # convert to numpy for calculations
         self.logger.console_logger.info("Avg. Proportional Loss: {}".format(avg_proportional_loss(jpc_matrix)))
 
     def run_evals_parallel(self) -> None:
@@ -91,22 +90,13 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         """
         pairs = list(itertools.product(range(self.instances), repeat=2))
         pool = Pool()
-        self.logger.console_logger.info("Evaluating {} pairings for {} episodes.".format(len(pairs), self.eval_episodes))
+        self.logger.console_logger.info(
+            "Evaluating {} pairings for {} episodes.".format(len(pairs), self.eval_episodes))
         pool.map(self.run_eval, pairs)
 
-    def run_evals(self):
-        """
-        Let all instances play against each other in sequential loop
-        :return:
-        """
-        for i in range(self.instances):
-            for j in range(self.instances):
-                self.run_eval((i, j), parallel=False)
-
-    def run_eval(self, instance_pair, parallel=True) -> None:
+    def run_eval(self, instance_pair) -> None:
         """
         Evaluates the performance of a instance pairing between player one and two.
-        :param parallel: Whether the evaluation run is part of a parallel execution
         :param instance_pair: A pair of instances to test
         :return:
         """
@@ -115,23 +105,7 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         self.logger.console_logger.info(eval_descriptor)
 
         # TODO are learners really persisted and the ones trained?
-        self.home_learner, self.away_learner = self.policies[i].one, self.policies[j].two
-        self.learners = [self.home_learner, self.away_learner]
-        episode = 0
-        home_ep_rewards, away_ep_rewards = [], []
-        # Create a stepper per pool worker if parallel eval used else use the sequential default stepper
-        stepper = SelfPlayParallelStepper(args=self.args, logger=self.logger) if parallel else self.stepper
-        if parallel:
-            stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
-                               home_mac=self.home_mac,
-                               away_mac=self.away_mac)
-        # Run certain amount of evaluation episodes on the provided learners above
-        while episode < self.eval_episodes:
-            home_batch, away_batch, last_env_info = stepper.run()
-            home_ep_rewards.append(np.sum(home_batch["reward"].flatten().cpu().numpy()))
-            away_ep_rewards.append(np.sum(away_batch["reward"].flatten().cpu().numpy()))
-            episode += 1
-        self.jpc_matrix[i][j] = np.mean(home_ep_rewards) + np.mean(away_ep_rewards)
-
-    def _build_eval_str(self, i, j):
-        return
+        play = SelfPlayRun(args=self.args, logger=self.logger)
+        play.set_learners(self.policies[i].one, self.policies[j].two)
+        home_mean_r, away_mean_r = play.evaluate_mean_returns(episode_n=self.eval_episodes)
+        self.jpc_matrix[i][j] = home_mean_r + away_mean_r
