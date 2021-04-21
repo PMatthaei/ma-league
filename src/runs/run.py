@@ -12,7 +12,31 @@ from components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
 
 
-class NormalPlayRun:
+class Run:
+
+    def _build_learners(self):
+        raise NotImplementedError()
+
+    def _set_scheme_meta(self):
+        raise NotImplementedError()
+
+    def _build_stepper(self):
+        raise NotImplementedError()
+
+    def _init_stepper(self):
+        raise NotImplementedError()
+
+    def start(self):
+        raise NotImplementedError()
+
+    def _finish(self):
+        raise NotImplementedError()
+
+    def _train_episode(self, episode_num):
+        raise NotImplementedError()
+
+
+class NormalPlayRun(Run):
 
     def __init__(self, args, logger):
         self.args = args
@@ -86,7 +110,7 @@ class NormalPlayRun:
         self.stepper = stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
 
     def _init_stepper(self):
-        self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess, mac=self.home_mac)
+        self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess, home_mac=self.home_mac)
 
     def start(self):
         self._init_stepper()

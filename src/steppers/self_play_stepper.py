@@ -37,20 +37,20 @@ class SelfPlayStepper:
 
         self.new_batch = None
         self.home_mac = None
-        self.opponent_mac = None
+        self.away_mac = None
         self.home_batch = None
-        self.opponent_batch = None
+        self.away_batch = None
 
     def initialize(self, scheme, groups, preprocess, home_mac, opponent_mac):
         self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,
                                  preprocess=preprocess, device=self.args.device)
         self.home_mac = home_mac
-        self.opponent_mac = opponent_mac
+        self.away_mac = opponent_mac
 
     @property
     def epsilons(self):
         return getattr(self.home_mac.action_selector, "epsilon", None), \
-               getattr(self.opponent_mac.action_selector, "epsilon", None)
+               getattr(self.away_mac.action_selector, "epsilon", None)
 
     def get_env_info(self):
         return self.env.get_env_info()
@@ -63,7 +63,7 @@ class SelfPlayStepper:
 
     def reset(self):
         self.home_batch = self.new_batch()
-        self.opponent_batch = self.new_batch()
+        self.away_batch = self.new_batch()
         self.env.reset()
         self.t = 0
 
@@ -79,7 +79,7 @@ class SelfPlayStepper:
         self.logger.runner_log_interval = self.args.runner_log_interval
 
         self.home_mac.init_hidden(batch_size=self.batch_size)
-        self.opponent_mac.init_hidden(batch_size=self.batch_size)
+        self.away_mac.init_hidden(batch_size=self.batch_size)
 
         env_info = {}
 
@@ -92,20 +92,20 @@ class SelfPlayStepper:
             home_pre_transition_data, opponent_pre_transition_data = self._build_pre_transition_data()
 
             self.home_batch.update(home_pre_transition_data, ts=self.t)
-            self.opponent_batch.update(opponent_pre_transition_data, ts=self.t)
+            self.away_batch.update(opponent_pre_transition_data, ts=self.t)
 
             home_actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
                                                         test_mode=test_mode)
-            opponent_actions = self.opponent_mac.select_actions(self.opponent_batch, t_ep=self.t, t_env=self.t_env,
-                                                                test_mode=test_mode)
+            away_actions = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env,
+                                                        test_mode=test_mode)
 
-            all_actions = th.cat((home_actions[0], opponent_actions[0]))
+            all_actions = th.cat((home_actions[0], away_actions[0]))
             obs, reward, done_n, env_info = self.env.step(all_actions)
             self.env.render()
 
-            home_reward, opponent_reward = reward
+            home_reward, away_reward = reward
             home_episode_return += home_reward
-            opp_episode_return += opponent_reward
+            opp_episode_return += away_reward
 
             home_post_transition_data = {
                 "actions": home_actions,
@@ -113,14 +113,14 @@ class SelfPlayStepper:
                 "terminated": [(done_n[0],)],
             }
             opponent_post_transition_data = {
-                "actions": opponent_actions,
-                "reward": [(opponent_reward,)],
-                "terminated": [(done_n[1],)],
+                "actions": away_actions,
+                "reward": [(away_reward,)],
+                "terminated": [(done_n[1],)], # TODO Correct to feed every agent its own done? the env finishes on any(done_n)
             }
             # Termination is dependent on all team-wise terminations
             terminated = any(done_n)
             self.home_batch.update(home_post_transition_data, ts=self.t)
-            self.opponent_batch.update(opponent_post_transition_data, ts=self.t)
+            self.away_batch.update(opponent_post_transition_data, ts=self.t)
 
             self.t += 1
         #
@@ -131,14 +131,14 @@ class SelfPlayStepper:
         home_last_data, opponent_last_data = self._build_pre_transition_data()
 
         self.home_batch.update(home_last_data, ts=self.t)
-        self.opponent_batch.update(opponent_last_data, ts=self.t)
+        self.away_batch.update(opponent_last_data, ts=self.t)
 
         # Select actions in the last stored state
         actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
         self.home_batch.update({"actions": actions}, ts=self.t)
 
-        actions = self.home_mac.select_actions(self.opponent_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
-        self.opponent_batch.update({"actions": actions}, ts=self.t)
+        actions = self.home_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+        self.away_batch.update({"actions": actions}, ts=self.t)
 
         if not test_mode:
             self.t_env += self.t
@@ -151,7 +151,7 @@ class SelfPlayStepper:
         self.logger.collect_episode_stats(env_info, self.t)
         self.logger.add_stats(self.t_env, epsilons=self.epsilons)
 
-        return self.home_batch, self.opponent_batch, env_info
+        return self.home_batch, self.away_batch, env_info
 
     def _build_pre_transition_data(self):
         state = self.env.get_state()

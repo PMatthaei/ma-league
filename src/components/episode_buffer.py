@@ -3,12 +3,12 @@ import numpy as np
 from types import SimpleNamespace as SN
 
 
-def _check_safe_view(v, dest):
+def _check_safe_view(v, dest, key):
     idx = len(v.shape) - 1
     for s in dest.shape[::-1]:
         if v.shape[idx] != s:
             if s != 1:
-                raise ValueError("Unsafe reshape of {} to {}".format(v.shape, dest.shape))
+                raise ValueError("Unsafe reshape of {} to {} at Key: {}".format(v.shape, dest.shape, key))
         else:
             idx -= 1
 
@@ -177,7 +177,7 @@ class EpisodeBatch:
             dtype = self.scheme[key].get("dtype", th.float32)
             value = th.tensor(value, dtype=dtype, device=self.device)
             # Check validity of following view_as
-            _check_safe_view(value, target[key][_slices])
+            _check_safe_view(value, target[key][_slices], key)
             # Add value via view_as
             target[key][_slices] = value.view_as(target[key][_slices])
 
@@ -188,7 +188,7 @@ class EpisodeBatch:
                 for transform in self.preprocess[key][1]:  # Get all transforms and apply them in array order
                     value = transform.transform(value)
                 # Add transformed value via view_as
-                _check_safe_view(value, target[new_k][_slices])
+                _check_safe_view(value, target[new_k][_slices], key)
                 target[new_k][_slices] = value.view_as(target[new_k][_slices])
 
     def __getitem__(self, item):
