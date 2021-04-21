@@ -68,6 +68,11 @@ class SelfPlayStepper:
         self.t = 0
 
     def run(self, test_mode=False):
+        """
+        Run a single episode while performing self-play
+        :param test_mode:
+        :return:
+        """
         self.reset()
 
         terminated = False

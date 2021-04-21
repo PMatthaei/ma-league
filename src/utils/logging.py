@@ -197,10 +197,10 @@ class LeagueLogger:
 
         if stat_type is int or stat_type is float or stat_type is bool:
             return d.get(k, 0)
-        elif stat_type is list or isinstance(d[k], (np.ndarray, np.generic) ):
+        elif stat_type is list:
             return np.array(d.get(k, []), dtype=int)
-
-        print()
+        elif isinstance(d[k], (np.ndarray, np.generic)):
+            return d.get(k, np.array([]))
 
     def update_stats(self, k, env_info):
         """
