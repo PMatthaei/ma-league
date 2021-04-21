@@ -120,6 +120,7 @@ class SelfPlayParallelStepper(ParallelStepper):
                 if idx in running_envs:  # We produced actions for this env
                     if not terminateds[idx]:  # Only send the actions to the env if it hasn't terminateds
                         parent_conn.send(("step", cpu_actions[action_idx]))
+                        # parent_conn.send(("step", actions[action_idx])) # TODO only with torch/CUDA multiprocessing
                     action_idx += 1  # actions is not a list over every env
 
             # Update running_envs

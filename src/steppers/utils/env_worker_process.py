@@ -1,6 +1,7 @@
-from multiprocessing.dummy import Process
 from multiprocessing.dummy.connection import Connection
+from multiprocessing.dummy import Process
 
+# from torch.multiprocessing import Process
 from gym.vector.utils import CloudpickleWrapper
 
 
