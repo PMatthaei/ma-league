@@ -1,9 +1,11 @@
+from learners.learner import Learner
 from runs.run import NormalPlayRun
 
 from learners import REGISTRY as le_REGISTRY
 from controllers import REGISTRY as mac_REGISTRY
 from components.episode_buffer import ReplayBuffer
 from steppers import SELF_REGISTRY as self_steppers_REGISTRY
+import torch as th
 
 
 class SelfPlayRun(NormalPlayRun):
@@ -75,3 +77,25 @@ class SelfPlayRun(NormalPlayRun):
 
             self.home_learner.train(home_sample, self.stepper.t_env, episode_num)
             self.away_learner.train(away_sample, self.stepper.t_env, episode_num)
+
+    def evaluate_mean_returns(self, episode_n=1):
+        self.logger.console_logger.info("Evaluate for {} episodes.".format(episode_n))
+        home_ep_rewards = th.zeros(episode_n, device=th.device('cuda:0'))
+        away_ep_rewards = home_ep_rewards.detach().clone()
+
+        self._init_stepper()
+
+        for i in range(episode_n):
+            home_batch, away_batch, last_env_info = self.stepper.run(test_mode=True)
+            home_ep_rewards[i] = th.sum(home_batch["reward"].flatten())
+            away_ep_rewards[i] = th.sum(away_batch["reward"].flatten())
+
+        self._finish()
+
+        return th.mean(home_ep_rewards), th.mean(away_ep_rewards)
+
+    def set_learners(self, home: Learner, away: Learner):
+        self.home_learner = home
+        self.home_mac = home.mac
+        self.away_learner = away
+        self.away_mac = away.mac

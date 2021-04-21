@@ -139,8 +139,8 @@ class NormalPlayRun(Run):
                 self._test(n_test_runs)
 
             # Save model if configured
-            if self.args.save_model and (
-                    self.stepper.t_env - self.model_save_time >= self.args.save_model_interval or self.model_save_time == 0):
+            save_interval_reached = (self.stepper.t_env - self.model_save_time) >= self.args.save_model_interval
+            if self.args.save_model and (save_interval_reached or self.model_save_time == 0):
                 self.model_save_time = self.stepper.t_env
                 out_path = self.checkpoint_manager.save(self.model_save_time, learners=self.learners)
                 self.logger.console_logger.info("Saving models to {}".format(out_path))
