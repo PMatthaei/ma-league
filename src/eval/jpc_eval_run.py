@@ -109,7 +109,7 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         if parallel:
             stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
                                home_mac=self.home_mac,
-                               opponent_mac=self.away_mac)
+                               away_mac=self.away_mac)
         # Run certain amount of evaluation episodes on the provided learners above
         while episode < self.eval_episodes:
             home_batch, away_batch, last_env_info = stepper.run()

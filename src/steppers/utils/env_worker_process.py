@@ -11,16 +11,11 @@ class EnvWorker(Process):
         self.env = env
         self.policy_team_id = policy_team_id
 
-        self.away = None
-        self.closed = False
-
     def run(self) -> None:
         # Make environment
         env = self.env.fn()
         # Handle incoming commands from the remote connection within another process
-        while not self.closed:
-            if not self.remote.poll():
-                continue
+        while True:
             cmd, data = self.remote.recv()
             if cmd == "step":
                 actions = data
@@ -50,7 +45,7 @@ class EnvWorker(Process):
             elif cmd == "close":
                 env.close()
                 self.remote.close()
-                self.closed = True
+                break
             elif cmd == "get_env_info":
                 self.remote.send(env.get_env_info())
             elif cmd == "get_stats":

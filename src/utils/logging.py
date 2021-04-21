@@ -159,7 +159,8 @@ class LeagueLogger:
         self.ep_returns[org] = self.test_returns[org] if self.test_mode else self.train_returns[org]
         if parallel:
             self.ep_returns[org].extend(episode_return)
-        self.ep_returns[org].append(episode_return)
+        else:
+            self.ep_returns[org].append(episode_return)
 
     def collect_episode_stats(self, env_info: Dict, t: int, parallel=False, batch_size=None, ep_lens=None):
         """
@@ -171,9 +172,14 @@ class LeagueLogger:
         self.ep_stats = self.test_stats if self.test_mode else self.train_stats
         # Integrate the new env_info into the stats
         if parallel:
-            infos = env_info if len(self.ep_stats) == 0 else [self.ep_stats] + env_info
-            self.ep_stats.update(
-                {k: np.sum(self.get_stat(k, d) for d in infos) for k in set.union(*[set(d) for d in infos])})
+            if len(self.ep_stats) == 0 and len(env_info) > 0:
+                infos = env_info
+            elif len(self.ep_stats) < 0 and len(env_info) == 0:
+                infos = [self.ep_stats]
+            else:
+                infos = [self.ep_stats] + env_info
+
+            self.ep_stats.update({k: np.sum(self.get_stat(k, d) for d in infos) for k in set.union(*[set(d) for d in infos])})
             self.ep_stats["n_episodes"] = batch_size + self.ep_stats.get("n_episodes", 0)
             self.ep_stats["ep_length"] = sum(ep_lens) + self.ep_stats.get("ep_length", 0)
         else:
@@ -191,8 +197,10 @@ class LeagueLogger:
 
         if stat_type is int or stat_type is float or stat_type is bool:
             return d.get(k, 0)
-        elif stat_type is list:
+        elif stat_type is list or isinstance(d[k], (np.ndarray, np.generic) ):
             return np.array(d.get(k, []), dtype=int)
+
+        print()
 
     def update_stats(self, k, env_info):
         """

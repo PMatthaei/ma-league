@@ -32,14 +32,14 @@ class EpisodeStepper:
 
         self.t_env = 0  # total time steps for this runner in the provided environment across multiple episodes
 
-        self.batch = None
-        self.mac = None
+        self.home_batch = None
+        self.home_mac = None
         self.new_batch_fn = None
 
-    def initialize(self, scheme, groups, preprocess, mac):
+    def initialize(self, scheme, groups, preprocess, home_mac, away_mac=None):
         self.new_batch_fn = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,  # last step
                                     preprocess=preprocess, device=self.args.device)
-        self.mac = mac
+        self.home_mac = home_mac
 
     def get_env_info(self):
         return self.env.get_env_info()
@@ -51,25 +51,25 @@ class EpisodeStepper:
         self.env.close()
 
     def reset(self):
-        self.batch = self.new_batch_fn()
+        self.home_batch = self.new_batch_fn()
         self.env.reset()
         self.t = 0
 
     @property
     def epsilon(self):
-        return getattr(self.mac.action_selector, "epsilon", None)
+        return getattr(self.home_mac.action_selector, "epsilon", None)
 
     def run(self, test_mode=False):
 
         self.reset()
 
-        if self.mac is None:
+        if self.home_mac is None:
             raise RunnerMACNotInitialized()
 
         terminated = False
         episode_return = 0
 
-        self.mac.init_hidden(batch_size=self.batch_size)
+        self.home_mac.init_hidden(batch_size=self.batch_size)
 
         self.logger.test_mode = test_mode
         self.logger.test_n_episode = self.args.test_nepisode
@@ -86,11 +86,11 @@ class EpisodeStepper:
                 "obs": [self.env.get_obs()]
             }
 
-            self.batch.update(pre_transition_data, ts=self.t)
+            self.home_batch.update(pre_transition_data, ts=self.t)
 
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch of size 1
-            actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+            actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
 
             obs, reward, done_n, env_info = self.env.step(actions[0])
             self.env.render()
@@ -103,7 +103,7 @@ class EpisodeStepper:
                 "terminated": [(done_n[self.policy_team_id],)],
             }
 
-            self.batch.update(post_transition_data, ts=self.t)
+            self.home_batch.update(post_transition_data, ts=self.t)
             # Termination is dependent on all team-wise terminations - AI or policy controlled teams
             terminated = any(done_n)
 
@@ -115,11 +115,11 @@ class EpisodeStepper:
             "obs": [self.env.get_obs()]
         }
 
-        self.batch.update(last_data, ts=self.t)
+        self.home_batch.update(last_data, ts=self.t)
 
         # Select actions in the last stored state
-        actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
-        self.batch.update({"actions": actions}, ts=self.t)
+        actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+        self.home_batch.update({"actions": actions}, ts=self.t)
 
         if not test_mode:
             self.t_env += self.t
@@ -128,4 +128,4 @@ class EpisodeStepper:
         self.logger.collect_episode_stats(env_info, self.t)
         self.logger.add_stats(self.t_env, epsilons=self.epsilon)
 
-        return self.batch
+        return self.home_batch
