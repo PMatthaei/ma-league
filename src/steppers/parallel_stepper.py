@@ -100,6 +100,11 @@ class ParallelStepper:
         self.env_steps_this_run = 0
 
     def run(self, test_mode=False):
+        """
+        Run a single episode with multiple environments in parallel
+        :param test_mode:
+        :return:
+        """
         self.reset()
 
         self.logger.test_mode = test_mode

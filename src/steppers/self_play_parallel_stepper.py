@@ -69,6 +69,11 @@ class SelfPlayParallelStepper(ParallelStepper):
         self.env_steps_this_run = 0
 
     def run(self, test_mode=False):
+        """
+        Run a single episode with multiple environments in parallel while performing self-play
+        :param test_mode:
+        :return:
+        """
         self.reset()
 
         self.logger.test_mode = test_mode
@@ -76,8 +81,8 @@ class SelfPlayParallelStepper(ParallelStepper):
         self.logger.runner_log_interval = self.args.runner_log_interval
 
         all_terminated = False
-        home_episode_returns = [[] for _ in range(self.batch_size)]
-        away_episode_returns = [[] for _ in range(self.batch_size)]
+        home_episode_returns = [0 for _ in range(self.batch_size)]
+        away_episode_returns = [0 for _ in range(self.batch_size)]
         ep_lens = [0 for _ in range(self.batch_size)]
 
         self.home_mac.init_hidden(batch_size=self.batch_size)

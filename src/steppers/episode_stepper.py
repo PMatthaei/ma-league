@@ -60,7 +60,11 @@ class EpisodeStepper:
         return getattr(self.home_mac.action_selector, "epsilon", None)
 
     def run(self, test_mode=False):
-
+        """
+        Run a single episode
+        :param test_mode:
+        :return:
+        """
         self.reset()
 
         if self.home_mac is None:
