@@ -175,7 +175,10 @@ class EpisodeBatch:
 
             # Get data type and value of the scheme data
             dtype = self.scheme[key].get("dtype", th.float32)
-            value = th.tensor(value, dtype=dtype, device=self.device)
+            if isinstance(value, list):
+                value = th.tensor(value, dtype=dtype, device=self.device)
+            else:
+                value = value.to(dtype).to(device=self.device)
             # Check validity of following view_as
             _check_safe_view(value, target[key][_slices], key)
             # Add value via view_as

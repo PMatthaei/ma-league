@@ -62,7 +62,7 @@ def config_copy(config):
 def get_default_config(path):
     with open(os.path.join(path, "config", "default.yaml"), "r") as f:
         try:
-            return yaml.load(f)
+            return yaml.load(f, Loader=yaml.FullLoader)
         except yaml.YAMLError as exc:
             assert False, "default.yaml error: {}".format(exc)
 
@@ -78,7 +78,7 @@ def get_config(params, arg_name, subfolder, path):
     if config_name is not None:
         with open(os.path.join(path, "config", subfolder, "{}.yaml".format(config_name)), "r") as f:
             try:
-                config_dict = yaml.load(f)
+                config_dict = yaml.load(f, Loader=yaml.FullLoader)
             except yaml.YAMLError as exc:
                 assert False, "{}.yaml error: {}".format(config_name, exc)
         return config_dict
