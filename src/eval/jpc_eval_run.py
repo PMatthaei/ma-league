@@ -76,22 +76,21 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         [proc.join() for proc in procs]
 
         # Evaluate policies
-        self.run_evals_parallel()
+        self.evaluate()
 
         self.stepper.close_env()
         self.logger.console_logger.info("Finished JPC Evaluation")
         jpc_matrix = th.tensor(self.jpc_matrix)  # convert to numpy for calculations
         self.logger.console_logger.info("Avg. Proportional Loss: {}".format(avg_proportional_loss(jpc_matrix)))
 
-    def run_evals_parallel(self) -> None:
+    def evaluate(self) -> None:
         """
         Let all instances play against each other in parallel fashion
         :return:
         """
         pairs = list(itertools.product(range(self.instances), repeat=2))
         pool = Pool()
-        self.logger.console_logger.info(
-            "Evaluating {} pairings for {} episodes.".format(len(pairs), self.eval_episodes))
+        self.logger.console_logger.info("Evaluate {} pairings for {} episodes.".format(len(pairs), self.eval_episodes))
         pool.map(self.run_eval, pairs)
 
     def run_eval(self, instance_pair) -> None:

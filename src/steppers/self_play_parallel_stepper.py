@@ -100,6 +100,7 @@ class SelfPlayParallelStepper(ParallelStepper):
                                                         test_mode=test_mode)
             away_actions = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env, bs=running_envs,
                                                         test_mode=test_mode)
+
             actions = th.cat((home_actions, away_actions), dim=1)
 
             cpu_actions = actions.to("cpu").numpy()
