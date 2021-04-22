@@ -1,6 +1,6 @@
 import multiprocessing
 
-# import torch
+import torch
 from gym.vector.utils import CloudpickleWrapper
 
 from envs import REGISTRY as env_REGISTRY
@@ -126,13 +126,13 @@ class ParallelStepper:
         running_envs = [idx for idx, terminated in enumerate(terminateds) if not terminated]
         env_infos = []  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
 
+        self.actions = torch.zeros((self.batch_size, self.args.n_agents))
         while True:
 
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch for each un-terminated env
             actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, bs=running_envs,
                                                    test_mode=test_mode)
-            cpu_actions = actions.to("cpu").numpy()  # TODO why to cpu? because we send it over connection?
 
             # Update the actions taken
             actions_chosen = {
@@ -145,7 +145,8 @@ class ParallelStepper:
             for idx, parent_conn in enumerate(self.parent_conns):
                 if idx in running_envs:  # We produced actions for this env
                     if not terminateds[idx]:  # Only send the actions to the env if it hasn't terminated
-                        parent_conn.send(("step", cpu_actions[action_idx]))
+                        self.actions[action_idx] = actions[action_idx]
+                        parent_conn.send(("step", self.actions[action_idx]))
                     action_idx += 1  # actions is not a list over every env
 
             # Update running envs
