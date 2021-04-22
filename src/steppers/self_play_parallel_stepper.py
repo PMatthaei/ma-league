@@ -1,4 +1,7 @@
 from functools import partial
+
+import torch
+
 from components.episode_buffer import EpisodeBatch
 
 from steppers import ParallelStepper
@@ -92,6 +95,8 @@ class SelfPlayParallelStepper(ParallelStepper):
         running_envs = [idx for idx, terminated in enumerate(terminateds) if not terminated]
         env_infos = []  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
 
+        self.actions = torch.zeros((self.batch_size, self.args.n_agents * 2)) # TODO Assumes two teams of equal size
+
         while True:
 
             # Pass the entire batch of experiences up till now to the agents
@@ -102,8 +107,6 @@ class SelfPlayParallelStepper(ParallelStepper):
                                                         test_mode=test_mode)
 
             actions = th.cat((home_actions, away_actions), dim=1)
-
-            cpu_actions = actions.to("cpu").numpy()
 
             # Update the actions taken
             home_actions_chosen = {
@@ -120,8 +123,8 @@ class SelfPlayParallelStepper(ParallelStepper):
             for idx, parent_conn in enumerate(self.parent_conns):
                 if idx in running_envs:  # We produced actions for this env
                     if not terminateds[idx]:  # Only send the actions to the env if it hasn't terminateds
-                        parent_conn.send(("step", cpu_actions[action_idx]))
-                        # parent_conn.send(("step", actions[action_idx])) # TODO only with torch/CUDA multiprocessing
+                        self.actions[action_idx] = actions[action_idx]
+                        parent_conn.send(("step", self.actions[action_idx]))
                     action_idx += 1  # actions is not a list over every env
 
             # Update running_envs
