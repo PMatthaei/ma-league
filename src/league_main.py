@@ -72,12 +72,12 @@ def run(_run, _config, _log):
 
     # Shared objects
     manager = Manager()
-    p_matrix = manager.dict()
-    players = manager.list()
+    p_matrix = manager.dict()   # Payoff matrix
+    players = manager.list()    # List of current players
 
     # Infrastructure
-    processes = []
-    league_conns = []
+    processes = []  # All running processes representing an agent playing in the league
+    run_conns = []  # Connections from the parent process to each run
 
     # Create league
     payoff = Payoff(p_matrix=p_matrix, players=players)
@@ -86,8 +86,8 @@ def run(_run, _config, _log):
 
     # Start league training
     for idx in range(league.size):
-        league_conn, conn = Pipe()  # TODO: downgrade to queue in league process to provide info if no msg from here to child conn needed
-        league_conns.append(league_conn)
+        run_conn, conn = Pipe()  # TODO: downgrade to queue in league process to provide info if no msg from here to child conn needed
+        run_conns.append(run_conn)
 
         player = league.get_player(idx)
 
@@ -96,7 +96,7 @@ def run(_run, _config, _log):
         proc.start()
 
     # Handle message communication within the league
-    handler = LeagueMessageHandler(coordinator, league_conns)
+    handler = LeagueMessageHandler(coordinator, run_conns)
     handler.start()
     handler.join()
 
