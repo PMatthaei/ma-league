@@ -32,7 +32,7 @@ select hardware in "${hardware_options[@]}"; do
     ;;
 
   *)
-    echo "Invalid option. Try another one."
+    echo "Invalid option. Try another one. Or Quit"
     continue
     ;;
 
@@ -72,7 +72,7 @@ select run in "${run_options[@]}"; do
     ;;
 
   *)
-    echo "Invalid option. Try another one."
+    echo "Invalid option. Try another one. Or Quit"
     continue
     ;;
 
