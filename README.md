@@ -1,6 +1,11 @@
+```diff
+- Under construction
+```
+This repository relies heavily on components of: [oxwhirl/pymarl](https://github.com/oxwhirl/pymarl)
+
 # Multi-Agent League 
 
-League to train Multi-Agent algorithms.
+Framework to train Multi-Agent algorithms in Vanilla, Self-Play or League-Play.
 
 # Run example
 
@@ -9,5 +14,9 @@ Test your MA-env installation via:
 
 # Getting started
 
-1) `pip install -r requirements.txt`
+1) Create a virtual env and install dependecies via: `pip install -r requirements.txt`
+2) Test setup via `python src/main.py --config=qmix --env-config=ma with play_mode=normal`
 
+# Configuration
+
+# Run on Docker
