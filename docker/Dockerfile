@@ -23,15 +23,12 @@ RUN apt-get update
 RUN apt-get -y install python3
 RUN apt-get -y install python3-pip
 RUN pip3 install --upgrade pip
-
-# Python packages we use (or used at one point...)
 RUN python3 --version
 
-RUN mkdir /install
-WORKDIR /install
-
+# Install requirements
 COPY ./requirements.txt .
 RUN pip3 install -r requirements.txt
+# Install dev requirements
 RUN pip3 install git+https://github.com/PMatthaei/ma-env.git@master
 
 WORKDIR /ma-league
