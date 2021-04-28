@@ -36,16 +36,17 @@ class TeamComposer:
         self.logger.debug("Created {} unique units.".format(len(units)))
         return units
 
-    def _to_team_build_plan(self, id, units, is_scripted=False):
+    @staticmethod
+    def _to_team_build_plan(tid, units, is_scripted=False):
         """
         Convert to a build plan which is used to setup the environment.
-        :param id:
+        :param tid:
         :param units:
         :param is_scripted:
         :return:
         """
         return {  # Team
-            "id": id,
+            "id": tid,
             "is_scripted": is_scripted,
             "units": units
         }

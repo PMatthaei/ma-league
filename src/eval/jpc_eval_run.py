@@ -46,7 +46,7 @@ class PolicyPair:
         self.two = two
 
 
-class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
+class JointPolicyCorrelationEvaluationRun:
     def __init__(self, args, logger, instances: int = 2, eval_episodes=100):
         super().__init__(args, logger)
         self.args = args
@@ -64,7 +64,6 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         Evaluate a policy pair with joint policy correlation.
         Therefore the policy is playing against it`s training partner to measure if there is correlation in results.
         """
-        self._init_stepper()
         procs = []
         # Train policies
         for instance in range(self.instances):
@@ -78,9 +77,8 @@ class JointPolicyCorrelationEvaluationRun(SelfPlayRun):
         # Evaluate policies
         self.evaluate()
 
-        self.stepper.close_env()
         self.logger.console_logger.info("Finished JPC Evaluation")
-        jpc_matrix = th.tensor(self.jpc_matrix)  # convert to numpy for calculations
+        jpc_matrix = th.tensor(self.jpc_matrix)  # convert to torch tensor
         self.logger.console_logger.info("Avg. Proportional Loss: {}".format(avg_proportional_loss(jpc_matrix)))
 
     def evaluate(self) -> None:

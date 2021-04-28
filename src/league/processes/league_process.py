@@ -30,22 +30,22 @@ class LeagueRun(Process):
                 warning("Opponent was none")
                 continue
 
-            self.logger.console_logger.info(self._get_match_str())
+            self.logger.console_logger.info(str(self))
 
             play = SelfPlayRun(args=self.args, logger=self.logger, episode_callback=self.send_episode_result)
             play.start()
 
-        self.send_run_finished()
+        self._close()
 
     def send_episode_result(self, env_info: Dict):
         result = self._get_result(env_info)
         self.conn.send({"result": (self.home.player_id, self.away.player_id, result)})
 
-    def send_run_finished(self):
+    def _close(self):
         self.conn.send({"close": self.home.player_id})
         self.conn.close()
 
-    def _get_match_str(self):
+    def __str__(self):
         player_str = f"{type(self.home).__name__} {self.home.player_id}"
         opponent_str = f"{type(self.away).__name__} {self.away.player_id} "
         return f"{player_str} playing against opponent {opponent_str} in Process {self.home.player_id}"

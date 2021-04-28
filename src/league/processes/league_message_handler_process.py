@@ -25,10 +25,9 @@ class LeagueMessageHandler(Process):
     def run(self) -> None:
         # Receive messages from all processes
         while any(not conn.closed for conn in self.conns):
-            [
-                self._handle_message(conn) for conn in self.conns
-                if not conn.closed and conn.poll()
-            ]
+            for conn in self.conns:
+                if not conn.closed and conn.poll():
+                    self._handle_message(conn)
 
     def _handle_message(self, conn: Connection):
         msg = conn.recv()
