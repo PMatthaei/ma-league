@@ -46,7 +46,7 @@ class PolicyPair:
 
 
 class JointPolicyCorrelationEvaluationRun:
-    def __init__(self, args, logger, instances: int = 2, eval_episodes=100):
+    def __init__(self, args, logger, instances: int = 5, eval_episodes=100):
         self.args = args
         self.logger = logger
         self.child_run_args = args
