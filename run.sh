@@ -2,23 +2,33 @@
 HASH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 4 | head -n 1)
 name=${USER}_ma_league_${HASH}
 
-title="Select hardware optimization"
+title="Select hardware usage for your containered experiment run:"
 prompt="Pick:"
-options=("Run on all GPUs" "Run on all CPUs")
-
+hardware_options=("GPUs (all)" "CPUs (all)" "Quit")
+#
+#
+# HARDWARE SELECT
+#
+#
 echo "$title"
-PS3="$prompt "
-select opt in "${options[@]}" "Quit"; do
+all_cpus="$(grep -c ^processor /proc/cpuinfo).0"
 
+PS3="$prompt "
+select hardware in "${hardware_options[@]}"; do
   case "$REPLY" in
 
   1)
-    echo "You picked $opt which is option $REPLY"
+    hardware=("--gpus" "all")
     break
     ;;
   2)
-    echo "You picked $opt which is option $REPLY"
+    hardware=("--cpus" "${all_cpus}")
     break
+    ;;
+
+  3)
+    echo "User forced quit."
+    exit
     ;;
 
   *)
@@ -27,35 +37,56 @@ select opt in "${options[@]}" "Quit"; do
     ;;
 
   esac
-
 done
 
-case "$REPLY" in
+#
+#
+# EXPERIMENT SELECT
+#
+#
+title="Select experiment run:"
+prompt="Pick:"
+run_options=("Normal Play" "Self Play" "League Play" "Quit")
+echo "$title"
+PS3="$prompt "
+select run in "${run_options[@]}"; do
+  case "$REPLY" in
 
-1)
-  echo "Launching container named '${name}' on: all GPUs"
-  docker run \
-  --gpus all \
-  --name $name \
-  --user $(id -u):$(id -g) \
-  -v $(pwd):/ma-league \
+  1)
+    run="python src/main.py --config=qmix --env-config=ma with play_mode=normal"
+    break
+    ;;
+  2)
+    run="python src/main.py --config=qmix --env-config=ma with play_mode=self"
+    break
+    ;;
+
+  3)
+    run="python src/league_main.py --config=qmix --env-config=ma with play_mode=league --league-config=default headless_controls=False"
+    break
+    ;;
+
+  4)
+    echo "User forced quit."
+    exit
+    ;;
+
+  *)
+    echo "Invalid option. Try another one."
+    continue
+    ;;
+
+  esac
+done
+
+# Split run command to array
+read -ra run -d '' <<< "$run"
+
+echo "Launching container named '${name}' on '${hardware[*]}' with command '${run[*]}'"
+docker run \
+  "${hardware[@]}" \
+  --name "$name" \
+  --user "$(id -u)":"$(id -g)" \
+  -v "$(pwd)":/ma-league \
   -t ma-league:1.0 \
-  ${@:1}
-  break
-  ;;
-2)
-  echo "Launching container named '${name}' on: all CPUs"
-  docker run \
-  --name $name \
-  --user $(id -u):$(id -g) \
-  -v $(pwd):/ma-league \
-  -t ma-league:1.0 \
-  ${@:1}
-  ;;
-
-*)
-  echo "Invalid option. Try another one."
-  continue
-  ;;
-
-esac
+   "${run[@]}"
