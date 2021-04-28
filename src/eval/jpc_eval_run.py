@@ -26,7 +26,6 @@ class TrainInstance(Process):
 
     def run(self) -> None:
         # Start a self play run
-        self.args.t_max = 100
         play = SelfPlayRun(args=self.args, logger=self.logger)
         play.start()
 
@@ -48,11 +47,10 @@ class PolicyPair:
 
 class JointPolicyCorrelationEvaluationRun:
     def __init__(self, args, logger, instances: int = 2, eval_episodes=100):
-        super().__init__(args, logger)
         self.args = args
         self.logger = logger
         self.child_run_args = args
-        self.child_run_args.runner = "episode"
+        self.child_run_args.runner = "parallel" # Each child run is stepping in plarallel
         self.instances = instances
         self.eval_episodes = eval_episodes
         manager = Manager()

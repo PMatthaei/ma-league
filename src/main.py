@@ -2,6 +2,7 @@ import datetime
 import pprint
 import threading
 from types import SimpleNamespace
+import torch
 
 import numpy as np
 import os
@@ -32,9 +33,13 @@ results_path = os.path.join(dirname(dirname(abspath(__file__))), "results")
 def run(_run, _config, _log):
     # check args sanity
     _config = args_sanity_check(_config, _log)
-    play_mode = _config['play_mode']
-    if play_mode != "normal":
+
+    if _config['play_mode'] != "normal":
         set_agents_only(_config)
+
+    if _config["runner"] == "parallel":
+        torch.multiprocessing.set_start_method('spawn')
+        #multiprocessing.set_start_method('spawn')
 
     args = SimpleNamespace(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"

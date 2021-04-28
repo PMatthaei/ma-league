@@ -21,6 +21,7 @@ select hardware in "${hardware_options[@]}"; do
     hardware=("--gpus" "all")
     break
     ;;
+
   2)
     hardware=("--cpus" "${all_cpus}")
     break
@@ -46,27 +47,33 @@ done
 #
 title="Select experiment run:"
 prompt="Pick:"
-run_options=("Normal Play" "Self Play" "League Play" "Quit")
+run_options=("Normal Play" "Self Play" "League Play" "JPC Evaluation" "Quit")
 echo "$title"
 PS3="$prompt "
 select run in "${run_options[@]}"; do
   case "$REPLY" in
 
   1)
-    run="python src/main.py --config=qmix --env-config=ma with play_mode=normal"
+    run="python src/main.py --config=qmix --env-config=ma with play_mode=normal save_model=True headless_controls=False"
     break
     ;;
+
   2)
-    run="python src/main.py --config=qmix --env-config=ma with play_mode=self"
+    run="python src/main.py --config=qmix --env-config=ma with play_mode=self save_model=True headless_controls=False"
     break
     ;;
 
   3)
-    run="python src/league_main.py --config=qmix --env-config=ma with play_mode=league --league-config=default headless_controls=False"
+    run="python src/league_main.py --config=qmix --env-config=ma with play_mode=league save_model=True --league-config=default headless_controls=False"
     break
     ;;
 
   4)
+    run="python src/main.py --config=qmix --env-config=ma with play_mode=self save_model=True eval=jpc headless_controls=False runner=parallel"
+    break
+    ;;
+
+  5)
     echo "User forced quit."
     exit
     ;;

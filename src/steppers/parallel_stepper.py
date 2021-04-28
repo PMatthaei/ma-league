@@ -1,5 +1,3 @@
-import multiprocessing
-
 import torch
 from gym.vector.utils import CloudpickleWrapper
 
@@ -24,8 +22,6 @@ class ParallelStepper:
         self.logger = logger
         self.batch_size = self.args.batch_size_run
         self.policy_team_id = 0
-        # torch.multiprocessing.set_start_method('spawn')
-        multiprocessing.set_start_method('spawn')
 
         # Make subprocesses for the envs
         self.parent_conns, self.worker_conns = zip(*[Pipe() for _ in range(self.batch_size)])
