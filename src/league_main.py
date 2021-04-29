@@ -16,8 +16,7 @@ from sacred.utils import apply_backspaces_and_linefeeds
 from league.components.payoff import Payoff
 from league.league import League
 from league.processes.league_process import LeagueRun
-from league.components.coordinator import Coordinator
-from league.processes.league_message_handler_process import LeagueMessageHandler
+from league.processes.league_coordinator import LeagueCoordinator
 from league.utils.team_composer import TeamComposer
 from utils.logging import LeagueLogger
 from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy, \
@@ -82,11 +81,10 @@ def run(_run, _config, _log):
     # Create league
     payoff = Payoff(p_matrix=p_matrix, players=players)
     league = League(initial_agents=team_compositions, payoff=payoff)
-    coordinator = Coordinator(league)
 
     # Start league training
     for idx in range(league.size):
-        run_conn, conn = Pipe()  # TODO: downgrade to queue in league process to provide info if no msg from here to child conn needed
+        run_conn, conn = Pipe()  # TODO: downgrade to queue if no msg from here to child conn needed
         run_conns.append(run_conn)
 
         player = league.get_player(idx)
@@ -96,9 +94,9 @@ def run(_run, _config, _log):
         proc.start()
 
     # Handle message communication within the league
-    handler = LeagueMessageHandler(coordinator, run_conns)
-    handler.start()
-    handler.join()
+    coordinator = LeagueCoordinator(league, run_conns)
+    coordinator.start()
+    coordinator.join()
 
     # Print win rates for all players
     league.print_payoff()
