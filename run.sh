@@ -96,7 +96,7 @@ done
 title="Choose multi-agent reinforcement learning algorithm:"
 prompt="Pick:"
 base_alg="--config="
-algs_options=("QMIX" "Quit")
+algs_options=("QMIX" "VDN" "IQL" "Quit")
 echo "$title"
 PS3="$prompt "
 select alg in "${algs_options[@]}"; do
@@ -108,6 +108,16 @@ select alg in "${algs_options[@]}"; do
     ;;
 
   2)
+    alg=$base_alg"vdn "
+    break
+    ;;
+
+  3)
+    alg=$base_alg"iql "
+    break
+    ;;
+
+  4)
     echo "User forced quit."
     exit
     ;;
@@ -189,7 +199,7 @@ select parallel in "${parallel_options[@]}"; do
     #
     echo "Enter desired number of parallel env instances: "
     read -r instances
-    instances="batch_size=${instances} batch_size_run=${instances} "
+    instances="batch_size_run=${instances} "
     break
     ;;
 
