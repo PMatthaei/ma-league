@@ -21,7 +21,9 @@ class EpisodeStepper:
         assert self.batch_size == 1
 
         self.env = env_REGISTRY[self.args.env](**self.args.env_args)
-        self.policy_team_id = 0
+        # Find id of the first policy team - Only supported for one policy team in the build plan
+        teams = args.env_args["match_build_plan"]
+        self.policy_team_id = teams.index(next(filter(lambda x: not x["is_scripted"], teams), None))
         if self.args.headless_controls:
             controls = HeadlessControls(env=self.env)
             controls.daemon = True
@@ -99,11 +101,11 @@ class EpisodeStepper:
             obs, reward, done_n, env_info = self.env.step(actions[0])
             self.env.render()
 
-            episode_return += reward[self.policy_team_id]
+            episode_return += reward[0]  # ! Only supported if one policy team is playing
 
             post_transition_data = {
                 "actions": actions,
-                "reward": [(reward[self.policy_team_id],)],
+                "reward": [(reward[0],)], # ! Only supported if one policy team is playing
                 "terminated": [(done_n[self.policy_team_id],)],
             }
 

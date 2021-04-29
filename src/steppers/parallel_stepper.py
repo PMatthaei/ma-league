@@ -21,7 +21,9 @@ class ParallelStepper:
         self.args = args
         self.logger = logger
         self.batch_size = self.args.batch_size_run
-        self.policy_team_id = 0
+        # Find id of the first policy team - Only supported for one policy team in the build plan
+        teams = args.env_args["match_build_plan"]
+        self.policy_team_id = teams.index(next(filter(lambda x: not x["is_scripted"], teams), None))
 
         # Make subprocesses for the envs
         self.parent_conns, self.worker_conns = zip(*[Pipe() for _ in range(self.batch_size)])
@@ -168,7 +170,7 @@ class ParallelStepper:
                 if not terminateds[idx]:
                     data = parent_conn.recv()
                     # Remaining data for this current timestep
-                    policy_team_reward = data["reward"][self.policy_team_id]
+                    policy_team_reward = data["reward"][0]  # ! Only supported if one policy team is playing
                     post_transition_data["reward"].append((policy_team_reward,))
 
                     episode_returns[idx] += policy_team_reward
@@ -177,19 +179,19 @@ class ParallelStepper:
                     if not test_mode:
                         self.env_steps_this_run += 1
 
-                    env_terminateds = data["terminated"]  # list of done booleans per team
-                    env_terminated = any(env_terminateds)
-                    if env_terminated:  # if any team is done
+                    done_n = data["terminated"]  # list of done booleans per team
+                    terminated = any(done_n)
+                    if terminated:  # if any team is done -> env terminated
                         env_infos.append(data["info"])
-                    terminateds[idx] = env_terminated
-                    post_transition_data["terminated"].append((env_terminated,))
+                    terminateds[idx] = terminated
+                    post_transition_data["terminated"].append((done_n[self.policy_team_id],))
 
                     # Data for the next timestep needed to select an action
                     pre_transition_data["state"].append(data["state"])
                     pre_transition_data["avail_actions"].append(data["avail_actions"])
                     pre_transition_data["obs"].append(data["obs"])
 
-            # Add post_transiton data into the batch
+            # Add post_transition data into the batch
             self.home_batch.update(post_transition_data, bs=running_envs, ts=self.t, mark_filled=False)
 
             # Move onto the next timestep

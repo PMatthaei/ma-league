@@ -171,7 +171,7 @@ done
 # PARALLELISM SELECT
 #
 #
-title="Choose parallelism:"
+title="Use parallelism in environment stepping:"
 prompt="Pick:"
 instances=""
 parallel_options=("Yes" "No" "Quit")
@@ -225,3 +225,5 @@ docker run \
   -v "$(pwd)":/ma-league \
   -t ma-league:1.0 \
    "${run[@]}"
+
+# !! For development: Changes within code will be mounted into the docker container !!
