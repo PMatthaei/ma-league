@@ -1,42 +1,4 @@
 #!/bin/bash
-title="Select hardware usage for your containered experiment mode:"
-prompt="Pick:"
-hardware_options=("GPUs (all)" "CPUs (all)" "Quit")
-#
-#
-# HARDWARE SELECT
-#
-#
-echo "$title"
-all_cpus="$(grep -c ^processor /proc/cpuinfo).0"
-
-PS3="$prompt "
-select hardware in "${hardware_options[@]}"; do
-  case "$REPLY" in
-
-  1)
-    hardware=("--gpus" "all")
-    break
-    ;;
-
-  2)
-    hardware=("--cpus" "${all_cpus}")
-    break
-    ;;
-
-  3)
-    echo "User forced quit."
-    exit
-    ;;
-
-  *)
-    echo "Invalid option. Try another one. Or Quit"
-    continue
-    ;;
-
-  esac
-done
-
 base_command="python src/main.py "
 #
 #
@@ -238,6 +200,42 @@ select infra in "${infra_options[@]}"; do
   case "$REPLY" in
 
   1)
+    #
+    #
+    # HARDWARE SELECT
+    #
+    #
+    title="Select hardware usage for your containered experiment mode:"
+    prompt="Pick:"
+    hardware_options=("GPUs (all)" "CPUs (all)" "Quit")
+    echo "$title"
+    all_cpus="$(grep -c ^processor /proc/cpuinfo).0"
+    PS3="$prompt "
+    select hardware in "${hardware_options[@]}"; do
+      case "$REPLY" in
+
+      1)
+        hardware=("--gpus" "all")
+        break
+        ;;
+
+      2)
+        hardware=("--cpus" "${all_cpus}")
+        break
+        ;;
+
+      3)
+        echo "User forced quit."
+        exit
+        ;;
+
+      *)
+        echo "Invalid option. Try another one. Or Quit"
+        continue
+        ;;
+
+      esac
+    done
     HASH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 4 | head -n 1)
     name=${USER}_ma_league_${HASH}
     echo "Launching docker container named '${name}' on '${hardware[*]}'"
@@ -257,6 +255,7 @@ select infra in "${infra_options[@]}"; do
   2)
     echo "Launching in slurm cluster"
     echo "Command: '${run[*]}'"
+    sh ./slurm/slurm-run.sh
     break
     ;;
 
