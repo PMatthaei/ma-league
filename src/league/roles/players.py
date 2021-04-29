@@ -14,9 +14,6 @@ from learners.learner import Learner
 class Player(object):
 
     def __init__(self):
-        """
-
-        """
         self.player_id = None
         self._payoff = None
         self._learner = None
@@ -67,8 +64,8 @@ class MainPlayer(Player):
             if isinstance(player, HistoricalPlayer)
         ]
         win_rates = self._payoff[self.player_id, historical]
-        chosen_id = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
-        return self._payoff.players[chosen_id], True
+        chosen = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
+        return self._payoff.players[chosen], True
 
     def _selfplay_branch(self, opponent: Player) -> Tuple[Player, bool]:
         """
@@ -90,8 +87,8 @@ class MainPlayer(Player):
             return opponent, False
 
         win_rates = self._payoff[self.player_id, historical]
-        chosen_id = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="variance"))
-        return self._payoff.players[chosen_id], True
+        chosen = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="variance"))
+        return self._payoff.players[chosen], True
 
     def _verification_branch(self, opponent) -> Union[Tuple[None, None], Tuple[Player, bool]]:
         """
@@ -112,9 +109,9 @@ class MainPlayer(Player):
         ]
         win_rates = self._payoff[self.player_id, exp_historical]
         if len(win_rates) and win_rates.min() < 0.3:
-            chosen_id = np.random.choice(exp_historical,
+            chosen = np.random.choice(exp_historical,
                                          p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
-            return self._payoff.players[chosen_id], True
+            return self._payoff.players[chosen], True
 
         # Check forgetting
         historical = [
@@ -124,8 +121,8 @@ class MainPlayer(Player):
         win_rates = self._payoff[self.player_id, historical]
         win_rates, historical = remove_monotonic_suffix(win_rates, historical)
         if len(win_rates) and win_rates.min() < 0.7:
-            chosen_id = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
-            return self._payoff.players[chosen_id], True
+            chosen = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
+            return self._payoff.players[chosen], True
 
         # TODO: when and why do we get here?
         return None, None
@@ -197,7 +194,7 @@ class HistoricalPlayer(Player):
         return self._parent
 
     def get_match(self) -> Tuple[Player, bool]:
-        raise ValueError("Historical players should not request matches")
+        raise ValueError("Historical players should not request matches.")
 
     def checkpoint(self) -> HistoricalPlayer:
         raise NotImplementedError

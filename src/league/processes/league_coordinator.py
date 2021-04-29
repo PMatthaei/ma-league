@@ -32,7 +32,7 @@ class LeagueCoordinator(Process):
         elif "checkpoint" in msg:  # checkpoint player initiated from a connected process
             self._checkpoint(msg)
         elif "result" in msg:
-            self._save_outcome(msg["result"])
+            self._save_outcome(msg)
         else:
             raise Exception("Unknown message.")
 

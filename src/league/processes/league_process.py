@@ -1,7 +1,9 @@
+import time
 from logging import warning
 from multiprocessing.dummy import Process
 
 from multiprocessing.connection import Connection
+from multiprocessing import Barrier
 
 from types import SimpleNamespace
 from typing import Dict
@@ -14,9 +16,10 @@ PLAY_TIME_MINS = 0.1
 
 
 class LeagueRun(Process):
-    def __init__(self, home: Player, conn: Connection, args: SimpleNamespace, logger: LeagueLogger):
+    def __init__(self, home: Player, barrier: Barrier, conn: Connection, args: SimpleNamespace, logger: LeagueLogger):
         super().__init__()
         self.home = home
+        self.barrier = barrier
         self.conn = conn
         self.args = args
         self.logger = logger
@@ -26,14 +29,19 @@ class LeagueRun(Process):
 
     def run(self) -> None:
         # Create play
-        play = SelfPlayRun(args=self.args, logger=self.logger, episode_callback=self.send_episode_result)
+        play = SelfPlayRun(args=self.args, logger=self.logger, episode_callback=self._episode_callback)
         # Set home learner
         self.home.learner = play.home_learner
 
         if isinstance(self.home, MainPlayer):  # MainPlayers are initially added as historical players
             self.checkpoint_agent()
 
-        while not self.terminated:
+        self.barrier.wait()  # Wait until all processes performed setup to wait for checkpointed agents
+
+        start_time = time.time()
+        end_time = time.time()
+
+        while end_time - start_time <= PLAY_TIME_MINS * 60:
             # Generate new opponent to train against and load his current checkpoint
             self.away, flag = self.home.get_match()
             if self.away is None:
@@ -44,13 +52,14 @@ class LeagueRun(Process):
 
             play.away_learner = self.away.learner
             play.start(play_time=PLAY_TIME_MINS * 60)
+            end_time = time.time()
 
         self._close()
 
     def checkpoint_agent(self):
         self.conn.send({"checkpoint": self.home.player_id})
 
-    def send_episode_result(self, env_info: Dict):
+    def _episode_callback(self, env_info: Dict):
         result = self._get_result(env_info)
         self.conn.send({"result": (self.home.player_id, self.away.player_id, result)})
 

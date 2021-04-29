@@ -50,7 +50,7 @@ class JointPolicyCorrelationEvaluationRun:
         self.args = args
         self.logger = logger
         self.child_run_args = args
-        self.child_run_args.runner = "parallel" # Each child run is stepping in plarallel
+        self.child_run_args.runner = "parallel" # Each child run is stepping in parallel
         self.instances = instances
         self.eval_episodes = eval_episodes
         manager = Manager()
