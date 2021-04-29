@@ -26,7 +26,7 @@ class Run:
     def _init_stepper(self):
         raise NotImplementedError()
 
-    def start(self):
+    def start(self, play_time=None):
         raise NotImplementedError()
 
     def _finish(self):
@@ -112,7 +112,12 @@ class NormalPlayRun(Run):
     def _init_stepper(self):
         self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess, home_mac=self.home_mac)
 
-    def start(self):
+    def start(self, play_time=None):
+        """
+
+        :param play_time: Play the run for a certain time in seconds.
+        :return:
+        """
         self._init_stepper()
 
         if self.args.checkpoint_path != "":
@@ -128,7 +133,11 @@ class NormalPlayRun(Run):
 
         self.logger.console_logger.info("Beginning training for {} timesteps".format(self.args.t_max))
 
-        while self.stepper.t_env <= self.args.t_max:
+        start_time = time.time()
+        end_time = time.time()
+        time_not_reached = play_time is not None and end_time - start_time <= play_time
+        t_not_reached = play_time is None and self.stepper.t_env <= self.args.t_max
+        while time_not_reached or t_not_reached:
 
             # Run for a whole episode at a time
             self._train_episode(episode_num=episode)
@@ -154,6 +163,8 @@ class NormalPlayRun(Run):
                 self.logger.log_recent_stats()
                 self.last_log_T = self.stepper.t_env
 
+            if play_time:
+                end_time = time.time()
         # Finish and clean up
         self._finish()
 

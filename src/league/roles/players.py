@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Tuple, Union, Any
 
 from league.components.payoff import Payoff
@@ -19,7 +20,6 @@ class Player(object):
         self.player_id = None
         self._payoff = None
         self._learner = None
-        self.checkpoint_path = ""
 
     def get_match(self) -> Player:
         pass
@@ -32,7 +32,7 @@ class Player(object):
 
     def _create_checkpoint(self) -> HistoricalPlayer:
         print("Saving checkpoint as HistoricalPlayer")
-        return HistoricalPlayer(self.player_id, self._payoff, self._learner)
+        return HistoricalPlayer(self.player_id, self._payoff, deepcopy(self._learner))
 
     @property
     def payoff(self) -> Payoff:
@@ -44,7 +44,7 @@ class Player(object):
 
 class MainPlayer(Player):
 
-    def __init__(self, player_id: int, payoff: Payoff, learner: Learner):
+    def __init__(self, player_id: int, payoff: Payoff, learner: Learner = None):
         """
 
         :param player_id:
@@ -181,7 +181,7 @@ class MainPlayer(Player):
 
 class HistoricalPlayer(Player):
 
-    def __init__(self, player_id: int, payoff: Payoff, learner: Learner):
+    def __init__(self, player_id: int, payoff: Payoff, learner: Learner = None):
         """
 
         :param player_id:

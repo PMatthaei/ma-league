@@ -23,18 +23,17 @@ class League(object):
         # Setup initial learning agents
         for i, plan in enumerate(initial_agents):
             for _ in range(self._main_agents_n):
-                main_agent = MainPlayer(player_id, learner=Learner(), payoff=self._payoff)
+                main_agent = MainPlayer(player_id, payoff=self._payoff)
                 self._learning_agents[player_id] = main_agent
-                self._payoff.add_player(main_agent.checkpoint())
                 player_id += 1
 
             for _ in range(self._main_exploiters_n):
-                exploiter = MainExploiter(player_id, learner=Learner(), payoff=self._payoff)
+                exploiter = MainExploiter(player_id, payoff=self._payoff)
                 self._learning_agents[player_id] = exploiter
                 player_id += 1
 
             for _ in range(self._league_exploiters_n):
-                league_exploiter = LeagueExploiter(player_id, learner=Learner(), payoff=self._payoff)
+                league_exploiter = LeagueExploiter(player_id, payoff=self._payoff)
                 self._learning_agents[player_id] = league_exploiter
                 player_id += 1
 
