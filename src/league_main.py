@@ -6,7 +6,7 @@ from copy import deepcopy
 from multiprocessing import Barrier
 from os.path import dirname, abspath
 
-from multiagent.core import RoleTypes, UnitAttackTypes
+from maenv.core import RoleTypes, UnitAttackTypes
 from multiprocessing.connection import Pipe
 from multiprocessing.dummy import Manager
 

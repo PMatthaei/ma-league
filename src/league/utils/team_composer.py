@@ -2,7 +2,7 @@ import itertools
 
 import enum
 
-from multiagent.core import RoleTypes, UnitAttackTypes
+from maenv.core import RoleTypes, UnitAttackTypes
 
 from utils.logging import LeagueLogger
 

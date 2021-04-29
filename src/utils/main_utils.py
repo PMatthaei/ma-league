@@ -3,7 +3,7 @@ import os
 from copy import deepcopy
 
 import yaml
-from multiagent.utils.enums import as_enum
+from maenv.utils.enums import as_enum
 
 
 def set_agents_only(config):

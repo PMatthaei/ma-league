@@ -105,7 +105,7 @@ class EpisodeStepper:
 
             post_transition_data = {
                 "actions": actions,
-                "reward": [(reward[0],)], # ! Only supported if one policy team is playing
+                "reward": [(reward[0],)],  # ! Only supported if one policy team is playing
                 "terminated": [(done_n[self.policy_team_id],)],
             }
 

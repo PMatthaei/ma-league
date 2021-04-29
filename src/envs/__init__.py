@@ -1,9 +1,5 @@
 from functools import partial
-
-import sys
-import os
-
-from multiagent.environment import TeamsEnv
+from maenv.environment import TeamsEnv
 
 
 def ma_env(env, **kwargs) -> TeamsEnv:
