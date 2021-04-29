@@ -3,6 +3,7 @@ import os
 import pprint
 import sys
 from copy import deepcopy
+from multiprocessing import Barrier
 from os.path import dirname, abspath
 
 from multiagent.core import RoleTypes, UnitAttackTypes
@@ -75,12 +76,14 @@ def run(_run, _config, _log):
     players = manager.list()    # List of current players
 
     # Infrastructure
-    processes = []  # All running processes representing an agent playing in the league
+    runs = []  # All running processes representing an agent playing in the league
     run_conns = []  # Connections from the parent process to each run
 
     # Create league
     payoff = Payoff(p_matrix=p_matrix, players=players)
     league = League(initial_agents=team_compositions, payoff=payoff)
+
+    barrier = Barrier(league.size)
 
     # Start league training
     for idx in range(league.size):
@@ -89,21 +92,20 @@ def run(_run, _config, _log):
 
         player = league.get_player(idx)
 
-        proc = LeagueRun(home=player, conn=conn, args=args, logger=logger)
-        processes.append(proc)
-        proc.start()
+        league_run = LeagueRun(home=player, barrier=barrier, conn=conn, args=args, logger=logger)
+        runs.append(league_run)
+        league_run.start()
 
     # Handle message communication within the league
     coordinator = LeagueCoordinator(league, run_conns)
     coordinator.start()
     coordinator.join()
 
+    # Wait for processes to finish
+    [r.join() for r in runs]
+
     # Print win rates for all players
     league.print_payoff()
-
-    # Wait for processes to finish
-    [proc.join() for proc in processes]
-
 
 @ex.main
 def league_main(_run, _config, _log):

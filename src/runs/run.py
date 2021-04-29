@@ -130,17 +130,20 @@ class NormalPlayRun(Run):
 
         # start training
         episode = 0
-
-        self.logger.console_logger.info("Beginning training for {} timesteps".format(self.args.t_max))
+        if play_time:
+            self.logger.console_logger.info("Beginning training for {} seconds.".format(play_time))
+        else:
+            self.logger.console_logger.info("Beginning training for {} timesteps.".format(self.args.t_max))
 
         start_time = time.time()
         end_time = time.time()
-        time_not_reached = play_time is not None and end_time - start_time <= play_time
         t_not_reached = play_time is None and self.stepper.t_env <= self.args.t_max
-        while time_not_reached or t_not_reached:
+
+        while (play_time is not None and (end_time - start_time) <= play_time) or t_not_reached:
 
             # Run for a whole episode at a time
             self._train_episode(episode_num=episode)
+            self.logger.console_logger.info("{}".format(episode))
 
             # Execute test runs once in a while
             n_test_runs = max(1, self.args.test_nepisode // self.stepper.batch_size)
@@ -163,8 +166,7 @@ class NormalPlayRun(Run):
                 self.logger.log_recent_stats()
                 self.last_log_T = self.stepper.t_env
 
-            if play_time:
-                end_time = time.time()
+            end_time = time.time()
         # Finish and clean up
         self._finish()
 
