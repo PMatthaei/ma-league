@@ -137,6 +137,14 @@ select save_model in "${save_options[@]}"; do
 
   1)
     save_model="save_model=True "
+    #
+    #
+    # SAVE INTERVAL INPUT
+    #
+    #
+    echo "Enter desired save interval(in env steps) or press enter for default: "
+    read -r save_model_interval
+    save_model_interval="save_model_interval=${save_model_interval} "
     break
     ;;
 
@@ -203,7 +211,7 @@ select parallel in "${parallel_options[@]}"; do
   esac
 done
 
-run=$base_command$alg$env_config$mode$save_model$parallel$instances" headless_controls=False"
+run=$base_command$alg$env_config$mode$save_model$save_model_interval$parallel$instances" headless_controls=False"
 
 # Split run command string to array of strings
 read -ra run -d '' <<< "$run"
