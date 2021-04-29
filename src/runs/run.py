@@ -143,7 +143,6 @@ class NormalPlayRun(Run):
 
             # Run for a whole episode at a time
             self._train_episode(episode_num=episode)
-            self.logger.console_logger.info("{}".format(episode))
 
             # Execute test runs once in a while
             n_test_runs = max(1, self.args.test_nepisode // self.stepper.batch_size)

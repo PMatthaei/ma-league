@@ -2,7 +2,7 @@
 HASH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 4 | head -n 1)
 name=${USER}_ma_league_${HASH}
 
-title="Select hardware usage for your containered experiment run:"
+title="Select hardware usage for your containered experiment mode:"
 prompt="Pick:"
 hardware_options=("GPUs (all)" "CPUs (all)" "Quit")
 #
@@ -40,36 +40,38 @@ select hardware in "${hardware_options[@]}"; do
   esac
 done
 
+base_command="python src/main.py "
 #
 #
 # EXPERIMENT SELECT
 #
 #
-title="Select experiment run:"
+title="Select experiment mode:"
 prompt="Pick:"
-run_options=("Normal Play" "Self Play" "League Play" "JPC Evaluation" "Quit")
+mode_options=("Normal Play" "Self Play" "League Play" "JPC Evaluation" "Quit")
 echo "$title"
 PS3="$prompt "
-select run in "${run_options[@]}"; do
+select mode in "${mode_options[@]}"; do
   case "$REPLY" in
 
   1)
-    run="python src/main.py --config=qmix --env-config=ma with play_mode=normal save_model=True headless_controls=False"
+    mode="play_mode=normal "
     break
     ;;
 
   2)
-    run="python src/main.py --config=qmix --env-config=ma with play_mode=self save_model=True headless_controls=False"
+    mode="play_mode=self "
     break
     ;;
 
   3)
-    run="python src/league_main.py --config=qmix --env-config=ma with play_mode=league save_model=True --league-config=default headless_controls=False"
+    base_command="python src/league_main.py "
+    mode="play_mode=league "
     break
     ;;
 
   4)
-    run="python src/main.py --config=qmix --env-config=ma with play_mode=self save_model=True eval=jpc headless_controls=False runner=parallel"
+    mode="play_mode=self eval=jpc "
     break
     ;;
 
@@ -86,10 +88,128 @@ select run in "${run_options[@]}"; do
   esac
 done
 
-# Split run command to array
+#
+#
+# ALGORITHM SELECT
+#
+#
+title="Choose multi-agent reinforcement learning algorithm:"
+prompt="Pick:"
+base_alg="--config="
+algs_options=("QMIX" "Quit")
+echo "$title"
+PS3="$prompt "
+select alg in "${algs_options[@]}"; do
+  case "$REPLY" in
+
+  1)
+    alg=$base_alg"qmix "
+    break
+    ;;
+
+  2)
+    echo "User forced quit."
+    exit
+    ;;
+
+  *)
+    echo "Invalid option. Try another one. Or Quit"
+    continue
+    ;;
+
+  esac
+done
+
+env_config="--env-config=ma with "
+
+#
+#
+# SAVE MODEL SELECT
+#
+#
+title="Should training models be saved?:"
+prompt="Pick:"
+save_options=("Yes" "No" "Quit")
+echo "$title"
+PS3="$prompt "
+select save_model in "${save_options[@]}"; do
+  case "$REPLY" in
+
+  1)
+    save_model="save_model=True "
+    break
+    ;;
+
+  2)
+    save_model="save_model=False "
+    break
+    ;;
+
+  3)
+    echo "User forced quit."
+    exit
+    ;;
+
+  *)
+    echo "Invalid option. Try another one. Or Quit"
+    continue
+    ;;
+
+  esac
+done
+
+#
+#
+# PARALLELISM SELECT
+#
+#
+title="Choose parallelism:"
+prompt="Pick:"
+instances=""
+parallel_options=("Yes" "No" "Quit")
+echo "$title"
+PS3="$prompt "
+select parallel in "${parallel_options[@]}"; do
+  case "$REPLY" in
+
+  1)
+    parallel="runner=parallel "
+    #
+    #
+    # INSTANCES INPUT
+    #
+    #
+    echo "Enter desired number of parallel env instances: "
+    read -r instances
+    instances="batch_size=${instances} batch_size_run=${instances} "
+    break
+    ;;
+
+  2)
+    parallel="runner=episode "
+    break
+    ;;
+
+  3)
+    echo "User forced quit."
+    exit
+    ;;
+
+  *)
+    echo "Invalid option. Try another one. Or Quit"
+    continue
+    ;;
+
+  esac
+done
+
+run=$base_command$alg$env_config$mode$save_model$parallel$instances" headless_controls=False"
+
+# Split run command string to array of strings
 read -ra run -d '' <<< "$run"
 
-echo "Launching container named '${name}' on '${hardware[*]}' with command '${run[*]}'"
+echo "Launching docker container named '${name}' on '${hardware[*]}'"
+echo "Command: '${run[*]}'"
 docker run \
   "${hardware[@]}" \
   --name "$name" \
