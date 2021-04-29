@@ -1,7 +1,4 @@
 #!/bin/bash
-HASH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 4 | head -n 1)
-name=${USER}_ma_league_${HASH}
-
 title="Select hardware usage for your containered experiment mode:"
 prompt="Pick:"
 hardware_options=("GPUs (all)" "CPUs (all)" "Quit")
@@ -226,14 +223,52 @@ run=$base_command$alg$env_config$mode$save_model$save_model_interval$parallel$in
 # Split run command string to array of strings
 read -ra run -d '' <<< "$run"
 
-echo "Launching docker container named '${name}' on '${hardware[*]}'"
-echo "Command: '${run[*]}'"
-docker run \
-  "${hardware[@]}" \
-  --name "$name" \
-  --user "$(id -u)":"$(id -g)" \
-  -v "$(pwd)":/ma-league \
-  -t ma-league:1.0 \
-   "${run[@]}"
+#
+#
+# INFRASTRUCTURE SELECT
+#
+#
+title="On which infrastructure should this experiment run:"
+prompt="Pick:"
+instances=""
+infra_options=("Docker" "Slurm" "Quit")
+echo "$title"
+PS3="$prompt "
+select infra in "${infra_options[@]}"; do
+  case "$REPLY" in
 
-# !! For development: Changes within code will be mounted into the docker container !!
+  1)
+    HASH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 4 | head -n 1)
+    name=${USER}_ma_league_${HASH}
+    echo "Launching docker container named '${name}' on '${hardware[*]}'"
+    echo "Command: '${run[*]}'"
+    docker run \
+      "${hardware[@]}" \
+      --name "$name" \
+      --user "$(id -u)":"$(id -g)" \
+      -v "$(pwd)":/ma-league \
+      -t ma-league:1.0 \
+       "${run[@]}"
+
+    # !! For development: Changes within code will be mounted into the docker container !!
+    break
+    ;;
+
+  2)
+    echo "Launching in slurm cluster"
+    echo "Command: '${run[*]}'"
+    break
+    ;;
+
+  3)
+    echo "User forced quit."
+    exit
+    ;;
+
+  *)
+    echo "Invalid option. Try another one. Or Quit"
+    continue
+    ;;
+
+  esac
+done
