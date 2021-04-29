@@ -118,9 +118,9 @@ class ParallelStepper:
         episode_returns = [0 for _ in range(self.batch_size)]
         eps = [0 for _ in range(self.batch_size)]
         self.home_mac.init_hidden(batch_size=self.batch_size)
-        # bool to determine env finished
+        # bools to determine finished envs
         terminateds = [False for _ in range(self.batch_size)]
-        # IDs of finished envs
+        # IDs of running envs
         running_envs = [idx for idx, terminated in enumerate(terminateds) if not terminated]
         env_infos = []  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
 
@@ -149,8 +149,7 @@ class ParallelStepper:
 
             # Update running envs
             running_envs = [idx for idx, terminated in enumerate(terminateds) if not terminated]
-            all_terminated = all(terminateds)
-            if all_terminated:
+            if all(terminateds):
                 break
 
             # Post step data we will insert for the current timestep

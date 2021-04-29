@@ -1,4 +1,28 @@
 #!/bin/bash
+Help() {
+  # Display Help
+  echo
+  echo "Run script for the ma-league. Build your experiment command and choose infrastructure to run the command with."
+  echo "For a detailed usage guide visit the wiki at: https://github.com/PMatthaei/ma-league/wiki"
+  echo
+  echo "Usage:   run.sh [-h]"
+  echo "Options:"
+  echo "  -h           Print this Help."
+  echo
+}
+
+while getopts ":h" option; do
+  case $option in
+  h) # display Help
+    Help
+    exit
+    ;;
+  *)
+    break
+    ;;
+  esac
+done
+
 base_command="python src/main.py "
 #
 #
@@ -183,7 +207,7 @@ done
 run=$base_command$alg$env_config$mode$save_model$save_model_interval$parallel$instances" headless_controls=False"
 
 # Split run command string to array of strings
-read -ra run -d '' <<< "$run"
+read -ra run -d '' <<<"$run"
 
 #
 #
@@ -246,7 +270,7 @@ select infra in "${infra_options[@]}"; do
       --user "$(id -u)":"$(id -g)" \
       -v "$(pwd)":/ma-league \
       -t ma-league:1.0 \
-       "${run[@]}"
+      "${run[@]}"
 
     # !! For development: Changes within code will be mounted into the docker container !!
     break
