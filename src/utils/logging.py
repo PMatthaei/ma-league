@@ -174,7 +174,7 @@ class LeagueLogger:
         if parallel:
             if len(self.ep_stats) == 0 and len(env_info) > 0:
                 infos = env_info
-            elif len(self.ep_stats) < 0 and len(env_info) == 0:
+            elif len(self.ep_stats) > 0 and len(env_info) == 0:
                 infos = [self.ep_stats]
             else:
                 infos = [self.ep_stats] + env_info
