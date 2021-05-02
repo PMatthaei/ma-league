@@ -279,7 +279,7 @@ select infra in "${infra_options[@]}"; do
   2)
     echo "Launching in slurm cluster"
     echo "Command: '${run[*]}'"
-    sh ./slurm/slurm-run.sh
+    sh ./slurm/slurm-run.sh ${run[*]}
     break
     ;;
 

@@ -5,11 +5,10 @@ from gym.vector.utils import CloudpickleWrapper
 
 
 class EnvWorker(Process):
-    def __init__(self, remote: Connection, env: CloudpickleWrapper, policy_team_id: int):
+    def __init__(self, remote: Connection, env: CloudpickleWrapper):
         super().__init__()
         self.remote = remote
         self.env = env
-        self.policy_team_id = policy_team_id
 
     def run(self) -> None:
         # Make environment
