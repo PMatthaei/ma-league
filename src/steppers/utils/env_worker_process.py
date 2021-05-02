@@ -23,7 +23,6 @@ class EnvWorker(Process):
                 # Return the observations, avail_actions and state to make the next action
                 state = env.get_state()
                 avail_actions = env.get_avail_actions()
-                obs = env.get_obs()
                 self.remote.send({
                     # Data for the next timestep needed to pick an action
                     "state": state,
@@ -47,8 +46,5 @@ class EnvWorker(Process):
                 break
             elif cmd == "get_env_info":
                 self.remote.send(env.get_env_info())
-            elif cmd == "get_stats":
-                # self.remote.send(env.get_stats())
-                self.remote.send({})  # TODO reimplement?
             else:
                 raise NotImplementedError
