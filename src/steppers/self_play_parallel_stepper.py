@@ -169,13 +169,13 @@ class SelfPlayParallelStepper(ParallelStepper):
                     if not test_mode:
                         self.env_steps_this_run += 1
 
-                    env_terminateds = data["terminated"]  # list of done booleans per team
-                    env_terminated = any(env_terminateds)
-                    if env_terminated:  # if any team is done
+                    done_n = data["terminated"]  # list of done booleans per team
+                    terminated = any(done_n)
+                    if terminated:  # if any team is done -> env terminated
                         env_infos.append(data["info"])
-                    terminateds[idx] = env_terminated
-                    home_post_transition_data["terminated"].append((env_terminated,))
-                    away_post_transition_data["terminated"].append((env_terminated,))  # TODO Correct to feed every agent the global termination?
+                    terminateds[idx] = terminated
+                    home_post_transition_data["terminated"].append((terminated,))
+                    away_post_transition_data["terminated"].append((terminated,))
 
                     # Data for the next timestep needed to select an action
                     append_pre_transition_data(away_pre_transition_data, home_pre_transition_data, data)

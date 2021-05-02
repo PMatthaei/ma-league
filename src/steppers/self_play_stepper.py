@@ -76,6 +76,8 @@ class SelfPlayStepper(EpisodeStepper):
 
             all_actions = th.cat((home_actions[0], away_actions[0]))
             obs, reward, done_n, env_info = self.env.step(all_actions)
+            terminated = any(done_n)  # Termination is dependent on all team-wise terminations
+
             self.env.render()
 
             home_reward, away_reward = reward
@@ -85,15 +87,14 @@ class SelfPlayStepper(EpisodeStepper):
             home_post_transition_data = {
                 "actions": home_actions,
                 "reward": [(home_reward,)],
-                "terminated": [(done_n[0],)],
+                "terminated": [(terminated,)],
             }
             opponent_post_transition_data = {
                 "actions": away_actions,
                 "reward": [(away_reward,)],
-                "terminated": [(done_n[1],)], # TODO Correct to feed every agent its own done? the env finishes on any(done_n)
+                "terminated": [(terminated,)]
             }
-            # Termination is dependent on all team-wise terminations
-            terminated = any(done_n)
+
             self.home_batch.update(home_post_transition_data, ts=self.t)
             self.away_batch.update(opponent_post_transition_data, ts=self.t)
 

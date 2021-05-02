@@ -99,6 +99,8 @@ class EpisodeStepper:
             actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
 
             obs, reward, done_n, env_info = self.env.step(actions[0])
+            terminated = any(done_n)
+
             self.env.render()
 
             episode_return += reward[0]  # ! Only supported if one policy team is playing
@@ -106,12 +108,11 @@ class EpisodeStepper:
             post_transition_data = {
                 "actions": actions,
                 "reward": [(reward[0],)],  # ! Only supported if one policy team is playing
-                "terminated": [(done_n[self.policy_team_id],)],
+                "terminated": [(terminated,)],
             }
 
             self.home_batch.update(post_transition_data, ts=self.t)
             # Termination is dependent on all team-wise terminations - AI or policy controlled teams
-            terminated = any(done_n)
 
             self.t += 1
 

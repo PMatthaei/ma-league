@@ -183,7 +183,7 @@ class ParallelStepper:
                     if terminated:  # if any team is done -> env terminated
                         env_infos.append(data["info"])
                     terminateds[idx] = terminated
-                    post_transition_data["terminated"].append((done_n[self.policy_team_id],))
+                    post_transition_data["terminated"].append((terminated,))
 
                     # Data for the next timestep needed to select an action
                     pre_transition_data["state"].append(data["state"])
