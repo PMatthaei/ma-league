@@ -37,6 +37,11 @@ class LeagueCoordinator(Process):
             raise Exception("Unknown message.")
 
     def _checkpoint(self, msg):
+        """
+        Save a checkpoint of the agent with the ID provided in the message.
+        :param msg:
+        :return:
+        """
         idx = msg["checkpoint"]
         agent = self.league.get_player(idx)
         self.league.add_player(agent.checkpoint())
@@ -44,7 +49,7 @@ class LeagueCoordinator(Process):
     def _save_outcome(self, msg):
         """
         Update the payoff matrix. After each play outcome check if the learning (=home) player should be checkpointed
-        :param result:
+        :param msg:
         :return:
         """
         home, away, outcome = msg["result"]

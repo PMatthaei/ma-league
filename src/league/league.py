@@ -2,7 +2,6 @@ from typing import Tuple
 
 from league.roles.exploiters import MainExploiter, LeagueExploiter
 from league.roles.players import MainPlayer, Player
-from learners.learner import Learner
 
 
 class League(object):

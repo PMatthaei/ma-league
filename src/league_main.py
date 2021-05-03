@@ -68,12 +68,12 @@ def run(_run, _config, _log):
     # Build league teams
     team_size = _config["team_size"]
     team_composer = TeamComposer(RoleTypes, UnitAttackTypes)
-    team_compositions = [team_composer.compose_unique_teams(team_size)[0]]  # TODO change back to all comps
+    team_compositions = team_composer.compose_unique_teams(team_size)
 
     # Shared objects
     manager = Manager()
-    p_matrix = manager.dict()   # Payoff matrix
-    players = manager.list()    # List of current players
+    p_matrix = manager.dict()  # Payoff matrix
+    players = manager.list()  # List of current players
 
     # Infrastructure
     runs = []  # All running processes representing an agent playing in the league
@@ -106,6 +106,7 @@ def run(_run, _config, _log):
 
     # Print win rates for all players
     league.print_payoff()
+
 
 @ex.main
 def league_main(_run, _config, _log):

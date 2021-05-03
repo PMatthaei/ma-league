@@ -30,11 +30,11 @@ class LeagueRun(Process):
     def run(self) -> None:
         # Create play
         play = SelfPlayRun(args=self.args, logger=self.logger, episode_callback=self._episode_callback)
-        # Set home learner
+        # Provide learner to the home player
         self.home.learner = play.home_learner
 
-        if isinstance(self.home, MainPlayer):  # MainPlayers are initially added as historical players
-            self.checkpoint_agent()
+        if isinstance(self.home, MainPlayer):
+            self.checkpoint_agent()  # MainPlayers are initially added as historical players
 
         self.barrier.wait()  # Wait until all processes performed setup to wait for checkpointed agents
 
