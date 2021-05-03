@@ -12,63 +12,63 @@ from league.roles.players import Player, MainPlayer
 from runs.self_play_run import SelfPlayRun
 from utils.logging import LeagueLogger
 
-PLAY_TIME_MINS = 0.1
-
 
 class LeagueRun(Process):
     def __init__(self, home: Player, barrier: Barrier, conn: Connection, args: SimpleNamespace, logger: LeagueLogger):
         super().__init__()
-        self.home = home
-        self.barrier = barrier
-        self.conn = conn
-        self.args = args
-        self.logger = logger
+        self._home = home
+        self._barrier = barrier
+        self._conn = conn
+        self._args = args
+        self._logger = logger
 
         self.away = None
         self.terminated = False
 
     def run(self) -> None:
-        # Create play
-        play = SelfPlayRun(args=self.args, logger=self.logger, episode_callback=self._episode_callback)
-        # Provide learner to the home player
-        self.home.learner = play.home_learner
+        self._setup()
 
-        if isinstance(self.home, MainPlayer):
-            self.checkpoint_agent()  # MainPlayers are initially added as historical players
-
-        self.barrier.wait()  # Wait until all processes performed setup to wait for checkpointed agents
+        self._barrier.wait()  # Wait until all processes setup their checkpoints and/or learner
 
         start_time = time.time()
         end_time = time.time()
 
-        while end_time - start_time <= PLAY_TIME_MINS * 60:
+        while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
             # Generate new opponent to train against and load his current checkpoint
-            self.away, flag = self.home.get_match()
+            self.away, flag = self._home.get_match()
             if self.away is None:
                 warning("No Opponent was found.")
                 continue
 
-            self.logger.console_logger.info(str(self))
+            self._logger.console_logger.info(str(self))
 
-            play.away_learner = self.away.learner
-            play.start(play_time=PLAY_TIME_MINS * 60)
+            self._play.away_learner = self.away.learner  # Provide away learner from the away player
+            self._play.start(play_time=self._args.league_play_time_mins * 60)
             end_time = time.time()
 
         self._close()
 
+    def _setup(self):
+        # Create play
+        self._play = SelfPlayRun(args=self._args, logger=self._logger, episode_callback=self._episode_callback)
+        # Provide learner to the home player
+        self._home.learner = self._play.home_learner
+        if isinstance(self._home, MainPlayer):
+            self.checkpoint_agent()  # MainPlayers are initially added as historical players
+
     def checkpoint_agent(self):
-        self.conn.send({"checkpoint": self.home.player_id})
+        self._conn.send({"checkpoint": self._home.player_id})
 
     def _episode_callback(self, env_info: Dict):
         result = self._get_result(env_info)
-        self.conn.send({"result": (self.home.player_id, self.away.player_id, result)})
+        self._conn.send({"result": (self._home.player_id, self.away.player_id, result)})
 
     def _close(self):
-        self.conn.send({"close": self.home.player_id})
-        self.conn.close()
+        self._conn.send({"close": self._home.player_id})
+        self._conn.close()
 
     def __str__(self):
-        player_str = f"{type(self.home).__name__} {self.home.player_id}"
+        player_str = f"{type(self._home).__name__} {self._home.player_id}"
         opponent_str = f"{type(self.away).__name__} {self.away.player_id} "
         return f"SelfPlayRun - {player_str} playing against opponent {opponent_str}"
 

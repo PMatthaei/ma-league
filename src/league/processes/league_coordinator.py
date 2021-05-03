@@ -1,7 +1,6 @@
-from enum import Enum
 from multiprocessing.connection import Connection
 from multiprocessing.dummy import Process
-from typing import List, Tuple
+from typing import List
 
 from league.league import League
 
