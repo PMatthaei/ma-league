@@ -142,7 +142,7 @@ class QLearner(Learner):
             th.save(self.mixer.state_dict(), "{}/{}mixer.th".format(path, self.name))
         th.save(self.optimiser.state_dict(), "{}/{}opt.th".format(path, self.name))
 
-    def load_models(self, path, name):
+    def load_models(self, path):
         self.mac.load_models(path, self.name)
         # Not quite right but I don't want to save target networks
         self.target_mac.load_models(path, self.name)

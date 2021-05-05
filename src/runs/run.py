@@ -131,8 +131,7 @@ class NormalPlayRun(Run):
         self._init_stepper()
 
         if self.args.checkpoint_path != "":
-            timestep_to_load = self.checkpoint_manager.load(learners=self.learners, load_step=self.args.load_step)
-            self.stepper.t_env = timestep_to_load
+            self.load_learners()
 
             if self.args.evaluate or self.args.save_replay:
                 self._evaluate_sequential()
@@ -160,9 +159,7 @@ class NormalPlayRun(Run):
             # Save model if configured
             save_interval_reached = (self.stepper.t_env - self.model_save_time) >= self.args.save_model_interval
             if self.args.save_model and (save_interval_reached or self.model_save_time == 0):
-                self.model_save_time = self.stepper.t_env
-                out_path = self.checkpoint_manager.save(self.model_save_time, learners=self.learners)
-                self.logger.console_logger.info("Saving models to {}".format(out_path))
+                self.save_learners()
 
             # Update episode counter with number of episodes run in the batch
             episode += self.args.batch_size_run
@@ -177,9 +174,19 @@ class NormalPlayRun(Run):
         # Finish and clean up
         self._finish()
 
+    def load_learners(self, checkpoint_path=None):
+        timestep_to_load = self.checkpoint_manager.load(learners=self.learners, load_step=self.args.load_step)
+        self.stepper.t_env = timestep_to_load
+
+    def save_learners(self, identifier=None):
+        self.model_save_time = self.stepper.t_env
+        out_path = self.checkpoint_manager.save(learners=self.learners, t_env=self.model_save_time, identifier=identifier)
+        self.logger.console_logger.info("Saving models to {}".format(out_path))
+        return out_path
+
     def _finish(self):
         self.stepper.close_env()
-        self.logger.console_logger.info("Finished Training")
+        self.logger.console_logger.info("Finished.")
 
     def _train_episode(self, episode_num):
         episode_batch = self.stepper.run(test_mode=False)

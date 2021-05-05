@@ -9,16 +9,16 @@ class Learner:
         self.args = args
         self.name = "" if name is None else name
 
-    def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
+    def train(self, batch: EpisodeBatch, t_env: int, episode_num: int) -> None:
         raise NotImplementedError()
 
-    def cuda(self):
+    def cuda(self) -> None:
         raise NotImplementedError()
 
     def save_models(self, path, name):
         raise NotImplementedError()
 
-    def load_models(self, path, name):
+    def load_models(self, path):
         raise NotImplementedError()
 
     def get_current_step(self) -> int:

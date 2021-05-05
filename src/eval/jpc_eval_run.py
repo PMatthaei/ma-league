@@ -10,7 +10,7 @@ from runs.self_play_run import SelfPlayRun
 
 
 class JointPolicyCorrelationEvaluationRun:
-    def __init__(self, args, logger, instances_num: int = 1, eval_episodes=100):
+    def __init__(self, args, logger, instances_num: int = 5, eval_episodes=100):
         self.args = args
         self.args.t_max = 200
         self.logger = logger
@@ -25,23 +25,19 @@ class JointPolicyCorrelationEvaluationRun:
         Therefore the policy is playing against it`s training partner to measure if there is correlation in results.
         """
         # Train policies
-        results = self.train_instances()
-        for index, learners in results:
-            self.policies[index] = learners
+        checkpoints = self.train_instances()
 
         # Evaluate policies
-        results = self.evaluate_instances()
-
-        for index, value in results:
-            self.jpc_matrix[index] = value
+        indices, values = self.evaluate_instances(checkpoints)
+        self.jpc_matrix[indices[:, 0], indices[:, 1]] = values
 
         self.logger.console_logger.info("Finished JPC Evaluation")
         self.logger.console_logger.info("Avg. Proportional Loss: {}".format(avg_proportional_loss(self.jpc_matrix)))
 
     def train_instances(self):
         """
-        Let all instances play against each other in parallel fashion
-        :return:
+        Let all instances play against each other in parallel fashion.
+        :return: checkpoints produced by all workers
         """
         instances = list(range(self.instances_num))
         pool = Pool()
@@ -49,31 +45,43 @@ class JointPolicyCorrelationEvaluationRun:
         return pool.map(self.train_instance_pair, instances)
 
     def train_instance_pair(self, instance: int):
+        """
+        Train agent in Self-Play and save learners as .th files
+        since transferring the learner torch construct between processes is complicated.
+        :param instance: identifier of the train instance
+        :return: the instance id and the path to the checkpointed policies
+        """
         play = SelfPlayRun(args=self.args, logger=self.logger)
         play.start()
-        return instance, (play.home_learner, play.away_learner)
+        path = play.save_learners(identifier=f"instance_{instance}")
+        return path
 
-    def evaluate_instances(self) -> List[Tuple[Tuple[int, int], float]]:
+    def evaluate_instances(self, checkpoints) -> Tuple[th.Tensor, th.Tensor]:
         """
-        Evaluate each player against each player in every training instance
+        Evaluate each player against each other.
         :return:
         """
         pairs = list(itertools.product(range(self.instances_num), repeat=2))
+        data = list(zip(pairs, [checkpoints] * self.instances_num))
         pool = Pool()
         self.logger.console_logger.info("Evaluate {} pairings for {} episodes.".format(len(pairs), self.eval_episodes))
-        return pool.map(self.evaluate_instance_pair, pairs)
+        results = pool.starmap(self.evaluate_instance_pair, data)
+        indices, values = map(list, zip(*results))
+        return th.tensor(indices), th.as_tensor(values)
 
-    def evaluate_instance_pair(self, instance_pair) -> Tuple[Tuple[int, int], float]:
+    def evaluate_instance_pair(self, instance_pair, checkpoints) -> Tuple[Tuple[int, int], float]:
         """
-        Evaluates the performance of a instance pairing between player one and two.
-        :param instance_pair: A pair of instances to test
+        Evaluates the performance of a instance pairing between player one and two of the given instances.
+        :param instance_pair: pair of instances to test
         :return:
         """
         i, j = instance_pair
-        eval_descriptor = "Eval player 1 from instance {} against player 2 from instance {}".format(i, j)
+        eval_descriptor = "Eval home player from instance {} against away player from instance {}".format(i, j)
         self.logger.console_logger.info(eval_descriptor)
-
+        home_checkpoint, away_checkpoint = checkpoints[i], checkpoints[j]
         play = SelfPlayRun(args=self.args, logger=self.logger)
-        play.set_learners(self.policies[i][0], self.policies[j][1])
+        play.home_learner.load_models(home_checkpoint)
+        play.away_learner.load_models(away_checkpoint)
+        # Calculate mean return for both policies
         home_mean_r, away_mean_r = play.evaluate_mean_returns(episode_n=self.eval_episodes)
         return instance_pair, (home_mean_r + away_mean_r)

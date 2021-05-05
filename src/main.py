@@ -29,7 +29,6 @@ ex.captured_out_filter = apply_backspaces_and_linefeeds
 
 results_path = os.path.join(dirname(dirname(abspath(__file__))), "results")
 
-
 def run(_run, _config, _log):
     # check args sanity
     _config = args_sanity_check(_config, _log)
