@@ -1,8 +1,3 @@
-from bin.controls.headless_controls import HeadlessControls
-
-from envs import REGISTRY as env_REGISTRY
-from functools import partial
-from components.episode_buffer import EpisodeBatch
 import torch as th
 
 from steppers import EpisodeStepper
@@ -33,6 +28,9 @@ class SelfPlayStepper(EpisodeStepper):
         return getattr(self.home_mac.action_selector, "epsilon", None), \
                getattr(self.away_mac.action_selector, "epsilon", None)
 
+    def save_replay(self):
+        raise NotImplementedError()
+
     def reset(self):
         super().reset()
         self.away_batch = self.new_batch_fn()
@@ -58,16 +56,11 @@ class SelfPlayStepper(EpisodeStepper):
 
         env_info = {}
 
-        #
-        #
-        # Main Loop - Run while episode is not terminated
-        #
-        #
         while not terminated:
-            home_pre_transition_data, opponent_pre_transition_data = self._build_pre_transition_data()
+            home_pre_transition_data, away_pre_transition_data = self._build_pre_transition_data()
 
             self.home_batch.update(home_pre_transition_data, ts=self.t)
-            self.away_batch.update(opponent_pre_transition_data, ts=self.t)
+            self.away_batch.update(away_pre_transition_data, ts=self.t)
 
             home_actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
                                                         test_mode=test_mode)
@@ -89,32 +82,28 @@ class SelfPlayStepper(EpisodeStepper):
                 "reward": [(home_reward,)],
                 "terminated": [(terminated,)],
             }
-            opponent_post_transition_data = {
+            away_post_transition_data = {
                 "actions": away_actions,
                 "reward": [(away_reward,)],
                 "terminated": [(terminated,)]
             }
 
             self.home_batch.update(home_post_transition_data, ts=self.t)
-            self.away_batch.update(opponent_post_transition_data, ts=self.t)
+            self.away_batch.update(away_post_transition_data, ts=self.t)
 
             self.t += 1
-        #
-        #
-        # Last (state,action) transition pair per learner
-        #
-        #
-        home_last_data, opponent_last_data = self._build_pre_transition_data()
+
+        home_last_data, away_last_data = self._build_pre_transition_data()
 
         self.home_batch.update(home_last_data, ts=self.t)
-        self.away_batch.update(opponent_last_data, ts=self.t)
+        self.away_batch.update(away_last_data, ts=self.t)
 
         # Select actions in the last stored state
-        actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
-        self.home_batch.update({"actions": actions}, ts=self.t)
+        home_actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+        self.home_batch.update({"actions": home_actions}, ts=self.t)
 
-        actions = self.home_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
-        self.away_batch.update({"actions": actions}, ts=self.t)
+        away_actions = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+        self.away_batch.update({"actions": away_actions}, ts=self.t)
 
         if not test_mode:
             self.t_env += self.t
