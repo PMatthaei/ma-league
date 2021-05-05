@@ -1,6 +1,6 @@
 import time
 from logging import warning
-from multiprocessing.dummy import Process
+from multiprocessing import Process
 
 from multiprocessing.connection import Connection
 from multiprocessing import Barrier
@@ -22,8 +22,8 @@ class LeagueRun(Process):
         self._args = args
         self._logger = logger
 
-        self.away = None
-        self.terminated = False
+        self._away: Player = None
+        self.terminated: bool = False
 
     def run(self) -> None:
         self._setup()
@@ -35,14 +35,14 @@ class LeagueRun(Process):
 
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
             # Generate new opponent to train against and load his current checkpoint
-            self.away, flag = self._home.get_match()
-            if self.away is None:
+            self._away, flag = self._home.get_match()
+            if self._away is None:
                 warning("No Opponent was found.")
                 continue
 
             self._logger.console_logger.info(str(self))
 
-            self._play.away_learner = self.away.learner  # Provide away learner from the away player
+            self._play.away_learner = self._away.learner  # Provide away learner from the away player
             self._play.start(play_time=self._args.league_play_time_mins * 60)
             end_time = time.time()
 
@@ -61,16 +61,14 @@ class LeagueRun(Process):
 
     def _episode_callback(self, env_info: Dict):
         result = self._get_result(env_info)
-        self._conn.send({"result": (self._home.player_id, self.away.player_id, result)})
+        self._conn.send({"result": (self._home.player_id, self._away.player_id, result)})
 
     def _close(self):
         self._conn.send({"close": self._home.player_id})
         self._conn.close()
 
     def __str__(self):
-        player_str = f"{type(self._home).__name__} {self._home.player_id}"
-        opponent_str = f"{type(self.away).__name__} {self.away.player_id} "
-        return f"SelfPlayRun - {player_str} playing against opponent {opponent_str}"
+        return f"SelfPlayRun - {self._home.prettier()} playing against opponent {self._away.prettier()}"
 
     @staticmethod
     def _get_result(env_info):

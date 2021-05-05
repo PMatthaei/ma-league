@@ -6,9 +6,10 @@ from copy import deepcopy
 from multiprocessing import Barrier
 from os.path import dirname, abspath
 
+import torch
 from maenv.core import RoleTypes, UnitAttackTypes
-from multiprocessing.connection import Pipe
-from multiprocessing.dummy import Manager
+from multiprocessing import Pipe
+from multiprocessing import Manager
 
 from sacred import SETTINGS, Experiment
 from sacred.observers import FileStorageObserver
@@ -44,6 +45,8 @@ def run(_run, _config, _log):
     _config['play_mode'] = "self"
     set_agents_only(_config)
 
+    torch.multiprocessing.set_start_method('spawn')
+
     args = SimpleNamespace(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"
 
@@ -68,7 +71,7 @@ def run(_run, _config, _log):
     # Build league teams
     team_size = _config["team_size"]
     team_composer = TeamComposer(RoleTypes, UnitAttackTypes)
-    team_compositions = team_composer.compose_unique_teams(team_size)
+    team_compositions = [team_composer.compose_unique_teams(team_size)[0]]
 
     # Shared objects
     manager = Manager()
@@ -83,7 +86,8 @@ def run(_run, _config, _log):
     payoff = Payoff(p_matrix=p_matrix, players=players)
     league = League(initial_agents=team_compositions, payoff=payoff)
 
-    barrier = Barrier(league.size)
+    # Used to ensure all processes have setup before starting to train
+    setup_barrier = Barrier(league.size)
 
     # Start league training
     for idx in range(league.size):
@@ -92,7 +96,7 @@ def run(_run, _config, _log):
 
         player = league.get_player(idx)
 
-        league_run = LeagueRun(home=player, barrier=barrier, conn=conn, args=args, logger=logger)
+        league_run = LeagueRun(home=player, barrier=setup_barrier, conn=conn, args=args, logger=logger)
         runs.append(league_run)
         league_run.start()
 

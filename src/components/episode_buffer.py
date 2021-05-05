@@ -274,8 +274,7 @@ class ReplayBuffer(EpisodeBatch):
                         slice(0, ep_batch.max_seq_length),
                         mark_filled=False)
             # Add episode data as samples to buffer
-            self.update(ep_batch.data.episode_data,
-                        slice(self.buffer_index, self.buffer_index + ep_batch.batch_size))
+            self.update(ep_batch.data.episode_data,slice(self.buffer_index, self.buffer_index + ep_batch.batch_size))
             self.buffer_index = (self.buffer_index + ep_batch.batch_size)
             self.episodes_in_buffer = max(self.episodes_in_buffer, self.buffer_index)
             self.buffer_index = self.buffer_index % self.buffer_size

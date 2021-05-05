@@ -194,15 +194,6 @@ class SelfPlayParallelStepper(ParallelStepper):
         if not test_mode:
             self.t_env += self.env_steps_this_run
 
-        # Get stats back for each env
-        for parent_conn in self.parent_conns:
-            parent_conn.send(("get_stats", None))
-
-        env_stats = []
-        for parent_conn in self.parent_conns:
-            env_stat = parent_conn.recv()
-            env_stats.append(env_stat)
-
         self.logger.collect_episode_returns(home_episode_returns, parallel=True)
         self.logger.collect_episode_returns(away_episode_returns, org=Originator.AWAY, parallel=True)
         self.logger.collect_episode_stats(env_infos, self.t, parallel=True, batch_size=self.batch_size, ep_lens=ep_lens)

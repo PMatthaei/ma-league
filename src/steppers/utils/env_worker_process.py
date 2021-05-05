@@ -6,6 +6,11 @@ from gym.vector.utils import CloudpickleWrapper
 
 class EnvWorker(Process):
     def __init__(self, remote: Connection, env: CloudpickleWrapper):
+        """
+        Interacts with environment if requested and communicates results back to parent connection.
+        :param remote:
+        :param env:
+        """
         super().__init__()
         self.remote = remote
         self.env = env
@@ -47,4 +52,4 @@ class EnvWorker(Process):
             elif cmd == "get_env_info":
                 self.remote.send(env.get_env_info())
             else:
-                raise NotImplementedError
+                raise NotImplementedError(f"Unknown message received in environment worker: {cmd}")

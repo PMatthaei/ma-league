@@ -110,7 +110,16 @@ class NormalPlayRun(Run):
         self.stepper = stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
 
     def _init_stepper(self):
-        self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess, home_mac=self.home_mac)
+        self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
+                                home_mac=self.home_mac)
+
+    @property
+    def _has_not_reached_t_max(self):
+        return self._play_time is None and (self.stepper.t_env <= self.args.t_max)
+
+    @property
+    def _has_not_reached_time_limit(self):
+        return self._play_time is not None and ((self._end_time - self._start_time) <= self._play_time)
 
     def start(self, play_time=None):
         """
@@ -118,6 +127,7 @@ class NormalPlayRun(Run):
         :param play_time: Play the run for a certain time in seconds.
         :return:
         """
+        self._play_time = play_time
         self._init_stepper()
 
         if self.args.checkpoint_path != "":
@@ -135,15 +145,13 @@ class NormalPlayRun(Run):
         else:
             self.logger.console_logger.info("Beginning training for {} timesteps.".format(self.args.t_max))
 
-        start_time = time.time()
-        end_time = time.time()
-        t_not_reached = play_time is None and self.stepper.t_env <= self.args.t_max
+        self._start_time = time.time()
+        self._end_time = time.time()
 
-        while (play_time is not None and (end_time - start_time) <= play_time) or t_not_reached:
+        while self._has_not_reached_time_limit or self._has_not_reached_t_max:
 
             # Run for a whole episode at a time
             self._train_episode(episode_num=episode)
-
             # Execute test runs once in a while
             n_test_runs = max(1, self.args.test_nepisode // self.stepper.batch_size)
             if (self.stepper.t_env - self.last_test_T) / self.args.test_interval >= 1.0:
@@ -165,7 +173,7 @@ class NormalPlayRun(Run):
                 self.logger.log_recent_stats()
                 self.last_log_T = self.stepper.t_env
 
-            end_time = time.time()
+            self._end_time = time.time()
         # Finish and clean up
         self._finish()
 

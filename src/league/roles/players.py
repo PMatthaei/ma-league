@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from typing import Tuple, Union, Any
 
@@ -37,6 +38,12 @@ class Player(object):
 
     def checkpoint(self) -> HistoricalPlayer:
         raise NotImplementedError
+
+    def __str__(self):
+        return f"{type(self).__name__}_{self.player_id}"
+
+    def prettier(self):
+        return re.sub(r'(?<!^)(?=[A-Z])', '_', str(self)).lower()
 
 
 class MainPlayer(Player):
@@ -110,7 +117,7 @@ class MainPlayer(Player):
         win_rates = self._payoff[self.player_id, exp_historical]
         if len(win_rates) and win_rates.min() < 0.3:
             chosen = np.random.choice(exp_historical,
-                                         p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
+                                      p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
             return self._payoff.players[chosen], True
 
         # Check forgetting

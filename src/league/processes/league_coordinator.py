@@ -1,5 +1,5 @@
 from multiprocessing.connection import Connection
-from multiprocessing.dummy import Process
+from multiprocessing import Process
 from typing import List
 
 from league.league import League

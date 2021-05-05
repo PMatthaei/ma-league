@@ -15,6 +15,10 @@ class Originator(str, Enum):
         return list(map(lambda c: c.value, cls))
 
 
+def dd():
+    return []
+
+
 class LeagueLogger:
     @staticmethod
     def console_logger():
@@ -38,7 +42,7 @@ class LeagueLogger:
         self.use_sacred = False
         self.use_hdf = False
 
-        self.stats = defaultdict(lambda: [])
+        self.stats = defaultdict(dd)
 
         self.tb_logger = None
         self.sacred_info = None
@@ -179,7 +183,8 @@ class LeagueLogger:
             else:
                 infos = [self.ep_stats] + env_info
 
-            self.ep_stats.update({k: np.sum(self.get_stat(k, d) for d in infos) for k in set.union(*[set(d) for d in infos])})
+            self.ep_stats.update(
+                {k: np.sum(self.get_stat(k, d) for d in infos) for k in set.union(*[set(d) for d in infos])})
             self.ep_stats["n_episodes"] = batch_size + self.ep_stats.get("n_episodes", 0)
             self.ep_stats["ep_length"] = sum(ep_lens) + self.ep_stats.get("ep_length", 0)
         else:

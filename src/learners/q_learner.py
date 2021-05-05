@@ -37,7 +37,7 @@ class QLearner(Learner):
         self.trained_steps = 0
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
-        self.trained_steps += batch.batch_size
+        self.trained_steps += batch.batch_size  # TODO Fix
         # Get the relevant quantities
         rewards = batch["reward"][:, :-1]
         actions = batch["actions"][:, :-1]
@@ -126,7 +126,7 @@ class QLearner(Learner):
     def _update_targets(self):
         self.target_mac.load_state(self.mac)
         if self.mixer is not None:
-            self.target_mixer.load_state_dict(self.mixer.state_dict())
+            self.target_mixer.load_state_dict(th.load(self.mixer.state_dict()))
         self.logger.console_logger.info("Updated {0}target network.".format(self.name))
 
     def cuda(self):
@@ -147,8 +147,10 @@ class QLearner(Learner):
         # Not quite right but I don't want to save target networks
         self.target_mac.load_models(path, self.name)
         if self.mixer is not None:
-            self.mixer.load_state_dict(th.load("{}/{}mixer.th".format(path, self.name), map_location=lambda storage, loc: storage))
-        self.optimiser.load_state_dict(th.load("{}/{}opt.th".format(path, self.name), map_location=lambda storage, loc: storage))
+            self.mixer.load_state_dict(
+                th.load("{}/{}mixer.th".format(path, self.name), map_location=lambda storage, loc: storage))
+        self.optimiser.load_state_dict(
+            th.load("{}/{}opt.th".format(path, self.name), map_location=lambda storage, loc: storage))
 
     def get_current_step(self):
         return self.trained_steps

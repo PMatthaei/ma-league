@@ -75,11 +75,11 @@ class EpisodeStepper:
         terminated = False
         episode_return = 0
 
-        self.home_mac.init_hidden(batch_size=self.batch_size)
-
         self.logger.test_mode = test_mode
         self.logger.test_n_episode = self.args.test_nepisode
         self.logger.runner_log_interval = self.args.runner_log_interval
+
+        self.home_mac.init_hidden(batch_size=self.batch_size)
 
         self.env.render()
 
