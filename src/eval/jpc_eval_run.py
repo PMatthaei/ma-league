@@ -1,5 +1,5 @@
 import itertools
-from multiprocessing import Pool, Process
+from multiprocessing import Pool
 from typing import Tuple, List, Union
 
 import torch as th
@@ -16,7 +16,6 @@ class JointPolicyCorrelationEvaluationRun:
         self.logger = logger
         self.instances_num = instances_num
         self.eval_episodes = eval_episodes
-
         self.policies: List[Union[Tuple[Learner, Learner], Tuple[None]]] = [tuple()] * self.instances_num
         self.jpc_matrix: th.Tensor = th.zeros([self.instances_num, self.instances_num], dtype=th.float32)
 
@@ -52,7 +51,7 @@ class JointPolicyCorrelationEvaluationRun:
     def train_instance_pair(self, instance: int):
         play = SelfPlayRun(args=self.args, logger=self.logger)
         play.start()
-        return instance, (play.home_learner.detach(), play.away_learner.detach())
+        return instance, (play.home_learner, play.away_learner)
 
     def evaluate_instances(self) -> List[Tuple[Tuple[int, int], float]]:
         """

@@ -131,7 +131,7 @@ class NormalPlayRun(Run):
         self._init_stepper()
 
         if self.args.checkpoint_path != "":
-            timestep_to_load = self.checkpoint_manager.load(learners=self.learners)
+            timestep_to_load = self.checkpoint_manager.load(learners=self.learners, load_step=self.args.load_step)
             self.stepper.t_env = timestep_to_load
 
             if self.args.evaluate or self.args.save_replay:

@@ -11,7 +11,6 @@ class CheckpointManager:
     def __init__(self, args, logger):
         self.unique_token = args.unique_token
         self.checkpoint_path = args.checkpoint_path
-        self.load_step = args.load_step
         self.logger = logger
         pass
 
@@ -24,7 +23,7 @@ class CheckpointManager:
         [learner.save_models(save_path, learner.name) for learner in learners]
         return save_path
 
-    def load(self, learners: List[Learner], checkpoint_path=None) -> int:
+    def load(self, learners: List[Learner], load_step, checkpoint_path=None) -> int:
         path = checkpoint_path if checkpoint_path is not None else self.checkpoint_path
         timesteps = []
         timestep_to_load = 0
@@ -40,12 +39,12 @@ class CheckpointManager:
             if os.path.isdir(full_name) and name.isdigit():
                 timesteps.append(int(name))
 
-        if self.load_step == 0:
+        if load_step == 0:
             # choose the max timestep
             timestep_to_load = max(timesteps)
         else:
             # choose the timestep closest to load_step
-            timestep_to_load = min(timesteps, key=lambda x: abs(x - self.load_step))
+            timestep_to_load = min(timesteps, key=lambda x: abs(x - load_step))
 
         model_path = os.path.join(path, str(timestep_to_load))
 
@@ -53,4 +52,3 @@ class CheckpointManager:
         [learner.load_models(model_path, learner.name) for learner in learners]
 
         return timestep_to_load
-

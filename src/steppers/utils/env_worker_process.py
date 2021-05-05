@@ -1,4 +1,4 @@
-from multiprocessing.dummy.connection import Connection
+from multiprocessing.connection import Connection
 
 from torch.multiprocessing import Process
 from gym.vector.utils import CloudpickleWrapper
@@ -22,7 +22,7 @@ class EnvWorker(Process):
         while True:
             cmd, data = self.remote.recv()
             if cmd == "step":
-                actions = data
+                actions = data.clone()
                 # Take a step in the environment
                 obs, reward, done_n, env_info = env.step(actions)
                 # Return the observations, avail_actions and state to make the next action
@@ -38,6 +38,7 @@ class EnvWorker(Process):
                     "terminated": done_n,
                     "info": env_info
                 })
+                del actions
             elif cmd == "reset":
                 env.reset()
                 self.remote.send({

@@ -124,7 +124,8 @@ class ParallelStepper:
         running_envs = [idx for idx, terminated in enumerate(terminateds) if not terminated]
         env_infos = []  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
 
-        self.actions = torch.zeros((self.batch_size, self.args.n_agents))
+        actions_batch = torch.zeros((self.batch_size, self.args.n_agents))
+
         while True:
 
             # Pass the entire batch of experiences up till now to the agents
@@ -136,6 +137,7 @@ class ParallelStepper:
             actions_chosen = {
                 "actions": actions.unsqueeze(1)
             }
+
             self.home_batch.update(actions_chosen, bs=running_envs, ts=self.t, mark_filled=False)
 
             # Send actions to each running env
@@ -143,8 +145,8 @@ class ParallelStepper:
             for idx, parent_conn in enumerate(self.parent_conns):
                 if idx in running_envs:  # We produced actions for this env
                     if not terminateds[idx]:  # Only send the actions to the env if it hasn't terminated
-                        self.actions[action_idx] = actions[action_idx]
-                        parent_conn.send(("step", self.actions[action_idx]))
+                        actions_batch[action_idx] = actions[action_idx]
+                        parent_conn.send(("step", actions_batch[action_idx]))
                     action_idx += 1  # actions is not a list over every env
 
             # Update running envs
