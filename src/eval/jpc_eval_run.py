@@ -29,6 +29,8 @@ class JointPolicyCorrelationEvaluationRun:
 
         # Evaluate policies
         indices, values = self.evaluate_instances(checkpoints)
+
+        # Fill JPC matrix with results
         self.jpc_matrix[indices[:, 0], indices[:, 1]] = values
 
         self.logger.console_logger.info("Finished JPC Evaluation")
@@ -40,9 +42,10 @@ class JointPolicyCorrelationEvaluationRun:
         :return: checkpoints produced by all workers
         """
         instances = list(range(self.instances_num))
-        pool = Pool()
         self.logger.console_logger.info("Train {} instances.".format(len(instances)))
-        return pool.map(self.train_instance_pair, instances)
+        with Pool() as pool:
+            results = pool.map(self.train_instance_pair, instances)
+        return results
 
     def train_instance_pair(self, instance: int):
         """
@@ -63,11 +66,11 @@ class JointPolicyCorrelationEvaluationRun:
         """
         pairs = list(itertools.product(range(self.instances_num), repeat=2))
         data = list(zip(pairs, [checkpoints] * self.instances_num))
-        pool = Pool()
         self.logger.console_logger.info("Evaluate {} pairings for {} episodes.".format(len(pairs), self.eval_episodes))
-        results = pool.starmap(self.evaluate_instance_pair, data)
+        with Pool() as pool:
+            results = pool.starmap(self.evaluate_instance_pair, data)
         indices, values = map(list, zip(*results))
-        return th.tensor(indices), th.as_tensor(values)
+        return th.as_tensor(indices), th.as_tensor(values)
 
     def evaluate_instance_pair(self, instance_pair, checkpoints) -> Tuple[Tuple[int, int], float]:
         """
@@ -78,10 +81,9 @@ class JointPolicyCorrelationEvaluationRun:
         i, j = instance_pair
         eval_descriptor = "Eval home player from instance {} against away player from instance {}".format(i, j)
         self.logger.console_logger.info(eval_descriptor)
-        home_checkpoint, away_checkpoint = checkpoints[i], checkpoints[j]
         play = SelfPlayRun(args=self.args, logger=self.logger)
-        play.home_learner.load_models(home_checkpoint)
-        play.away_learner.load_models(away_checkpoint)
+        play.home_learner.load_models(checkpoints[i])
+        play.away_learner.load_models(checkpoints[j])
         # Calculate mean return for both policies
         home_mean_r, away_mean_r = play.evaluate_mean_returns(episode_n=self.eval_episodes)
         return instance_pair, (home_mean_r + away_mean_r)
