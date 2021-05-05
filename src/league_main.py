@@ -2,6 +2,7 @@ import datetime
 import os
 import pprint
 import sys
+import threading
 from copy import deepcopy
 from multiprocessing import Barrier
 from os.path import dirname, abspath
@@ -111,6 +112,20 @@ def run(_run, _config, _log):
     # Print win rates for all players
     league.print_payoff()
 
+    # Clean up after finishing
+    print("Exiting Main")
+
+    print("Stopping all threads")
+    for t in threading.enumerate():
+        if t.name != "MainThread":
+            print("Thread {} is alive! Is daemon: {}".format(t.name, t.daemon))
+            t.join(timeout=1)
+            print("Thread joined")
+
+    print("Exiting script")
+
+    # Making sure framework really exits
+    os._exit(os.EX_OK)
 
 @ex.main
 def league_main(_run, _config, _log):
