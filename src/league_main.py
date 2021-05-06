@@ -4,6 +4,8 @@ import pprint
 import sys
 import threading
 from copy import deepcopy
+from multiprocessing.managers import BaseManager
+
 from torch.multiprocessing import Barrier, Queue, Manager
 from os.path import dirname, abspath
 
@@ -18,6 +20,7 @@ from league.components.payoff import Payoff
 from league.league import League
 from league.processes.league_process import LeagueProcess
 from league.processes.league_coordinator import LeagueCoordinator
+from league.roles.players import Player
 from league.utils.team_composer import TeamComposer
 from utils.logging import LeagueLogger
 from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy, \
@@ -79,26 +82,24 @@ def run(_run, _config, _log):
 
     # Infrastructure
     runs = []  # All running processes representing an agent playing in the league
-    queues = []  # Connections from the parent process to each run
 
     # Create league
     payoff = Payoff(p_matrix=p_matrix, players=players)
     league = League(initial_agents=team_compositions, payoff=payoff)
+    in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(league.size)])
 
-    # Used to ensure all processes have setup before starting to train
-    setup_barrier = Barrier(league.size)
+    setup_barrier = Barrier(parties=league.size)
 
     # Start league training
-    for idx in range(league.size):
-        queue = Queue()
-        queues.append(queue)
+    for idx, (in_q, out_q) in enumerate(zip(in_queues, out_queues)):
         player = league.get_player(idx)
-        league_run = LeagueProcess(home=player, barrier=setup_barrier, queue=queue, args=args, logger=logger)
+        league_run = LeagueProcess(home=player, queue=(in_q, out_q), args=args, logger=logger, barrier=setup_barrier)
         runs.append(league_run)
-        league_run.start()
+
+    [r.start() for r in runs]
 
     # Handle message communication within the league
-    coordinator = LeagueCoordinator(league, queues)
+    coordinator = LeagueCoordinator(logger=logger, players=players, queues=(in_queues, out_queues), payoff=payoff)
     coordinator.start()
     coordinator.join()
 
@@ -110,7 +111,7 @@ def run(_run, _config, _log):
 
     # Clean up after finishing
     print("Exiting Main")
-
+    manager.shutdown()
     print("Stopping all threads")
     for t in threading.enumerate():
         if t.name != "MainThread":
@@ -122,6 +123,7 @@ def run(_run, _config, _log):
 
     # Making sure framework really exits
     os._exit(os.EX_OK)
+
 
 @ex.main
 def league_main(_run, _config, _log):

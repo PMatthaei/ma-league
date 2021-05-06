@@ -47,7 +47,7 @@ class League(object):
         return self._payoff.update(home, away, result)
 
     def get_player(self, idx: int) -> Player:
-        return self._learning_agents[idx]
+        return self._payoff.get_player(idx)
 
     def add_player(self, player: Player):
         self._payoff.add_player(player)
