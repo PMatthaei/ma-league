@@ -2,6 +2,7 @@ from typing import Tuple
 
 from league.roles.exploiters import MainExploiter, LeagueExploiter
 from league.roles.players import MainPlayer, Player
+from learners.learner import Learner
 
 
 class League(object):
@@ -50,6 +51,9 @@ class League(object):
 
     def add_player(self, player: Player):
         self._payoff.add_player(player)
+
+    def provide_learner(self, player_id: int, learner: Learner):
+        self._payoff.get_player(player_id).learner = learner
 
     def print_payoff(self):
         player_ids = list(range(self.size))

@@ -14,10 +14,10 @@ from learners.learner import Learner
 
 class Player(object):
 
-    def __init__(self):
-        self.player_id = None
-        self._payoff = None
-        self.latest = None
+    def __init__(self, player_id: int, payoff: Payoff):
+        self.player_id = player_id
+        self._payoff = payoff
+        self.learner: Union[Learner, None] = None
 
     def get_match(self) -> Player:
         pass
@@ -30,7 +30,7 @@ class Player(object):
 
     def _create_checkpoint(self) -> HistoricalPlayer:
         print("Saving checkpoint as HistoricalPlayer")
-        return HistoricalPlayer(self.player_id, self._payoff)
+        return HistoricalPlayer(self.player_id, self._payoff, deepcopy(self.learner))
 
     @property
     def payoff(self) -> Payoff:
@@ -49,15 +49,7 @@ class Player(object):
 class MainPlayer(Player):
 
     def __init__(self, player_id: int, payoff: Payoff):
-        """
-
-        :param player_id:
-        :param team_plan:
-        :param payoff:
-        """
-        super().__init__()
-        self.player_id = player_id
-        self._payoff = payoff
+        super().__init__(player_id, payoff)
         self._checkpoint_step = 0
 
     def _pfsp_branch(self) -> Tuple[Player, bool]:
@@ -69,6 +61,10 @@ class MainPlayer(Player):
             player.player_id for player in self._payoff.players
             if isinstance(player, HistoricalPlayer)
         ]
+
+        if len(historical) == 0:  # no new historical opponents found # TODO
+            return None, False
+
         win_rates = self._payoff[self.player_id, historical]
         chosen = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
         return self._payoff.players[chosen], True
@@ -162,8 +158,8 @@ class MainPlayer(Player):
 
         :return:
         """
-        steps_passed = self.current_step - self._checkpoint_step
-        if steps_passed < 2e9: # TODO make constant
+        steps_passed = self.learner.get_current_step() - self._checkpoint_step
+        if steps_passed < 2e9:  # TODO make constant
             return False
 
         historical = [
@@ -171,29 +167,28 @@ class MainPlayer(Player):
             if isinstance(player, HistoricalPlayer)
         ]
         win_rates = self._payoff[self.player_id, historical]
-        return win_rates.min() > 0.7 or steps_passed > 4e9 # TODO make constant
+        return win_rates.min() > 0.7 or steps_passed > 4e9  # TODO make constant
 
     def checkpoint(self) -> HistoricalPlayer:
         """
 
         :return:
         """
-        self._checkpoint_step = self.current_step
+        self._checkpoint_step = self.learner.get_current_step()
         return self._create_checkpoint()
 
 
 class HistoricalPlayer(Player):
 
-    def __init__(self, player_id: int, payoff: Payoff):
+    def __init__(self, player_id: int, payoff: Payoff, learner: Learner):
         """
 
         :param player_id:
         :param payoff:
         """
-        super().__init__()
-        self.player_id = player_id
-        self._payoff = payoff
-        self._parent = None
+
+        super().__init__(player_id, payoff)
+        self._parent = learner
 
     @property
     def parent(self) -> Learner:

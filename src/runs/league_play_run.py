@@ -8,7 +8,7 @@ from steppers import SELF_REGISTRY as self_steppers_REGISTRY
 import torch as th
 
 
-class LeaguePlay(NormalPlayRun):
+class LeaguePlayRun(NormalPlayRun):
 
     def __init__(self, args, logger, finish_callback=None, episode_callback=None):
         """
@@ -32,7 +32,7 @@ class LeaguePlay(NormalPlayRun):
         # Build standard home learner
         super()._build_learners()
         # Add static learner
-        self.away_mac = mac_REGISTRY[self.args.mac](self.scheme, self.groups, self.args)
+        self.away_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
         self.away_learner = le_REGISTRY[self.args.learner](self.away_mac, self.scheme, self.logger, self.args, "away")
         self.learners.append(self.away_learner)
 
@@ -42,7 +42,7 @@ class LeaguePlay(NormalPlayRun):
     def _init_stepper(self):
         # Give runner the scheme
         self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
-                                home_mac=self.home_mac)
+                                home_mac=self.home_mac, away_mac=self.away_mac)
 
     def _finish(self):
         super()._finish()
@@ -51,7 +51,7 @@ class LeaguePlay(NormalPlayRun):
 
     def _train_episode(self, episode_num):
         # Run for a whole episode at a time
-        home_batch, away_batch, last_env_info = self.stepper.run(test_mode=False)
+        home_batch, _, last_env_info = self.stepper.run(test_mode=False)
         if self.episode_callback is not None:
             self.episode_callback(last_env_info)
 

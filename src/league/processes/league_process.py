@@ -1,20 +1,19 @@
 import time
 from logging import warning
-from multiprocessing import Process
+from torch.multiprocessing import Process
 
-from multiprocessing.connection import Connection
-from torch.multiprocessing import Barrier
+from torch.multiprocessing import Barrier, Queue
 
 from types import SimpleNamespace
-from typing import Dict
+from typing import Dict, Union
 
 from league.roles.players import Player, MainPlayer
-from runs.self_play_run import SelfPlayRun
+from runs.league_play_run import LeaguePlayRun
 from utils.logging import LeagueLogger
 
 
-class LeaguePlayRun(Process):
-    def __init__(self, home: Player, barrier: Barrier, conn: Connection, args: SimpleNamespace, logger: LeagueLogger):
+class LeagueProcess(Process):
+    def __init__(self, home: Player, barrier: Barrier, queue: Queue, args: SimpleNamespace, logger: LeagueLogger):
         """
         LeaguePlay is a form of NormalPlay where the opponent can be swapped out from a pool of agents.
         This will cause the home player to adapt to multiple opponents but will also cause inter-non-stationarity since
@@ -26,13 +25,13 @@ class LeaguePlayRun(Process):
         :param logger:
         """
         super().__init__()
-        self._home = home
+        self._home_player = home
         self._barrier = barrier
-        self._conn = conn
+        self._queue = queue
         self._args = args
         self._logger = logger
 
-        self._away: Player = None
+        self._away_player: Union[Player, None] = None
         self.terminated: bool = False
 
     def run(self) -> None:
@@ -43,14 +42,14 @@ class LeaguePlayRun(Process):
 
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
             # Generate new opponent to train against and load his current checkpoint
-            self._away, flag = self._home.get_match()
-            if self._away is None:
+            self._away_player, flag = self._home_player.get_match()
+            if self._away_player is None:
                 warning("No Opponent was found.")
                 continue
+            # TODO load away players learner
+            #self._play.away_learner.load_models(self._away_player.latest)
 
             self._logger.console_logger.info(str(self))
-
-            self._play.away_learner.load_models(self._away.latest)
             play_time_seconds = self._args.league_play_time_mins * 60
             self._play.start(play_time=play_time_seconds)
             end_time = time.time()
@@ -59,27 +58,28 @@ class LeaguePlayRun(Process):
 
     def _setup(self):
         # Create play
-        self._play = SelfPlayRun(args=self._args, logger=self._logger, episode_callback=self._episode_callback)
-        # Provide learner to the home player
-        self._home.learner = self._play.home_learner
-        if isinstance(self._home, MainPlayer):
-            self.checkpoint_agent()  # MainPlayers are initially added as historical players
-        self._barrier.wait()  # Wait until all processes setup their checkpoints and/or learner
+        self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._episode_callback)
+        # Provide learner to the shared home player
+        self._send_learner()
+        if isinstance(self._home_player, MainPlayer):
+            self._checkpoint_agent()  # MainPlayers are initially added as historical players
+        self._barrier.wait()  # Synchronize - Wait until all processes performed setup
 
-    def checkpoint_agent(self):
-        print("Sent checkpoint")
-        self._conn.send({"checkpoint": self._home.player_id})
+    def _send_learner(self):
+        self._queue.put({"learner": self._play.home_learner, "player_id": self._home_player.player_id})
+
+    def _checkpoint_agent(self):
+        self._queue.put({"checkpoint": self._home_player.player_id})
 
     def _episode_callback(self, env_info: Dict):
         result = self._get_result(env_info)
-        self._conn.send({"result": (self._home.player_id, self._away.player_id, result)})
+        self._queue.put({"result": (self._home_player.player_id, self._away_player.player_id, result)})
 
     def _close(self):
-        self._conn.send({"close": self._home.player_id})
-        self._conn.close()
+        self._queue.put({"close": self._home_player.player_id})
 
     def __str__(self):
-        return f"SelfPlayRun - {self._home.prettier()} playing against opponent {self._away.prettier()}"
+        return f"LeaguePlayRun - {self._home_player.prettier()} playing against opponent {self._away_player.prettier()}"
 
     @staticmethod
     def _get_result(env_info):

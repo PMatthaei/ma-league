@@ -4,13 +4,11 @@ import pprint
 import sys
 import threading
 from copy import deepcopy
-from torch.multiprocessing import Barrier
+from torch.multiprocessing import Barrier, Queue, Manager
 from os.path import dirname, abspath
 
 import torch
 from maenv.core import RoleTypes, UnitAttackTypes
-from multiprocessing import Pipe
-from multiprocessing import Manager
 
 from sacred import SETTINGS, Experiment
 from sacred.observers import FileStorageObserver
@@ -18,7 +16,7 @@ from sacred.utils import apply_backspaces_and_linefeeds
 
 from league.components.payoff import Payoff
 from league.league import League
-from league.processes.league_play_run import LeaguePlayRun
+from league.processes.league_process import LeagueProcess
 from league.processes.league_coordinator import LeagueCoordinator
 from league.utils.team_composer import TeamComposer
 from utils.logging import LeagueLogger
@@ -81,7 +79,7 @@ def run(_run, _config, _log):
 
     # Infrastructure
     runs = []  # All running processes representing an agent playing in the league
-    run_conns = []  # Connections from the parent process to each run
+    queues = []  # Connections from the parent process to each run
 
     # Create league
     payoff = Payoff(p_matrix=p_matrix, players=players)
@@ -92,17 +90,15 @@ def run(_run, _config, _log):
 
     # Start league training
     for idx in range(league.size):
-        run_conn, conn = Pipe()  # TODO: downgrade to queue if no msg from here to child conn needed
-        run_conns.append(run_conn)
-
+        queue = Queue()
+        queues.append(queue)
         player = league.get_player(idx)
-
-        league_run = LeaguePlayRun(home=player, barrier=setup_barrier, conn=conn, args=args, logger=logger)
+        league_run = LeagueProcess(home=player, barrier=setup_barrier, queue=queue, args=args, logger=logger)
         runs.append(league_run)
         league_run.start()
 
     # Handle message communication within the league
-    coordinator = LeagueCoordinator(league, run_conns)
+    coordinator = LeagueCoordinator(league, queues)
     coordinator.start()
     coordinator.join()
 

@@ -73,7 +73,7 @@ class SelfPlayParallelStepper(ParallelStepper):
 
     def run(self, test_mode=False):
         """
-        Run a single episode with multiple environments in parallel while performing self-play
+        Run a single episode with multiple environments in parallel while performing self-play.
         :param test_mode:
         :return:
         """

@@ -1,5 +1,5 @@
 import itertools
-from multiprocessing import Pool
+from torch.multiprocessing.pool import Pool
 from typing import Tuple, List, Union
 
 import torch as th

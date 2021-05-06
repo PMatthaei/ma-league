@@ -1,37 +1,40 @@
-from multiprocessing.connection import Connection
-from multiprocessing import Process
+from torch.multiprocessing import Process, Queue
 from typing import List
 
 from league.league import League
 
 
 class LeagueCoordinator(Process):
-    def __init__(self, league: League, connections: List[Connection]):
+    def __init__(self, league: League, queues: List[Queue]):
         """
         Handles messages sent from league sub processes to the main league process.
         :param league:
         :param connections:
         """
-        self.league = league
-        self.conns = connections
         super().__init__()
+        self.league = league
+        self._queues = queues
+        self._closed = []
 
     def run(self) -> None:
         # Receive messages from all processes over their connections
-        while any(not conn.closed for conn in self.conns):
-            for conn in self.conns:
-                if not conn.closed and conn.poll():
-                    self._handle_message(conn)
+        while len(self._closed) != len(self._queues):
+            for q in self._queues:
+                if not q.empty():
+                    self._handle_message(q)
 
-    def _handle_message(self, conn: Connection):
-        msg = conn.recv()
+    def _handle_message(self, queue: Queue):
+        msg = queue.get_nowait()
         if "close" in msg:
             print(f"Closing connection to process {msg['close']}")
-            conn.close()
+            queue.close()
+            self._closed.append(msg['close'])
         elif "checkpoint" in msg:  # checkpoint player initiated from a connected process
             self._checkpoint(msg)
         elif "result" in msg:
             self._save_outcome(msg)
+        elif "learner" in msg:
+            self._provide_learner(msg)
         else:
             raise Exception("Unknown message.")
 
@@ -55,3 +58,9 @@ class LeagueCoordinator(Process):
         home_player, _ = self.league.update(home, away, outcome)
         if home_player.ready_to_checkpoint():  # Auto-checkpoint player
             self.league.add_player(home_player.checkpoint())
+
+    def _provide_learner(self, msg):
+        self.league.provide_learner(msg["player_id"], msg["learner"])
+        self.league._payoff.players[msg["player_id"]].learner = msg["learner"]
+        player = self.league._payoff.players[msg["player_id"]]
+        print()

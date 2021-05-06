@@ -88,8 +88,13 @@ class Payoff:
         self.p_matrix[home, away] *= self.decay
         self.p_matrix[away, home] *= self.decay
 
-    def add_player(self, player):
+    def add_player(self, player) -> None:
         self.players.append(player)
+
+    def get_player(self, player_id: int):
+        player = self.players[player_id]
+        assert player.player_id == player_id, "ID mismatch."
+        return player
 
     def has_entries(self, home: int, away: int):
         """
