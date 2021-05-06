@@ -17,7 +17,7 @@ class Player(object):
     def __init__(self):
         self.player_id = None
         self._payoff = None
-        self._learner = None
+        self.latest = None
 
     def get_match(self) -> Player:
         pass
@@ -30,7 +30,7 @@ class Player(object):
 
     def _create_checkpoint(self) -> HistoricalPlayer:
         print("Saving checkpoint as HistoricalPlayer")
-        return HistoricalPlayer(self.player_id, self._payoff, deepcopy(self._learner))
+        return HistoricalPlayer(self.player_id, self._payoff)
 
     @property
     def payoff(self) -> Payoff:
@@ -48,7 +48,7 @@ class Player(object):
 
 class MainPlayer(Player):
 
-    def __init__(self, player_id: int, payoff: Payoff, learner: Learner = None):
+    def __init__(self, player_id: int, payoff: Payoff):
         """
 
         :param player_id:
@@ -58,7 +58,6 @@ class MainPlayer(Player):
         super().__init__()
         self.player_id = player_id
         self._payoff = payoff
-        self.learner = learner
         self._checkpoint_step = 0
 
     def _pfsp_branch(self) -> Tuple[Player, bool]:
@@ -163,8 +162,8 @@ class MainPlayer(Player):
 
         :return:
         """
-        steps_passed = self.learner.get_current_step() - self._checkpoint_step
-        if steps_passed < 2e9:
+        steps_passed = self.current_step - self._checkpoint_step
+        if steps_passed < 2e9: # TODO make constant
             return False
 
         historical = [
@@ -172,20 +171,20 @@ class MainPlayer(Player):
             if isinstance(player, HistoricalPlayer)
         ]
         win_rates = self._payoff[self.player_id, historical]
-        return win_rates.min() > 0.7 or steps_passed > 4e9
+        return win_rates.min() > 0.7 or steps_passed > 4e9 # TODO make constant
 
     def checkpoint(self) -> HistoricalPlayer:
         """
 
         :return:
         """
-        self._checkpoint_step = self.learner.get_current_step()
+        self._checkpoint_step = self.current_step
         return self._create_checkpoint()
 
 
 class HistoricalPlayer(Player):
 
-    def __init__(self, player_id: int, payoff: Payoff, learner: Learner = None):
+    def __init__(self, player_id: int, payoff: Payoff):
         """
 
         :param player_id:
@@ -194,7 +193,7 @@ class HistoricalPlayer(Player):
         super().__init__()
         self.player_id = player_id
         self._payoff = payoff
-        self._parent = learner
+        self._parent = None
 
     @property
     def parent(self) -> Learner:

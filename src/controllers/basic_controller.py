@@ -1,10 +1,11 @@
+from controllers.multi_agent_controller import MultiAgentController
 from exceptions.mac_exceptions import HiddenStateNotInitialized
 from modules.agents import REGISTRY as agent_REGISTRY
 from components.action_selectors import REGISTRY as action_REGISTRY
 import torch as th
 
 
-class BasicMAC:
+class BasicMAC(MultiAgentController):
     def __init__(self, scheme, groups, args):
         """
         This multi-agent controller shares parameters between agents.
@@ -80,7 +81,8 @@ class BasicMAC:
         th.save(self.agent.state_dict(), "{}/{}agent.th".format(path, name))
 
     def load_models(self, path, name):
-        self.agent.load_state_dict(th.load("{}/{}agent.th".format(path, name), map_location=lambda storage, loc: storage))
+        self.agent.load_state_dict(
+            th.load("{}/{}agent.th".format(path, name), map_location=lambda storage, loc: storage))
 
     def _build_agents(self, input_shape):
         return agent_REGISTRY[self.args.agent](input_shape, self.args)

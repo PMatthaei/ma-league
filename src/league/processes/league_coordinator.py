@@ -8,7 +8,7 @@ from league.league import League
 class LeagueCoordinator(Process):
     def __init__(self, league: League, connections: List[Connection]):
         """
-        Handles messages sent from learner processes to the main league process.
+        Handles messages sent from league sub processes to the main league process.
         :param league:
         :param connections:
         """
@@ -53,5 +53,5 @@ class LeagueCoordinator(Process):
         """
         home, away, outcome = msg["result"]
         home_player, _ = self.league.update(home, away, outcome)
-        if home_player.ready_to_checkpoint():
+        if home_player.ready_to_checkpoint():  # Auto-checkpoint player
             self.league.add_player(home_player.checkpoint())

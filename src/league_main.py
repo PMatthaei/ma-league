@@ -4,7 +4,7 @@ import pprint
 import sys
 import threading
 from copy import deepcopy
-from multiprocessing import Barrier
+from torch.multiprocessing import Barrier
 from os.path import dirname, abspath
 
 import torch
@@ -18,7 +18,7 @@ from sacred.utils import apply_backspaces_and_linefeeds
 
 from league.components.payoff import Payoff
 from league.league import League
-from league.processes.league_process import LeagueRun
+from league.processes.league_play_run import LeaguePlayRun
 from league.processes.league_coordinator import LeagueCoordinator
 from league.utils.team_composer import TeamComposer
 from utils.logging import LeagueLogger
@@ -97,7 +97,7 @@ def run(_run, _config, _log):
 
         player = league.get_player(idx)
 
-        league_run = LeagueRun(home=player, barrier=setup_barrier, conn=conn, args=args, logger=logger)
+        league_run = LeaguePlayRun(home=player, barrier=setup_barrier, conn=conn, args=args, logger=logger)
         runs.append(league_run)
         league_run.start()
 

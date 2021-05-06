@@ -76,7 +76,7 @@ def run(_run, _config, _log):
             from runs.self_play_run import SelfPlayRun
             play = SelfPlayRun(args=args, logger=logger)
     else:
-        from runs.run import NormalPlayRun
+        from runs.normal_play_run import NormalPlayRun
         play = NormalPlayRun(args=args, logger=logger)
 
     play.start()

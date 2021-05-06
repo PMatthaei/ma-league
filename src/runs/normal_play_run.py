@@ -2,6 +2,7 @@ import time
 
 import torch as th
 
+from runs.experiment_run import ExperimentRun
 from utils.checkpoint_manager import CheckpointManager
 from utils.timehelper import time_left, time_str
 
@@ -12,35 +13,15 @@ from components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
 
 
-class Run:
-
-    def _build_learners(self):
-        raise NotImplementedError()
-
-    def _set_scheme_meta(self):
-        raise NotImplementedError()
-
-    def _build_stepper(self):
-        raise NotImplementedError()
-
-    def _init_stepper(self):
-        raise NotImplementedError()
-
-    def start(self, play_time=None):
-        raise NotImplementedError()
-
-    def _finish(self):
-        raise NotImplementedError()
-
-    def _train_episode(self, episode_num):
-        raise NotImplementedError()
-
-
-class NormalPlayRun(Run):
+class NormalPlayRun(ExperimentRun):
 
     def __init__(self, args, logger):
-        self.args = args
-        self.logger = logger
+        """
+        NormalPlay performs the standard way of training a single multi-agent against a static opponent.
+        :param args:
+        :param logger:
+        """
+        super().__init__(args, logger)
         self.last_test_T = -self.args.test_interval - 1
         self.last_log_T = 0
         self.model_save_time = 0

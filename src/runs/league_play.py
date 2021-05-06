@@ -8,11 +8,11 @@ from steppers import SELF_REGISTRY as self_steppers_REGISTRY
 import torch as th
 
 
-class SelfPlayRun(NormalPlayRun):
+class LeaguePlay(NormalPlayRun):
 
     def __init__(self, args, logger, finish_callback=None, episode_callback=None):
         """
-        SelfPlay performs training of two multi-agents in the same environment,
+        LeaguePlay performs training of single multi-agent against a checkpointed agent in the same environment,
         thus causing inter-non-stationarity between two agents since the opposite agent becomes part of the environment.
         :param args:
         :param logger:
@@ -31,14 +31,9 @@ class SelfPlayRun(NormalPlayRun):
     def _build_learners(self):
         # Build standard home learner
         super()._build_learners()
-        # Build additional away learner
-        self.away_buffer = ReplayBuffer(self.scheme, self.groups, self.args.buffer_size,
-                                        self.env_info["episode_limit"] + 1,
-                                        preprocess=self.preprocess,
-                                        device="cpu" if self.args.buffer_cpu_only else self.args.device)
-        self.away_mac = mac_REGISTRY[self.args.mac](self.away_buffer.scheme, self.groups, self.args)
-        self.away_learner = le_REGISTRY[self.args.learner](self.away_mac, self.scheme, self.logger, self.args,
-                                                           name="away")
+        # Add static learner
+        self.away_mac = mac_REGISTRY[self.args.mac](self.scheme, self.groups, self.args)
+        self.away_learner = le_REGISTRY[self.args.learner](self.away_mac, self.scheme, self.logger, self.args, "away")
         self.learners.append(self.away_learner)
 
     def _build_stepper(self):
@@ -47,8 +42,7 @@ class SelfPlayRun(NormalPlayRun):
     def _init_stepper(self):
         # Give runner the scheme
         self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
-                                home_mac=self.home_mac,
-                                away_mac=self.away_mac)
+                                home_mac=self.home_mac)
 
     def _finish(self):
         super()._finish()
@@ -62,48 +56,18 @@ class SelfPlayRun(NormalPlayRun):
             self.episode_callback(last_env_info)
 
         self.home_buffer.insert_episode_batch(home_batch)
-        self.away_buffer.insert_episode_batch(away_batch)
 
         # Sample batch from buffer if possible
         batch_size = self.args.batch_size
-        if self.home_buffer.can_sample(batch_size) and self.away_buffer.can_sample(batch_size):
+        if self.home_buffer.can_sample(batch_size):
             home_sample = self.home_buffer.sample(batch_size)
-            away_sample = self.away_buffer.sample(batch_size)
 
             # Truncate batch to only filled timesteps
             max_ep_t_h = home_sample.max_t_filled()
-            max_ep_t_o = away_sample.max_t_filled()
             home_sample = home_sample[:, :max_ep_t_h]
-            away_sample = away_sample[:, :max_ep_t_o]
 
             device = self.args.device
             if home_sample.device != device:
                 home_sample.to(device)
 
-            if away_sample.device != device:
-                away_sample.to(device)
-
             self.home_learner.train(home_sample, self.stepper.t_env, episode_num)
-            self.away_learner.train(away_sample, self.stepper.t_env, episode_num)
-
-    def evaluate_mean_returns(self, episode_n=1):
-        self.logger.console_logger.info("Evaluate for {} episodes.".format(episode_n))
-        home_ep_rewards = th.zeros(episode_n, device=th.device('cuda:0'))
-        away_ep_rewards = home_ep_rewards.detach().clone()
-
-        self._init_stepper()
-
-        for i in range(episode_n):
-            home_batch, away_batch, last_env_info = self.stepper.run(test_mode=True)
-            home_ep_rewards[i] = th.sum(home_batch["reward"].flatten())
-            away_ep_rewards[i] = th.sum(away_batch["reward"].flatten())
-
-        self._finish()
-
-        return th.mean(home_ep_rewards), th.mean(away_ep_rewards)
-
-    def set_learners(self, home: Learner, away: Learner):
-        self.home_learner = home
-        self.home_mac = home.mac
-        self.away_learner = away
-        self.away_mac = away.mac
