@@ -120,11 +120,11 @@ class SelfPlayParallelStepper(ParallelStepper):
 
             # Send actions to each env
             action_idx = 0
-            for idx, parent_conn in enumerate(self.in_queues):
+            for idx, in_q in enumerate(self.in_queues):
                 if idx in running_envs:  # We produced actions for this env
                     if not terminateds[idx]:  # Only send the actions to the env if it hasn't terminateds
                         self.actions[action_idx] = actions[action_idx]
-                        parent_conn.send(("step", self.actions[action_idx]))
+                        in_q.put(("step", self.actions[action_idx]))
                     action_idx += 1  # actions is not a list over every env
 
             # Update running_envs
@@ -154,9 +154,9 @@ class SelfPlayParallelStepper(ParallelStepper):
                 "obs": []
             }
             # Receive data back for each unterminated env
-            for idx, parent_conn in enumerate(self.in_queues):
+            for idx, out_q in enumerate(self.out_queues):
                 if not terminateds[idx]:
-                    data = parent_conn.recv()
+                    data = out_q.get()
                     home_reward, away_reward = data["reward"]
                     # Remaining data for this current timestep
                     home_post_transition_data["reward"].append((home_reward,))
