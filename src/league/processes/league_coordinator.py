@@ -54,6 +54,7 @@ class LeagueCoordinator(Process):
         idx = msg["checkpoint"]
         self.logger.info(f"Create historical player of player {idx}")
         self._players.append(self._players[idx].checkpoint())
+        # TODO maybe this does not have to be a message
 
     def _save_outcome(self, msg):
         """
@@ -70,9 +71,11 @@ class LeagueCoordinator(Process):
         player_id = msg["player_id"]
         learner = msg["learner"]
         self.logger.info(f"Received learner {learner}")
+        # --- ! Do not change this assignment
         player = self._players[player_id]
         player.learner = learner
         self._players[player_id] = player
+        # --- ! Do not change this assignment
         self.logger.info(f"Updated learner of player {player_id}")
         self.logger.info(f"{self._players[player_id].learner}")
         self._out_queues[player_id].put({"updated": True, "player_id": player_id})

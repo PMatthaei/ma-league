@@ -42,14 +42,16 @@ class LeagueProcess(Process):
         end_time = time.time()
 
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
-            # Generate new opponent to train against and load his current checkpoint
+            # Generate new opponent to train against and load his learner
             self._away_player, flag = self._home_player.get_match()
             if self._away_player is None:
                 warning("No Opponent was found.")
                 continue
             away_learner = self._get_learner(self._away_player.player_id)
             self._play.away_learner = away_learner
+            self._play.away_learner.mac = away_learner.mac
 
+            # Start training against new opponent
             self._logger.console_logger.info(str(self))
             play_time_seconds = self._args.league_play_time_mins * 60
             self._play.start(play_time=play_time_seconds)
@@ -70,10 +72,13 @@ class LeagueProcess(Process):
     def _send_learner_update(self):
         self._in_queue.put({"learner": self._play.home_learner, "player_id": self._home_player.player_id})
         acc = self._out_queue.get()
-        self._logger.console_logger.info(acc)
+        if acc["updated"] and acc["player_id"] == self._home_player.player_id:
+            self._logger.console_logger.info(acc)
+        else:
+            raise Exception("Illegal message received")
         self._setup_barrier.wait()
 
-    def _get_learner(self, idx: int):
+    def _get_learner(self, idx: int) -> Learner:
         self._in_queue.put({"away": idx, "player_id": self._home_player.player_id})
         return self._out_queue.get()
 

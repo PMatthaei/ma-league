@@ -132,9 +132,15 @@ class NormalPlayRun(ExperimentRun):
 
             # Run for a whole episode at a time
             self._train_episode(episode_num=episode)
+
             # Execute test runs once in a while
             n_test_runs = max(1, self.args.test_nepisode // self.stepper.batch_size)
             if (self.stepper.t_env - self.last_test_T) / self.args.test_interval >= 1.0:
+                self.logger.console_logger.info("t_env: {} / {}".format(self.stepper.t_env, self.args.t_max))
+                self.logger.console_logger.info("Estimated time left: {}. Time passed: {}".format(
+                    time_left(self.last_time, self.last_test_T, self.stepper.t_env, self.args.t_max),
+                    time_str(time.time() - self.start_time)))
+                self.last_time = time.time()
                 self._test(n_test_runs)
 
             # Save model if configured
@@ -185,11 +191,6 @@ class NormalPlayRun(ExperimentRun):
             self.home_learner.train(episode_sample, self.stepper.t_env, episode_num)
 
     def _test(self, n_test_runs):
-        self.logger.console_logger.info("t_env: {} / {}".format(self.stepper.t_env, self.args.t_max))
-        self.logger.console_logger.info("Estimated time left: {}. Time passed: {}".format(
-            time_left(self.last_time, self.last_test_T, self.stepper.t_env, self.args.t_max),
-            time_str(time.time() - self.start_time)))
-        self.last_time = time.time()
         self.last_test_T = self.stepper.t_env
         for _ in range(n_test_runs):
             self.stepper.run(test_mode=True)

@@ -70,4 +70,8 @@ class LeaguePlayRun(NormalPlayRun):
             if home_sample.device != device:
                 home_sample.to(device)
 
+            print(f"Train {episode_num}")
             self.home_learner.train(home_sample, self.stepper.t_env, episode_num)
+
+    def _test(self, n_test_runs):
+        pass # Skip tests in league
