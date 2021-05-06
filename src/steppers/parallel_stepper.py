@@ -1,10 +1,10 @@
 import torch
 from gym.vector.utils import CloudpickleWrapper
+from torch.multiprocessing import Queue
 
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
-from multiprocessing import Pipe
 
 from steppers.utils.env_worker_process import EnvWorker
 
@@ -26,19 +26,18 @@ class ParallelStepper:
         self.policy_team_id = teams.index(next(filter(lambda x: not x["is_scripted"], teams), None))
 
         # Make subprocesses for the envs
-        self.parent_conns, self.worker_conns = zip(*[Pipe() for _ in range(self.batch_size)])
+        self.in_queues, self.out_queues = zip(*[(Queue(), Queue()) for _ in range(self.batch_size)])
         env_fn = env_REGISTRY[self.args.env]
         self.workers = [
-            EnvWorker(conn, CloudpickleWrapper(partial(env_fn, **self.args.env_args)))
-            for conn in self.worker_conns
+            EnvWorker(in_q=in_q, out_q=out_q, env=CloudpickleWrapper(partial(env_fn, **self.args.env_args)))
+            for (in_q, out_q) in zip(self.in_queues, self.out_queues)
         ]
-
         for worker in self.workers:
             worker.daemon = True
             worker.start()
 
-        self.parent_conns[0].send(("get_env_info", None))
-        self.env_info = self.parent_conns[0].recv()
+        self.in_queues[0].put(("get_env_info", None))
+        self.env_info = self.out_queues[0].get()
         self.episode_limit = self.env_info["episode_limit"]
 
         self.t = 0
@@ -75,15 +74,15 @@ class ParallelStepper:
         pass
 
     def close_env(self):
-        for parent_conn in self.parent_conns:
-            parent_conn.send(("close", None))
+        for in_q in self.in_queues:
+            in_q.put(("close", None))
 
     def reset(self):
         self.home_batch = self.new_batch_fn()
 
         # Reset the envs
-        for parent_conn in self.parent_conns:
-            parent_conn.send(("reset", None))
+        for in_q in self.in_queues:
+            in_q.put(("reset", None))
 
         pre_transition_data = {
             "state": [],
@@ -91,8 +90,8 @@ class ParallelStepper:
             "obs": []
         }
         # Get the obs, state and avail_actions back
-        for parent_conn in self.parent_conns:
-            data = parent_conn.recv()
+        for out_q in self.out_queues:
+            data = out_q.get()
             pre_transition_data["state"].append(data["state"])
             pre_transition_data["avail_actions"].append(data["avail_actions"])
             pre_transition_data["obs"].append(data["obs"])
@@ -142,11 +141,11 @@ class ParallelStepper:
 
             # Send actions to each running env
             action_idx = 0
-            for idx, parent_conn in enumerate(self.parent_conns):
+            for idx, in_q in enumerate(self.in_queues):
                 if idx in running_envs:  # We produced actions for this env
                     if not terminateds[idx]:  # Only send the actions to the env if it hasn't terminated
                         actions_batch[action_idx] = actions[action_idx]
-                        parent_conn.send(("step", actions_batch[action_idx]))
+                        in_q.put(("step", actions_batch[action_idx]))
                     action_idx += 1  # actions is not a list over every env
 
             # Update running envs
@@ -167,9 +166,9 @@ class ParallelStepper:
             }
 
             # Receive step data back for each unterminated env
-            for idx, parent_conn in enumerate(self.parent_conns):
+            for idx, out_q in enumerate(self.out_queues):
                 if not terminateds[idx]:
-                    data = parent_conn.recv()
+                    data = out_q.get()
                     # Remaining data for this current timestep
                     policy_team_reward = data["reward"][0]  # ! Only supported if one policy team is playing
                     post_transition_data["reward"].append((policy_team_reward,))

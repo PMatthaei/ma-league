@@ -46,7 +46,7 @@ class SelfPlayParallelStepper(ParallelStepper):
         self.away_batch = self.new_batch_fn()
 
         # Reset the envs
-        for parent_conn in self.parent_conns:
+        for parent_conn in self.in_queues:
             parent_conn.send(("reset", None))
 
         # Pre transition data
@@ -62,7 +62,7 @@ class SelfPlayParallelStepper(ParallelStepper):
         }
 
         # Get the obs, state and avail_actions back
-        for parent_conn in self.parent_conns:
+        for parent_conn in self.in_queues:
             data = parent_conn.recv()
             append_pre_transition_data(away_ptd, home_ptd, data)
 
@@ -120,7 +120,7 @@ class SelfPlayParallelStepper(ParallelStepper):
 
             # Send actions to each env
             action_idx = 0
-            for idx, parent_conn in enumerate(self.parent_conns):
+            for idx, parent_conn in enumerate(self.in_queues):
                 if idx in running_envs:  # We produced actions for this env
                     if not terminateds[idx]:  # Only send the actions to the env if it hasn't terminateds
                         self.actions[action_idx] = actions[action_idx]
@@ -154,7 +154,7 @@ class SelfPlayParallelStepper(ParallelStepper):
                 "obs": []
             }
             # Receive data back for each unterminated env
-            for idx, parent_conn in enumerate(self.parent_conns):
+            for idx, parent_conn in enumerate(self.in_queues):
                 if not terminateds[idx]:
                     data = parent_conn.recv()
                     home_reward, away_reward = data["reward"]
