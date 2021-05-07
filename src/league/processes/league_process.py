@@ -8,6 +8,8 @@ from types import SimpleNamespace
 from typing import Dict, Union, Tuple
 
 from league.roles.players import Player, MainPlayer
+from league.utils.commands import UpdateLearnerCommand, Ack, CloseLeagueProcessCommand, PayoffUpdateCommand, \
+    GetLearnerCommand, CheckpointLearnerCommand
 from learners.learner import Learner
 from runs.league_play_run import LeaguePlayRun
 from utils.logging import LeagueLogger
@@ -27,7 +29,7 @@ class LeagueProcess(Process):
         :param logger:
         """
         super().__init__()
-        self._home_player = home
+        self._home = home
         self._in_queue, self._out_queue = queue
         self._args = args
         self._logger = logger
@@ -43,11 +45,11 @@ class LeagueProcess(Process):
 
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
             # Generate new opponent to train against and load his learner
-            self._away_player, flag = self._home_player.get_match()
+            self._away_player, flag = self._home.get_match()
             if self._away_player is None:
                 warning("No Opponent was found.")
                 continue
-            away_learner = self._get_learner(self._away_player.player_id)
+            away_learner = self._get_learner(self._away_player.id_)
             self._play.away_learner = away_learner
             self._play.away_learner.mac = away_learner.mac
 
@@ -66,34 +68,43 @@ class LeagueProcess(Process):
         self._send_learner_update()
 
         # Progress to form initial checkpoint agents after learners arrived
-        if isinstance(self._home_player, MainPlayer):
+        if isinstance(self._home, MainPlayer):
             self._send_checkpoint_request()  # MainPlayers are initially added as historical players
 
     def _send_learner_update(self):
-        self._in_queue.put({"learner": self._play.home_learner, "player_id": self._home_player.player_id})
-        acc = self._out_queue.get()
-        if acc["updated"] and acc["player_id"] == self._home_player.player_id:
-            self._logger.console_logger.info(acc)
-        else:
-            raise Exception("Illegal message received")
+        cmd = UpdateLearnerCommand(origin=self._home.id_, data=self._play.home_learner)
+        self._in_queue.put(cmd)
+        ack = self._out_queue.get()
+        if not (isinstance(ack, Ack) and ack.data == cmd.id_):
+            raise Exception("Illegal ACK message received.")
+
         self._setup_barrier.wait()
 
     def _get_learner(self, idx: int) -> Learner:
-        self._in_queue.put({"away": idx, "player_id": self._home_player.player_id})
-        return self._out_queue.get()
+        cmd = GetLearnerCommand(origin=self._home.id_, data=idx)
+        self._in_queue.put(cmd)
+        learner = self._out_queue.get()
+        if not isinstance(learner, Learner):
+            raise Exception("Illegal ACK message received.")
+
+        return learner
 
     def _send_checkpoint_request(self):
-        self._in_queue.put({"checkpoint": self._home_player.player_id})
+        cmd = CheckpointLearnerCommand(origin=self._home.id_)
+        self._in_queue.put(cmd)
 
     def _send_episode_result(self, env_info: Dict):
         result = self._get_result(env_info)
-        self._in_queue.put({"result": (self._home_player.player_id, self._away_player.player_id, result)})
+        data = ((self._home.id_, self._away_player.id_), result)
+        cmd = PayoffUpdateCommand(origin=self._home.id_, data=data)
+        self._in_queue.put(cmd)
 
     def _close(self):
-        self._in_queue.put({"close": self._home_player.player_id})
+        cmd = CloseLeagueProcessCommand(origin=self._home.id_)
+        self._in_queue.put(cmd)
 
     def __str__(self):
-        return f"LeaguePlayRun - {self._home_player.prettier()} playing against {self._away_player.prettier()}"
+        return f"LeaguePlayRun - {self._home.prettier()} playing against {self._away_player.prettier()}"
 
     @staticmethod
     def _get_result(env_info):

@@ -5,6 +5,8 @@ from typing import List, Tuple
 
 from league.components.payoff import Payoff
 from league.roles.players import Player
+from league.utils.commands import UpdateLearnerCommand, Ack, CloseLeagueProcessCommand, PayoffUpdateCommand, \
+    GetLearnerCommand, CheckpointLearnerCommand
 
 
 class LeagueCoordinator(Process):
@@ -29,58 +31,54 @@ class LeagueCoordinator(Process):
                     self._handle_message(q)
 
     def _handle_message(self, queue: Queue):
-        msg = queue.get_nowait()
-        if "close" in msg:
-            self.logger.info(f"Closing connection to process {msg['close']}")
+        cmd = queue.get_nowait()
+        if isinstance(cmd, UpdateLearnerCommand):
+            self._update_learner(cmd)
+        elif isinstance(cmd, CloseLeagueProcessCommand):
+            self.logger.info(f"Closing connection to process {cmd.origin}")
             queue.close()
-            self._closed.append(msg['close'])
-        elif "checkpoint" in msg:  # checkpoint player initiated from a connected process
-            self._checkpoint(msg)
-        elif "result" in msg:
-            self._save_outcome(msg)
-        elif "learner" in msg:
-            self._update_learner(msg)
-        elif "away" in msg:
-            self._send_away_learner(msg)
+            self._closed.append(cmd.origin)
+        elif isinstance(cmd, CheckpointLearnerCommand):
+            self._checkpoint(cmd)
+        elif isinstance(cmd, PayoffUpdateCommand):
+            self._save_outcome(cmd)
+        elif isinstance(cmd, GetLearnerCommand):
+            self._send_away_learner(cmd)
         else:
             raise Exception("Unknown message.")
 
-    def _checkpoint(self, msg):
+    def _checkpoint(self, cmd: CheckpointLearnerCommand):
         """
         Save a checkpoint of the agent with the ID provided in the message.
         :param msg:
         :return:
         """
-        idx = msg["checkpoint"]
-        self.logger.info(f"Create historical player of player {idx}")
-        self._players.append(self._players[idx].checkpoint())
-        # TODO maybe this does not have to be a message
+        self.logger.info(f"Create historical player of player {cmd.origin}")
+        historical_player = self._players[cmd.origin].checkpoint()
+        self._players.append(historical_player)
+        # TODO maybe this does not have to be a message.
+        # TODO: is the learner being checkpointed also up-to-date?
 
-    def _save_outcome(self, msg):
+    def _save_outcome(self, cmd: PayoffUpdateCommand):
         """
         Update the payoff matrix. After each play outcome check if the learning (=home) player should be checkpointed
         :param msg:
         :return:
         """
-        home, away, outcome = msg["result"]
+        (home, away), outcome = cmd.data
         home_player, _ = self._payoff.update(home, away, outcome)
         if home_player.ready_to_checkpoint():  # Auto-checkpoint player
             self._players.append(self._players[home_player].checkpoint())
 
-    def _update_learner(self, msg):
-        player_id = msg["player_id"]
-        learner = msg["learner"]
-        self.logger.info(f"Received learner {learner}")
+    def _update_learner(self, cmd: UpdateLearnerCommand):
+        player_id = cmd.origin
         # --- ! Do not change this assignment
         player = self._players[player_id]
-        player.learner = learner
+        player.learner = cmd.data
         self._players[player_id] = player
         # --- ! Do not change this assignment
         self.logger.info(f"Updated learner of player {player_id}")
-        self.logger.info(f"{self._players[player_id].learner}")
-        self._out_queues[player_id].put({"updated": True, "player_id": player_id})
+        self._out_queues[player_id].put(Ack(data=cmd.id_))
 
-    def _send_away_learner(self, msg):
-        player_id = msg["player_id"]
-        away_id = msg["away"]
-        self._out_queues[player_id].put(self._players[away_id].learner)
+    def _send_away_learner(self, cmd: GetLearnerCommand):
+        self._out_queues[cmd.origin].put(self._players[cmd.data].learner)

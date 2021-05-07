@@ -15,7 +15,7 @@ from learners.learner import Learner
 class Player(object):
 
     def __init__(self, player_id: int, payoff: Payoff):
-        self.player_id = player_id
+        self.id_ = player_id
         self._payoff = payoff
         self.learner: Union[Learner, None] = None
 
@@ -29,8 +29,7 @@ class Player(object):
         return False
 
     def _create_checkpoint(self) -> HistoricalPlayer:
-        print("Saving checkpoint as HistoricalPlayer")
-        return HistoricalPlayer(self.player_id, self._payoff, deepcopy(self.learner))
+        return HistoricalPlayer(self.id_, self._payoff, deepcopy(self.learner))
 
     @property
     def payoff(self) -> Payoff:
@@ -40,7 +39,7 @@ class Player(object):
         raise NotImplementedError
 
     def __str__(self):
-        return f"{type(self).__name__}_{self.player_id}"
+        return f"{type(self).__name__}_{self.id_}"
 
     def prettier(self):
         return re.sub(r'(?<!^)(?=[A-Z])', '_', str(self)).lower()
@@ -58,14 +57,14 @@ class MainPlayer(Player):
         :return:
         """
         historical = [
-            player.player_id for player in self._payoff.players
+            player.id_ for player in self._payoff.players
             if isinstance(player, HistoricalPlayer)
         ]
 
         if len(historical) == 0:  # no new historical opponents found # TODO
             return None, False
 
-        win_rates = self._payoff[self.player_id, historical]
+        win_rates = self._payoff[self.id_, historical]
         chosen = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
         return self._payoff.players[chosen], True
 
@@ -76,19 +75,19 @@ class MainPlayer(Player):
         :return:
         """
         # Play self-play match
-        if self._payoff[self.player_id, opponent.player_id] > 0.3:
+        if self._payoff[self.id_, opponent.id_] > 0.3:
             return opponent, False
 
         # If opponent is too strong, look for a checkpoint as curriculum
         historical = [
-            player.player_id for player in self._payoff.players
+            player.id_ for player in self._payoff.players
             if isinstance(player, HistoricalPlayer) and player.parent == opponent
         ]
 
         if len(historical) == 0:  # no new historical opponents found # TODO
             return opponent, False
 
-        win_rates = self._payoff[self.player_id, historical]
+        win_rates = self._payoff[self.id_, historical]
         chosen = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="variance"))
         return self._payoff.players[chosen], True
 
@@ -106,10 +105,10 @@ class MainPlayer(Player):
             if isinstance(player, MainExploiter)
         ])
         exp_historical = [
-            player.player_id for player in self._payoff.players
+            player.id_ for player in self._payoff.players
             if isinstance(player, HistoricalPlayer) and player.parent in exploiters
         ]
-        win_rates = self._payoff[self.player_id, exp_historical]
+        win_rates = self._payoff[self.id_, exp_historical]
         if len(win_rates) and win_rates.min() < 0.3:
             chosen = np.random.choice(exp_historical,
                                       p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
@@ -117,10 +116,10 @@ class MainPlayer(Player):
 
         # Check forgetting
         historical = [
-            player.player_id for player in self._payoff.players
+            player.id_ for player in self._payoff.players
             if isinstance(player, HistoricalPlayer) and player.parent == opponent
         ]
-        win_rates = self._payoff[self.player_id, historical]
+        win_rates = self._payoff[self.id_, historical]
         win_rates, historical = remove_monotonic_suffix(win_rates, historical)
         if len(win_rates) and win_rates.min() < 0.7:
             chosen = np.random.choice(historical, p=prioritized_fictitious_self_play(win_rates, weighting="squared"))
@@ -163,10 +162,10 @@ class MainPlayer(Player):
             return False
 
         historical = [
-            player.player_id for player in self._payoff.players
+            player.id_ for player in self._payoff.players
             if isinstance(player, HistoricalPlayer)
         ]
-        win_rates = self._payoff[self.player_id, historical]
+        win_rates = self._payoff[self.id_, historical]
         return win_rates.min() > 0.7 or steps_passed > 4e9  # TODO make constant
 
     def checkpoint(self) -> HistoricalPlayer:

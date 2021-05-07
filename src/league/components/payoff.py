@@ -93,7 +93,7 @@ class Payoff:
 
     def get_player(self, player_id: int):
         player = self.players[player_id]
-        assert player.player_id == player_id, "ID mismatch."
+        assert player.id_ == player_id, "ID mismatch."
         return player
 
     def has_entries(self, home: int, away: int):
