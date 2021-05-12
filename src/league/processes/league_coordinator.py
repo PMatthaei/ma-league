@@ -5,7 +5,7 @@ from typing import List, Tuple
 
 from league.components.payoff import Payoff
 from league.roles.players import Player
-from league.utils.commands import UpdateLearnerCommand, Ack, CloseLeagueProcessCommand, PayoffUpdateCommand, \
+from league.utils.commands import ProvideLearnerCommand, Ack, CloseLeagueProcessCommand, PayoffUpdateCommand, \
     GetLearnerCommand, CheckpointLearnerCommand
 
 
@@ -32,7 +32,7 @@ class LeagueCoordinator(Process):
 
     def _handle_message(self, queue: Queue):
         cmd = queue.get_nowait()
-        if isinstance(cmd, UpdateLearnerCommand):
+        if isinstance(cmd, ProvideLearnerCommand):
             self._update_learner(cmd)
         elif isinstance(cmd, CloseLeagueProcessCommand):
             self.logger.info(f"Closing connection to process {cmd.origin}")
@@ -70,7 +70,7 @@ class LeagueCoordinator(Process):
         if home_player.ready_to_checkpoint():  # Auto-checkpoint player
             self._players.append(self._players[home_player].checkpoint())
 
-    def _update_learner(self, cmd: UpdateLearnerCommand):
+    def _update_learner(self, cmd: ProvideLearnerCommand):
         player_id = cmd.origin
         # --- ! Do not change this assignment
         player = self._players[player_id]

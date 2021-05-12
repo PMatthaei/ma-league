@@ -37,7 +37,7 @@ def run(_run, _config, _log):
         set_agents_only(_config)
 
     if _config["runner"] == "parallel" or _config['eval'] == "jpc":
-        torch.multiprocessing.set_start_method('spawn')
+        torch.multiprocessing.set_start_method('spawn', force=True)
         #multiprocessing.set_start_method('spawn')
 
     args = SimpleNamespace(**_config)

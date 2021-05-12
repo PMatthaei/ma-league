@@ -101,9 +101,3 @@ class SelfPlayRun(NormalPlayRun):
         self._finish()
 
         return th.mean(home_ep_rewards), th.mean(away_ep_rewards)
-
-    def set_learners(self, home: Learner, away: Learner):
-        self.home_learner = home
-        self.home_mac = home.mac
-        self.away_learner = away
-        self.away_mac = away.mac

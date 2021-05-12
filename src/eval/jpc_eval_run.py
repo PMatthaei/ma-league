@@ -1,5 +1,5 @@
 import itertools
-from torch.multiprocessing.pool import Pool
+from torch.multiprocessing import Pool
 from typing import Tuple, List, Union
 
 import torch as th
@@ -10,7 +10,7 @@ from runs.self_play_run import SelfPlayRun
 
 
 class JointPolicyCorrelationEvaluationRun:
-    def __init__(self, args, logger, instances_num: int = 5, eval_episodes=100):
+    def __init__(self, args, logger, instances_num: int = 2, eval_episodes=100):
         self.args = args
         self.args.t_max = 200
         self.logger = logger
@@ -65,7 +65,7 @@ class JointPolicyCorrelationEvaluationRun:
         :return:
         """
         pairs = list(itertools.product(range(self.instances_num), repeat=2))
-        data = list(zip(pairs, [checkpoints] * self.instances_num))
+        data = list(zip(pairs, [checkpoints] * len(pairs)))
         self.logger.console_logger.info("Evaluate {} pairings for {} episodes.".format(len(pairs), self.eval_episodes))
         with Pool() as pool:
             results = pool.starmap(self.evaluate_instance_pair, data)

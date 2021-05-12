@@ -2,6 +2,7 @@ import uuid
 from enum import Enum
 from typing import Dict, Any, Tuple
 
+from league.components.payoff import MatchResult
 from learners.learner import Learner
 
 
@@ -34,7 +35,7 @@ class Ack(BaseCommand):
         super().__init__(CommandTypes.ACK, None, None, data)
 
 
-class UpdateLearnerCommand(BaseCommand):
+class ProvideLearnerCommand(BaseCommand):
 
     def __init__(self, origin: int, data: Learner):
         super().__init__(CommandTypes.UPDATE, origin, Resources.LEARNER, data)
@@ -54,7 +55,7 @@ class CheckpointLearnerCommand(BaseCommand):
 
 class PayoffUpdateCommand(BaseCommand):
 
-    def __init__(self, origin: int, data: Tuple[Tuple[int, int], str]):  # TODO replace result string with enum
+    def __init__(self, origin: int, data: Tuple[Tuple[int, int], MatchResult]):
         super().__init__(CommandTypes.UPDATE, origin, Resources.PAYOFF, data)
 
 

@@ -47,7 +47,7 @@ def run(_run, _config, _log):
     _config['play_mode'] = "self"
     set_agents_only(_config)
 
-    torch.multiprocessing.set_start_method('spawn')
+    torch.multiprocessing.set_start_method('spawn', force=True)
 
     args = SimpleNamespace(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"

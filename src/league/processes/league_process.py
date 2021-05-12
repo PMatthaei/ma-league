@@ -7,8 +7,9 @@ from torch.multiprocessing import Barrier, Queue
 from types import SimpleNamespace
 from typing import Dict, Union, Tuple
 
+from league.components.payoff import MatchResult
 from league.roles.players import Player, MainPlayer
-from league.utils.commands import UpdateLearnerCommand, Ack, CloseLeagueProcessCommand, PayoffUpdateCommand, \
+from league.utils.commands import ProvideLearnerCommand, Ack, CloseLeagueProcessCommand, PayoffUpdateCommand, \
     GetLearnerCommand, CheckpointLearnerCommand
 from learners.learner import Learner
 from runs.league_play_run import LeaguePlayRun
@@ -36,9 +37,17 @@ class LeagueProcess(Process):
         self._setup_barrier = barrier
         self._away_player: Union[Player, None] = None
         self.terminated: bool = False
+        self._play = None
 
     def run(self) -> None:
-        self._setup()
+        # Create play
+        self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._send_episode_result)
+        # Provide learner to the shared home player
+        self._send_learner_update()
+
+        # Progress to form initial checkpoint agents after learners arrived
+        if isinstance(self._home, MainPlayer):
+            self._send_checkpoint_request()  # MainPlayers are initially added as historical players
 
         start_time = time.time()
         end_time = time.time()
@@ -49,7 +58,7 @@ class LeagueProcess(Process):
             if self._away_player is None:
                 warning("No Opponent was found.")
                 continue
-            away_learner = self._get_learner(self._away_player.id_)
+            away_learner = self._send_learner_get(self._away_player.id_)
             self._play.away_learner = away_learner
             self._play.away_learner.mac = away_learner.mac
 
@@ -61,26 +70,17 @@ class LeagueProcess(Process):
 
         self._close()
 
-    def _setup(self):
-        # Create play
-        self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._send_episode_result)
-        # Provide learner to the shared home player
-        self._send_learner_update()
-
-        # Progress to form initial checkpoint agents after learners arrived
-        if isinstance(self._home, MainPlayer):
-            self._send_checkpoint_request()  # MainPlayers are initially added as historical players
-
     def _send_learner_update(self):
-        cmd = UpdateLearnerCommand(origin=self._home.id_, data=self._play.home_learner)
+        cmd = ProvideLearnerCommand(origin=self._home.id_, data=self._play.home_learner)
         self._in_queue.put(cmd)
+        # Wait for ACK message before waiting at the barrier to make sure the learner was set
         ack = self._out_queue.get()
         if not (isinstance(ack, Ack) and ack.data == cmd.id_):
             raise Exception("Illegal ACK message received.")
 
         self._setup_barrier.wait()
 
-    def _get_learner(self, idx: int) -> Learner:
+    def _send_learner_get(self, idx: int) -> Learner:
         cmd = GetLearnerCommand(origin=self._home.id_, data=idx)
         self._in_queue.put(cmd)
         learner = self._out_queue.get()
@@ -112,9 +112,9 @@ class LeagueProcess(Process):
         battle_won = env_info["battle_won"]
         if draw or all(battle_won) or not any(battle_won):
             # Draw if all won or all lost
-            result = "draw"
-        elif battle_won[0]:
-            result = "won"
+            result = MatchResult.DRAW
+        elif battle_won[0]: # TODO BUG! the battle won bool at position 0 does not have to be the one of the home player
+            result = MatchResult.WIN
         else:
-            result = "loss"
+            result = MatchResult.LOSS
         return result

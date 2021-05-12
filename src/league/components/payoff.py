@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+from enum import Enum
 from typing import Tuple, Union, List
 
 import numpy as np
+
+
+class MatchResult(Enum):
+    WIN = 0,
+    LOSS = 1,
+    DRAW = 2,
 
 
 class Payoff:
@@ -26,8 +33,8 @@ class Payoff:
         if self.p_matrix[_home, _away] == 0:
             return 0.5
 
-        return (self.p_matrix[_home, _away, 'win'] +
-                0.5 * self.p_matrix[_home, _away, 'draw']) / self.p_matrix[_home, _away]
+        return (self.p_matrix[_home, _away, MatchResult.WIN] +
+                0.5 * self.p_matrix[_home, _away, MatchResult.DRAW]) / self.p_matrix[_home, _away]
 
     def __getitem__(self, match: Union[Tuple[int, List[int]], Tuple[int, int]]):
         """
@@ -66,25 +73,25 @@ class Payoff:
         self.p_matrix[home, away] += 1
         self.p_matrix[away, home] += 1
 
-        if result == "win":
-            self.p_matrix[home, away, "win"] += 1
-            self.p_matrix[away, home, "loss"] += 1
-        elif result == "draw":
-            self.p_matrix[home, away, "draw"] += 1
-            self.p_matrix[away, home, "draw"] += 1
+        if result == MatchResult.WIN:
+            self.p_matrix[home, away, MatchResult.WIN] += 1
+            self.p_matrix[away, home, MatchResult.LOSS] += 1
+        elif result == MatchResult.DRAW:
+            self.p_matrix[home, away, MatchResult.DRAW] += 1
+            self.p_matrix[away, home, MatchResult.DRAW] += 1
         else:
-            self.p_matrix[home, away, "loss"] += 1
-            self.p_matrix[away, home, "win"] += 1
+            self.p_matrix[home, away, MatchResult.LOSS] += 1
+            self.p_matrix[away, home, MatchResult.WIN] += 1
 
         return self.players[home], self.players[away]
 
     def _apply_decay(self, home: int, away: int):
-        self.p_matrix[home, away, "win"] *= self.decay
-        self.p_matrix[away, home, "win"] *= self.decay
-        self.p_matrix[home, away, "loss"] *= self.decay
-        self.p_matrix[away, home, "loss"] *= self.decay
-        self.p_matrix[home, away, "draw"] *= self.decay
-        self.p_matrix[away, home, "draw"] *= self.decay
+        self.p_matrix[home, away, MatchResult.WIN] *= self.decay
+        self.p_matrix[away, home, MatchResult.WIN] *= self.decay
+        self.p_matrix[home, away, MatchResult.LOSS] *= self.decay
+        self.p_matrix[away, home, MatchResult.LOSS] *= self.decay
+        self.p_matrix[home, away, MatchResult.DRAW] *= self.decay
+        self.p_matrix[away, home, MatchResult.DRAW] *= self.decay
         self.p_matrix[home, away] *= self.decay
         self.p_matrix[away, home] *= self.decay
 
@@ -105,7 +112,7 @@ class Payoff:
         :return:
         """
         keys = []
-        for result in ["win", "loss", "draw"]:
+        for result in [MatchResult.WIN, MatchResult.LOSS, MatchResult.DRAW]:
             keys.append((home, away, result))
             keys.append((away, home, result))
         keys.append((home, away))
@@ -120,11 +127,11 @@ class Payoff:
         :param away:
         :return:
         """
-        self.p_matrix[home, away, "win"] = 0
-        self.p_matrix[away, home, "win"] = 0
-        self.p_matrix[home, away, "loss"] = 0
-        self.p_matrix[away, home, "loss"] = 0
-        self.p_matrix[home, away, "draw"] = 0
-        self.p_matrix[away, home, "draw"] = 0
+        self.p_matrix[home, away, MatchResult.WIN] = 0
+        self.p_matrix[away, home, MatchResult.WIN] = 0
+        self.p_matrix[home, away, MatchResult.LOSS] = 0
+        self.p_matrix[away, home, MatchResult.LOSS] = 0
+        self.p_matrix[home, away, MatchResult.DRAW] = 0
+        self.p_matrix[away, home, MatchResult.DRAW] = 0
         self.p_matrix[home, away] = 0
         self.p_matrix[away, home] = 0
