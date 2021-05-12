@@ -1,8 +1,9 @@
 from components.episode_buffer import EpisodeBatch
+from controllers.multi_agent_controller import MultiAgentController
 
 
 class Learner:
-    def __init__(self, mac=None, scheme=None, logger=None, args=None, name=None):
+    def __init__(self, mac: MultiAgentController, scheme, logger, args, name=None):
         self.mac = mac
         self.scheme = scheme
         self.logger = logger
@@ -22,4 +23,4 @@ class Learner:
         raise NotImplementedError()
 
     def get_current_step(self) -> int:
-        return 0 # TODO
+        return 0  # TODO

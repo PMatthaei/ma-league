@@ -92,8 +92,7 @@ def run(_run, _config, _log):
 
     # Start league training
     for idx, (in_q, out_q) in enumerate(zip(in_queues, out_queues)):
-        player = league.get_player(idx)
-        league_run = LeagueProcess(home=player, queue=(in_q, out_q), args=args, logger=logger, barrier=setup_barrier)
+        league_run = LeagueProcess(player_id=idx, players=players, queue=(in_q, out_q), args=args, logger=logger, barrier=setup_barrier)
         runs.append(league_run)
 
     [r.start() for r in runs]

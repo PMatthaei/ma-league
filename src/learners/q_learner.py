@@ -2,6 +2,7 @@ import copy
 import torch as th
 from torch.optim import RMSprop
 
+from controllers.multi_agent_controller import MultiAgentController
 from learners.learner import Learner
 from modules.mixers.qmix import QMixer
 from modules.mixers.vdn import VDNMixer
@@ -9,7 +10,7 @@ from components.episode_buffer import EpisodeBatch
 
 
 class QLearner(Learner):
-    def __init__(self, mac, scheme, logger, args, name=None):
+    def __init__(self, mac: MultiAgentController, scheme, logger, args, name=None):
         super().__init__(mac, scheme, logger, args, name)
         self.name += "_qlearner_"
         self.params = list(mac.parameters())

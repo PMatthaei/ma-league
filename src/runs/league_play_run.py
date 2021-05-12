@@ -25,24 +25,16 @@ class LeaguePlayRun(NormalPlayRun):
         self.away_mac = None
         self.away_learner = None
 
-    def integrate(self, away: Learner):
-        away.name = "away"
+    def set_away_learner(self, away: Learner):
         self.away_learner = away
         self.away_mac = away.mac
-        self.learners.append(away)
+        self.away_learner.name = "away"
+        self.learners.append(self.away_learner)
 
     def _set_scheme_meta(self):
         super()._set_scheme_meta()
         # Override number of agents with per agent value
         self.args.n_agents = int(self.env_info["n_agents"] / 2)  # TODO: assuming same team size and two teams
-
-    def _build_learners(self):
-        # Build standard home learner
-        super()._build_learners()
-        # Empty learner - fill with requested learners from PFSP
-        self.away_mac = None
-        self.away_learner = None
-        self.learners.append(self.away_learner)
 
     def _build_stepper(self):
         self.stepper = self_steppers_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
@@ -57,7 +49,7 @@ class LeaguePlayRun(NormalPlayRun):
         if self.finish_callback is not None:
             self.finish_callback()
 
-    def _train_episode(self, episode_num):
+    def _train_episode(self, episode_num, callback=None):
         # Run for a whole episode at a time
         home_batch, _, last_env_info = self.stepper.run(test_mode=False)
         if self.episode_callback is not None:
@@ -78,8 +70,11 @@ class LeaguePlayRun(NormalPlayRun):
             if home_sample.device != device:
                 home_sample.to(device)
 
-            print(f"Train {episode_num}")
             self.home_learner.train(home_sample, self.stepper.t_env, episode_num)
 
+            if callback:
+                callback(self.home_learner)
+
     def _test(self, n_test_runs):
-        pass # Skip tests in league
+        self.last_test_T = self.stepper.t_env
+        pass  # Skip tests in league

@@ -102,7 +102,7 @@ class NormalPlayRun(ExperimentRun):
     def _has_not_reached_time_limit(self):
         return self._play_time is not None and ((self._end_time - self._start_time) <= self._play_time)
 
-    def start(self, play_time=None):
+    def start(self, play_time=None, train_callback=None):
         """
 
         :param play_time: Play the run for a certain time in seconds.
@@ -131,7 +131,7 @@ class NormalPlayRun(ExperimentRun):
         while self._has_not_reached_time_limit or self._has_not_reached_t_max:
 
             # Run for a whole episode at a time
-            self._train_episode(episode_num=episode)
+            self._train_episode(episode_num=episode, callback=train_callback)
 
             # Execute test runs once in a while
             n_test_runs = max(1, self.args.test_nepisode // self.stepper.batch_size)
@@ -167,7 +167,8 @@ class NormalPlayRun(ExperimentRun):
 
     def save_learners(self, identifier=None):
         self.model_save_time = self.stepper.t_env
-        out_path = self.checkpoint_manager.save(learners=self.learners, t_env=self.model_save_time, identifier=identifier)
+        out_path = self.checkpoint_manager.save(learners=self.learners, t_env=self.model_save_time,
+                                                identifier=identifier)
         self.logger.console_logger.info("Saving models to {}".format(out_path))
         return out_path
 
@@ -175,7 +176,7 @@ class NormalPlayRun(ExperimentRun):
         self.stepper.close_env()
         self.logger.console_logger.info("Finished.")
 
-    def _train_episode(self, episode_num):
+    def _train_episode(self, episode_num, callback=None):
         episode_batch = self.stepper.run(test_mode=False)
         self.home_buffer.insert_episode_batch(episode_batch)
         if self.home_buffer.can_sample(self.args.batch_size):
@@ -189,6 +190,8 @@ class NormalPlayRun(ExperimentRun):
                 episode_sample.to(self.args.device)
 
             self.home_learner.train(episode_sample, self.stepper.t_env, episode_num)
+            if callback:
+                callback(self.home_learner)
 
     def _test(self, n_test_runs):
         self.last_test_T = self.stepper.t_env
