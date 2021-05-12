@@ -41,13 +41,13 @@ class LeagueProcess(Process):
 
     def run(self) -> None:
         # Create play
-        self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._send_episode_result)
+        self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._provide_episode_result)
         # Provide learner to the shared home player
-        self._send_learner_update()
+        self._provide_learner_update()
 
         # Progress to form initial checkpoint agents after learners arrived
         if isinstance(self._home, MainPlayer):
-            self._send_checkpoint_request()  # MainPlayers are initially added as historical players
+            self._request_checkpoint()  # MainPlayers are initially added as historical players
 
         start_time = time.time()
         end_time = time.time()
@@ -58,9 +58,8 @@ class LeagueProcess(Process):
             if self._away_player is None:
                 warning("No Opponent was found.")
                 continue
-            away_learner = self._send_learner_get(self._away_player.id_)
-            self._play.away_learner = away_learner
-            self._play.away_learner.mac = away_learner.mac
+            away_learner = self._request_learner(self._away_player.id_)
+            self._play.integrate(away_learner)
 
             # Start training against new opponent
             self._logger.console_logger.info(str(self))
@@ -68,19 +67,19 @@ class LeagueProcess(Process):
             self._play.start(play_time=play_time_seconds)
             end_time = time.time()
 
-        self._close()
+        self._request_close()
 
-    def _send_learner_update(self):
+    def _provide_learner_update(self):
         cmd = ProvideLearnerCommand(origin=self._home.id_, data=self._play.home_learner)
         self._in_queue.put(cmd)
         # Wait for ACK message before waiting at the barrier to make sure the learner was set
         ack = self._out_queue.get()
         if not (isinstance(ack, Ack) and ack.data == cmd.id_):
             raise Exception("Illegal ACK message received.")
-
+        # Wait at barrier until every league process performed the setup
         self._setup_barrier.wait()
 
-    def _send_learner_get(self, idx: int) -> Learner:
+    def _request_learner(self, idx: int) -> Learner:
         cmd = GetLearnerCommand(origin=self._home.id_, data=idx)
         self._in_queue.put(cmd)
         learner = self._out_queue.get()
@@ -89,17 +88,17 @@ class LeagueProcess(Process):
 
         return learner
 
-    def _send_checkpoint_request(self):
+    def _request_checkpoint(self):
         cmd = CheckpointLearnerCommand(origin=self._home.id_)
         self._in_queue.put(cmd)
 
-    def _send_episode_result(self, env_info: Dict):
+    def _provide_episode_result(self, env_info: Dict):
         result = self._get_result(env_info)
         data = ((self._home.id_, self._away_player.id_), result)
         cmd = PayoffUpdateCommand(origin=self._home.id_, data=data)
         self._in_queue.put(cmd)
 
-    def _close(self):
+    def _request_close(self):
         cmd = CloseLeagueProcessCommand(origin=self._home.id_)
         self._in_queue.put(cmd)
 

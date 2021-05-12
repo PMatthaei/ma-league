@@ -1,5 +1,3 @@
-import logging
-
 from torch.multiprocessing import Process, Queue
 from typing import List, Tuple
 
@@ -25,12 +23,13 @@ class LeagueCoordinator(Process):
 
     def run(self) -> None:
         # Receive messages from all processes over their connections
-        while len(self._closed) != len(self._in_queues):
+        while len(self._closed) != len(set(self._in_queues)):
             for q in self._in_queues:
                 if not q.empty():
-                    self._handle_message(q)
+                    self._handle_commands(q)
+        self.logger.info("League Coordinator shut down.")
 
-    def _handle_message(self, queue: Queue):
+    def _handle_commands(self, queue: Queue):
         cmd = queue.get_nowait()
         if isinstance(cmd, ProvideLearnerCommand):
             self._update_learner(cmd)
@@ -43,7 +42,7 @@ class LeagueCoordinator(Process):
         elif isinstance(cmd, PayoffUpdateCommand):
             self._save_outcome(cmd)
         elif isinstance(cmd, GetLearnerCommand):
-            self._send_away_learner(cmd)
+            self._provide_learner(cmd)
         else:
             raise Exception("Unknown message.")
 
@@ -61,8 +60,9 @@ class LeagueCoordinator(Process):
 
     def _save_outcome(self, cmd: PayoffUpdateCommand):
         """
-        Update the payoff matrix. After each play outcome check if the learning (=home) player should be checkpointed
-        :param msg:
+        Update the payoff matrix.
+        Check if the learning (=home) player should be checkpointed after each update
+        :param cmd:
         :return:
         """
         (home, away), outcome = cmd.data
@@ -71,6 +71,12 @@ class LeagueCoordinator(Process):
             self._players.append(self._players[home_player].checkpoint())
 
     def _update_learner(self, cmd: ProvideLearnerCommand):
+        """
+        Receive a learner during the league sub process setup and provide it to its corresponding player.
+        These learners can be requested by other sub processes.
+        :param cmd:
+        :return:
+        """
         player_id = cmd.origin
         # --- ! Do not change this assignment
         player = self._players[player_id]
@@ -80,5 +86,11 @@ class LeagueCoordinator(Process):
         self.logger.info(f"Updated learner of player {player_id}")
         self._out_queues[player_id].put(Ack(data=cmd.id_))
 
-    def _send_away_learner(self, cmd: GetLearnerCommand):
+    def _provide_learner(self, cmd: GetLearnerCommand):
+        """
+        Provide a league sub process with a requested learner, identified by its owning player.
+        :param cmd:
+        :return:
+        """
+        # TODO make sure the most recent version of the sub prcoess is sent
         self._out_queues[cmd.origin].put(self._players[cmd.data].learner)

@@ -22,6 +22,14 @@ class LeaguePlayRun(NormalPlayRun):
         super().__init__(args, logger)
         self.finish_callback = finish_callback
         self.episode_callback = episode_callback
+        self.away_mac = None
+        self.away_learner = None
+
+    def integrate(self, away: Learner):
+        away.name = "away"
+        self.away_learner = away
+        self.away_mac = away.mac
+        self.learners.append(away)
 
     def _set_scheme_meta(self):
         super()._set_scheme_meta()
@@ -31,9 +39,9 @@ class LeaguePlayRun(NormalPlayRun):
     def _build_learners(self):
         # Build standard home learner
         super()._build_learners()
-        # Add static learner
-        self.away_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
-        self.away_learner = le_REGISTRY[self.args.learner](self.away_mac, self.scheme, self.logger, self.args, "away")
+        # Empty learner - fill with requested learners from PFSP
+        self.away_mac = None
+        self.away_learner = None
         self.learners.append(self.away_learner)
 
     def _build_stepper(self):
