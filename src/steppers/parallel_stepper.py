@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import torch
 from gym.vector.utils import CloudpickleWrapper
 from torch.multiprocessing import Queue
@@ -7,6 +9,7 @@ from functools import partial
 from components.episode_buffer import EpisodeBatch
 
 from steppers.utils.env_worker_process import EnvWorker
+from steppers.utils.stepper_utils import get_policy_team_id
 
 
 class ParallelStepper:
@@ -23,13 +26,15 @@ class ParallelStepper:
         self.batch_size = self.args.batch_size_run
         # Find id of the first policy team - Only supported for one policy team in the build plan
         teams = args.env_args["match_build_plan"]
-        self.policy_team_id = teams.index(next(filter(lambda x: not x["is_scripted"], teams), None))
+        self.policy_team_id = get_policy_team_id(teams)
 
         # Make subprocesses for the envs
         self.in_queues, self.out_queues = zip(*[(Queue(), Queue()) for _ in range(self.batch_size)])
+        # TODO ensure every env is the same! or else f.e. spawns will be different thus harm learning
+        env = env_REGISTRY[self.args.env](**self.args.env_args)
         env_fn = env_REGISTRY[self.args.env]
         self.workers = [
-            EnvWorker(in_q=in_q, out_q=out_q, env=CloudpickleWrapper(partial(env_fn, **self.args.env_args)))
+            EnvWorker(in_q=in_q, out_q=out_q, env=deepcopy(env))
             for (in_q, out_q) in zip(self.in_queues, self.out_queues)
         ]
         for worker in self.workers:

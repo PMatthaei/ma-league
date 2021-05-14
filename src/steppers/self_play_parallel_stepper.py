@@ -7,7 +7,7 @@ from components.episode_buffer import EpisodeBatch
 from steppers import ParallelStepper
 import torch as th
 
-from steppers.utils.transition_parser import append_pre_transition_data
+from steppers.utils.stepper_utils import append_pre_transition_data
 from utils.logging import Originator
 
 

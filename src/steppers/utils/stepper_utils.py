@@ -1,3 +1,6 @@
+from typing import List
+
+
 def append_pre_transition_data(away_pre_transition_data, home_pre_transition_data, data):
     state = data["state"]
     actions = data["avail_actions"]
@@ -14,3 +17,12 @@ def append_pre_transition_data(away_pre_transition_data, home_pre_transition_dat
     away_pre_transition_data["state"].append(state)
     away_pre_transition_data["avail_actions"].append(away_avail_actions)
     away_pre_transition_data["obs"].append(away_obs)
+
+
+def get_policy_team_id(teams: List):
+    """
+    Returns the ID of the first policy team found within a match build plan.
+    :param teams:
+    :return:
+    """
+    return teams.index(next(filter(lambda x: not x["is_scripted"], teams), None))

@@ -4,6 +4,7 @@ from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
 from exceptions.runner_exceptions import RunnerMACNotInitialized
+from steppers.utils.stepper_utils import get_policy_team_id
 
 
 class EpisodeStepper:
@@ -23,7 +24,7 @@ class EpisodeStepper:
         self.env = env_REGISTRY[self.args.env](**self.args.env_args)
         # Find id of the first policy team - Only supported for one policy team in the build plan
         teams = args.env_args["match_build_plan"]
-        self.policy_team_id = teams.index(next(filter(lambda x: not x["is_scripted"], teams), None))
+        self.policy_team_id = get_policy_team_id(teams)
         if self.args.headless_controls:
             controls = HeadlessControls(env=self.env)
             controls.daemon = True
