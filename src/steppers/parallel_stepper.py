@@ -30,9 +30,7 @@ class ParallelStepper:
 
         # Make subprocesses for the envs
         self.in_queues, self.out_queues = zip(*[(Queue(), Queue()) for _ in range(self.batch_size)])
-        # TODO ensure every env is the same! or else f.e. spawns will be different thus harm learning
         env = env_REGISTRY[self.args.env](**self.args.env_args)
-        env_fn = env_REGISTRY[self.args.env]
         self.workers = [
             EnvWorker(in_q=in_q, out_q=out_q, env=deepcopy(env))
             for (in_q, out_q) in zip(self.in_queues, self.out_queues)

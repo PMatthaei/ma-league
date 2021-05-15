@@ -191,7 +191,7 @@ class NormalPlayRun(ExperimentRun):
 
             self.home_learner.train(episode_sample, self.stepper.t_env, episode_num)
             if callback:
-                callback(self.home_learner)
+                callback(self.learners)
 
     def _test(self, n_test_runs):
         self.last_test_T = self.stepper.t_env

@@ -15,6 +15,11 @@ from runs.league_play_run import LeaguePlayRun
 from utils.logging import LeagueLogger
 
 
+def debug_learners(learners: List[Learner]):
+    for learner in learners:
+        print(f"{learner.name} at step {learner.get_current_step()}")
+
+
 class LeagueProcess(Process):
     def __init__(self,
                  players: List[Player],
@@ -72,13 +77,10 @@ class LeagueProcess(Process):
             # Start training against new opponent
             self._logger.console_logger.info(str(self))
             play_time_seconds = self._args.league_play_time_mins * 60
-            self._play.start(play_time=play_time_seconds, train_callback=self.test)
+            self._play.start(play_time=play_time_seconds, train_callback=debug_learners)
             end_time = time.time()
 
         self._request_close()
-
-    def test(self, learner: Learner):
-        print(learner.get_current_step())
 
     def _get_shared_learner(self, player: Player):
         return self._shared_players[player.id_].learner

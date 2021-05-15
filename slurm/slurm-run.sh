@@ -25,8 +25,10 @@ python3 -m venv ./venv/ma-league
 source ./venv/ma-league/bin/activate
 pip install -U pip setuptools wheel
 
-# For CUDA 11, we need to explicitly request the correct version. Aded to
 pip install -r requirements.txt
+pip install torch==1.8.0+cu111 torchvision==0.9.0+cu111 torchaudio==0.8.0 -f https://download.pytorch.org/whl/torch_stable.html
+
+# For CUDA 11, we need to explicitly request the correct version.
 pip install git+https://github.com/PMatthaei/ma-env.git
 
 # test cuda
