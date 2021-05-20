@@ -13,6 +13,7 @@ class QLearner(Learner):
     def __init__(self, mac: MultiAgentController, scheme, logger, args, name=None):
         super().__init__(mac, scheme, logger, args, name)
         self.name += "_qlearner_"
+        # Receive params from the agent from MAC
         self.params = list(mac.parameters())
 
         self.last_target_update_episode = 0
@@ -25,6 +26,7 @@ class QLearner(Learner):
                 self.mixer = QMixer(args)
             else:
                 raise ValueError("Mixer {} not recognised.".format(args.mixer))
+            # Add addtional params for later optimization
             self.params += list(self.mixer.parameters())
             self.target_mixer = copy.deepcopy(self.mixer)
 
