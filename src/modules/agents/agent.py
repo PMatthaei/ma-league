@@ -11,6 +11,7 @@ class Agent(nn.Module):
         super(Agent, self).__init__()
         self.args = args
         self.input_shape = input_shape
+        self.trained_steps = 0
 
     def init_hidden(self):
         raise NotImplementedError()

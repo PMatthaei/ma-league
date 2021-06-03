@@ -1,4 +1,5 @@
 from learners.learner import Learner
+from modules.agents.agent import Agent
 from runs.normal_play_run import NormalPlayRun
 
 from learners import REGISTRY as le_REGISTRY
@@ -22,14 +23,10 @@ class LeaguePlayRun(NormalPlayRun):
         super().__init__(args, logger)
         self.finish_callback = finish_callback
         self.episode_callback = episode_callback
-        self.away_mac = None
-        self.away_learner = None
+        self.away_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
 
-    def set_away_learner(self, away: Learner):
-        self.away_learner = away
-        self.away_mac = away.mac
-        self.away_learner.name = "away"
-        self.learners.append(self.away_learner)
+    def set_away_agent(self, away: Agent): # TODO buffer?
+        self.away_mac.agent = away
 
     def _set_scheme_meta(self):
         super()._set_scheme_meta()

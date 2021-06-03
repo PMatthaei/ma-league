@@ -9,7 +9,6 @@ class Learner:
         self.logger = logger
         self.args = args
         self.name = "" if name is None else name
-        self._trained_steps = 0
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int) -> None:
         """
@@ -45,12 +44,3 @@ class Learner:
         :return:
         """
         raise NotImplementedError()
-
-    @property
-    def trained_steps(self) -> int:
-        """
-        Get current time step of the learner.
-        This should return the total amount of time steps the learner has processed/learned.
-        :return:
-        """
-        return self._trained_steps

@@ -10,6 +10,7 @@ import numpy as np
 
 from league.utils.various import remove_monotonic_suffix
 from learners.learner import Learner
+from modules.agents.agent import Agent
 
 
 class Player(object):
@@ -17,7 +18,7 @@ class Player(object):
     def __init__(self, player_id: int, payoff: Payoff):
         self.id_ = player_id
         self._payoff = payoff
-        self.learner: Union[Learner, None] = None
+        self.agent: Union[Agent, None] = None
 
     def get_match(self) -> Player:
         pass
@@ -29,7 +30,7 @@ class Player(object):
         return False
 
     def _create_checkpoint(self) -> HistoricalPlayer:
-        return HistoricalPlayer(self.id_, self._payoff, deepcopy(self.learner))
+        return HistoricalPlayer(self.id_, self._payoff, deepcopy(self.agent))
 
     @property
     def payoff(self) -> Payoff:
@@ -51,7 +52,7 @@ class MainPlayer(Player):
         super().__init__(player_id, payoff)
         self._checkpoint_step = 0
 
-    def _pfsp_branch(self) -> Tuple[Player, bool]:
+    def _pfsp_branch(self) -> Union[Tuple[Player, bool], Tuple[None, bool]]:
         """
 
         :return:
@@ -157,7 +158,7 @@ class MainPlayer(Player):
 
         :return:
         """
-        steps_passed = self.learner.trained_steps - self._checkpoint_step
+        steps_passed = self.agent.trained_steps - self._checkpoint_step
         if steps_passed < 2e9:  # TODO make constant
             return False
 
@@ -173,7 +174,7 @@ class MainPlayer(Player):
 
         :return:
         """
-        self._checkpoint_step = self.learner.trained_steps
+        self._checkpoint_step = self.agent.trained_steps
         return self._create_checkpoint()
 
 

@@ -10,14 +10,8 @@ from typing import Dict, Union, Tuple, List
 from league.components.payoff import MatchResult
 from league.roles.players import Player, MainPlayer
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointLearnerCommand
-from learners.learner import Learner
 from runs.league_play_run import LeaguePlayRun
 from utils.logging import LeagueLogger
-
-
-def debug_learners(learners: List[Learner]):
-    for learner in learners:
-        print(f"{learner.name} at step {learner.trained_steps}")
 
 
 class LeagueProcess(Process):
@@ -30,8 +24,7 @@ class LeagueProcess(Process):
                  barrier: Barrier):
         """
         LeaguePlay is a form of NormalPlay where the opponent can be swapped out from a pool of agents.
-        This will cause the home player to adapt to multiple opponents but will also cause inter-non-stationarity since
-        the opponent will become part of the environment.
+        The opponent is fixed and is therefore not learning to prevent non-stationary environment.
         :param players:
         :param player_id:
         :param queue:
@@ -49,12 +42,12 @@ class LeagueProcess(Process):
         self._setup_barrier = barrier
         self._away_player: Union[Player, None] = None
         self.terminated: bool = False
-        self._play = None
+
+        self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._provide_episode_result)
 
     def run(self) -> None:
         # Create play
-        self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._provide_episode_result)
-        self._share_learner()
+        self._share_agent()
 
         # Wait at barrier until every league process performed the setup
         self._setup_barrier.wait()
@@ -68,26 +61,27 @@ class LeagueProcess(Process):
 
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
             self._away_player, flag = self._home.get_match()
-            away_learner = self._get_shared_learner(self._away_player)
-            if away_learner is None:
+            away_agent = self._get_shared_agent(self._away_player)
+            if away_agent is None:
                 warning("No Opponent was found.")
                 continue
-            self._play.set_away_learner(away_learner)
+            self._play.set_away_agent(away_agent)
 
             # Start training against new opponent
             self._logger.console_logger.info(str(self))
             play_time_seconds = self._args.league_play_time_mins * 60
-            self._play.start(play_time=play_time_seconds, train_callback=debug_learners)
+            self._play.start(play_time=play_time_seconds,
+                             train_callback=lambda x: print(self._home.agent.trained_steps))
             end_time = time.time()
 
         self._request_close()
 
-    def _get_shared_learner(self, player: Player):
-        return self._shared_players[player.id_].learner
+    def _get_shared_agent(self, player: Player):
+        return self._shared_players[player.id_].agent
 
-    def _share_learner(self):
-        # Provide learner as part of the player and insert into shared memory list
-        self._home.learner = self._play.home_learner
+    def _share_agent(self):
+        # Provide agent as part of the player and insert into shared memory list
+        self._home.agent = self._play.home_mac.agent
         self._shared_players[self._player_id] = self._home
 
     def _request_checkpoint(self):
