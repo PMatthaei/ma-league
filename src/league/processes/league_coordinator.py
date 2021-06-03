@@ -30,6 +30,7 @@ class LeagueCoordinator(Process):
         self.logger.info("League Coordinator shut down.")
 
     def _handle_commands(self, queue: Queue):
+        # TODO Clean Up unused commands
         cmd = queue.get_nowait()
         if isinstance(cmd, ProvideLearnerCommand):
             self._update_learner(cmd)
