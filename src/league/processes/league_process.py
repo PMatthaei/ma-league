@@ -23,8 +23,10 @@ class LeagueProcess(Process):
                  logger: LeagueLogger,
                  barrier: Barrier):
         """
-        LeaguePlay is a form of NormalPlay where the opponent can be swapped out from a pool of agents.
+        The process is running a single League-Play and handles communication with the central component.
+        League-Play is a form of NormalPlay where the opponent can be swapped out from a pool of agents (=league).
         The opponent is fixed and is therefore not learning to prevent non-stationary environment.
+        Opponents are sampled via Self-Play Sampling such as FSP, PFSP or SP.
         :param players:
         :param player_id:
         :param queue:
@@ -46,10 +48,9 @@ class LeagueProcess(Process):
         self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._provide_episode_result)
 
     def run(self) -> None:
-        # Create play
         self._share_agent()
 
-        # Wait at barrier until every league process performed the setup
+        # Wait at barrier until every league process performed the sharing step before the next step
         self._setup_barrier.wait()
 
         # Progress to form initial checkpoint agents after all runs performed setup

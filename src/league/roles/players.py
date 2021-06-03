@@ -5,7 +5,7 @@ from copy import deepcopy
 from typing import Tuple, Union, Any
 
 from league.components.payoff import Payoff
-from league.components.pfsp import prioritized_fictitious_self_play
+from league.components.self_play import prioritized_fictitious_self_play
 import numpy as np
 
 from league.utils.various import remove_monotonic_suffix
@@ -180,7 +180,7 @@ class MainPlayer(Player):
 
 class HistoricalPlayer(Player):
 
-    def __init__(self, player_id: int, payoff: Payoff, learner: Learner):
+    def __init__(self, player_id: int, payoff: Payoff, agent: Agent):
         """
 
         :param player_id:
@@ -188,10 +188,10 @@ class HistoricalPlayer(Player):
         """
 
         super().__init__(player_id, payoff)
-        self._parent = learner
+        self._parent = agent
 
     @property
-    def parent(self) -> Learner:
+    def parent(self) -> Agent:
         return self._parent
 
     def get_match(self) -> Tuple[Player, bool]:

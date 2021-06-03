@@ -13,8 +13,7 @@ class LeaguePlayRun(NormalPlayRun):
 
     def __init__(self, args, logger, finish_callback=None, episode_callback=None):
         """
-        LeaguePlay performs training of single multi-agent against a checkpointed agent in the same environment,
-        thus causing inter-non-stationarity between two agents since the opposite agent becomes part of the environment.
+        LeaguePlay performs training of a single multi-agent and offers loading of new adversarial agents.
         :param args:
         :param logger:
         :param finish_callback:
@@ -23,9 +22,10 @@ class LeaguePlayRun(NormalPlayRun):
         super().__init__(args, logger)
         self.finish_callback = finish_callback
         self.episode_callback = episode_callback
+        # WARN: Assuming the away agent uses the same buffer scheme!!
         self.away_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
 
-    def set_away_agent(self, away: Agent): # TODO buffer?
+    def set_away_agent(self, away: Agent):
         self.away_mac.agent = away
 
     def _set_scheme_meta(self):
