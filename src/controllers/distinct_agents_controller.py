@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from components.episode_buffer import EpisodeBatch
 from controllers.multi_agent_controller import MultiAgentController
 from exceptions.mac_exceptions import HiddenStateNotInitialized
@@ -72,17 +74,24 @@ class DistinctMAC(MultiAgentController):
 
     def init_hidden(self, batch_size):
         self.hidden_states = [
-            agent.init_hidden().unsqueeze(0).expand(batch_size, -1)  # bav
+            agent.init_hidden().unsqueeze(0).expand(batch_size, 1, -1)  # bav
             for agent in self.agents
         ]
+
+    @staticmethod
+    def _set_trained_steps(agent, steps):
+        agent.trained_steps = steps
+
+    def update_trained_steps(self, trained_steps):
+        [self._set_trained_steps(agent, trained_steps) for agent in self.agents]
 
     def parameters(self):
         params = []
         [params + list(agent.parameters()) for agent in self.agents]
         return params
 
-    def load_state(self, other_mac):
-        [agent.load_state_dict(other_mac.agent.state_dict()) for agent in self.agents]
+    def load_state(self, other_mac: DistinctMAC):
+        [agent.load_state_dict(other_mac.agents[i].state_dict()) for i, agent in enumerate(self.agents)]
 
     def cuda(self):
         [agent.cuda() for agent in self.agents]

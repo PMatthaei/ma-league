@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from controllers.multi_agent_controller import MultiAgentController
 from exceptions.mac_exceptions import HiddenStateNotInitialized
 from modules.agents import REGISTRY as agent_REGISTRY
@@ -64,13 +66,16 @@ class BasicMAC(MultiAgentController):
 
         return agent_outs.view(ep_batch.batch_size, self.n_agents, -1)
 
+    def update_trained_steps(self, trained_steps):
+        self.agent.trained_steps = trained_steps
+
     def init_hidden(self, batch_size):
         self.hidden_states = self.agent.init_hidden().unsqueeze(0).expand(batch_size, self.n_agents, -1)  # bav
 
     def parameters(self):
         return self.agent.parameters()
 
-    def load_state(self, other_mac):
+    def load_state(self, other_mac: BasicMAC):
         self.agent.load_state_dict(other_mac.agent.state_dict())
 
     def cuda(self):
