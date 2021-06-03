@@ -157,7 +157,7 @@ class MainPlayer(Player):
 
         :return:
         """
-        steps_passed = self.learner.get_current_step() - self._checkpoint_step
+        steps_passed = self.learner.trained_steps - self._checkpoint_step
         if steps_passed < 2e9:  # TODO make constant
             return False
 
@@ -173,7 +173,7 @@ class MainPlayer(Player):
 
         :return:
         """
-        self._checkpoint_step = self.learner.get_current_step()
+        self._checkpoint_step = self.learner.trained_steps
         return self._create_checkpoint()
 
 

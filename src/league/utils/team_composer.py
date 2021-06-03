@@ -1,10 +1,25 @@
 import itertools
 
 import enum
+from collections import Counter
 
 from maenv.core import RoleTypes, UnitAttackTypes
 
 from utils.logging import LeagueLogger
+
+
+class Team:
+    def __init__(self):
+        self.unit_occurrence_dict = dict()
+
+    def difference(self, team):
+        t1_counts = Counter(self.unit_occurrence_dict)
+        t2_counts = Counter(team)
+        diff = [t1_counts[unit] - t2_counts[unit] if unit in t2_counts else t1_counts[unit] for unit in t1_counts]
+        in_swaps = [x for x in diff if x > 0]
+        weighting = len(in_swaps) / sum(self.unit_occurrence_dict.values())
+        dist = sum(in_swaps) * weighting
+        return dist
 
 
 class TeamComposer:

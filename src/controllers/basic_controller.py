@@ -27,10 +27,9 @@ class BasicMAC(MultiAgentController):
         # Only select available actions for the selected batch elements in bs
         avail_actions = ep_batch["avail_actions"][:, t_ep]
         # Run forward propagation for the batch -> Q-values
-        agent_outputs = self.forward(ep_batch, t_ep, test_mode=test_mode)
+        agent_outs = self.forward(ep_batch, t_ep, test_mode=test_mode)
         # Choose action by f.e. epsilon-greedy
-        chosen_actions = self.action_selector.select_action(agent_outputs[bs], avail_actions[bs], t_env,
-                                                            test_mode=test_mode)
+        chosen_actions = self.action_selector.select_action(agent_outs[bs], avail_actions[bs], t_env, test_mode)
         return chosen_actions
 
     def forward(self, ep_batch, t, test_mode=False):
@@ -90,7 +89,7 @@ class BasicMAC(MultiAgentController):
     def _build_inputs(self, batch, t):
         """
         Select data from the batch which should be served as a input to the agent network.
-        Assumes homogenous agents with flat observations.
+        Assumes homogeneous agents with flat observations.
         Other MACs might want to e.g. delegate building inputs to each agent
         Runs in every forward pass
         :param batch:
@@ -99,8 +98,7 @@ class BasicMAC(MultiAgentController):
         """
 
         bs = batch.batch_size
-        inputs = []
-        inputs.append(batch["obs"][:, t])  # b1av
+        inputs = [batch["obs"][:, t]]
         if self.args.obs_last_action:
             if t == 0:
                 inputs.append(th.zeros_like(batch["actions_onehot"][:, t]))

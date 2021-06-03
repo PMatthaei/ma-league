@@ -13,7 +13,7 @@ class QLearner(Learner):
     def __init__(self, mac: MultiAgentController, scheme, logger, args, name=None):
         super().__init__(mac, scheme, logger, args, name)
         self.name += "_qlearner_"
-        # Receive params from the agent from MAC
+        # Receive params from the agent from Multi-Agent Controller
         self.params = list(mac.parameters())
 
         self.last_target_update_episode = 0
@@ -26,7 +26,7 @@ class QLearner(Learner):
                 self.mixer = QMixer(args)
             else:
                 raise ValueError("Mixer {} not recognised.".format(args.mixer))
-            # Add addtional params for later optimization
+            # Add additional mixer params for later optimization
             self.params += list(self.mixer.parameters())
             self.target_mixer = copy.deepcopy(self.mixer)
 
@@ -37,15 +37,14 @@ class QLearner(Learner):
 
         self.log_stats_t = -self.args.learner_log_interval - 1
 
-        self.trained_steps = 0
-
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
-        self.trained_steps += batch.batch_size  # TODO Fix
-        # Get the relevant quantities
+        # Get the relevant batch quantities
         rewards = batch["reward"][:, :-1]
         actions = batch["actions"][:, :-1]
         terminated = batch["terminated"][:, :-1].float()
+        # Filled boolean indicates if steps were filled to match max. sequence length in the batch
         mask = batch["filled"][:, :-1].float()
+
         mask[:, 1:] = mask[:, 1:] * (1 - terminated[:, :-1])
         avail_actions = batch["avail_actions"]
 
@@ -95,6 +94,7 @@ class QLearner(Learner):
         # Td-error
         td_error = (chosen_action_qvals - targets.detach())
 
+        # Mask out previously filled time steps if the env was already terminated in the corresponding batch entry
         mask = mask.expand_as(td_error)
 
         # 0-out the targets that came from padded data
@@ -105,6 +105,7 @@ class QLearner(Learner):
 
         # Optimise
         self.optimiser.zero_grad()
+        # Computes dloss/dx for every parameter x which has requires_grad=True.
         loss.backward()
         grad_norm = th.nn.utils.clip_grad_norm_(self.params, self.args.grad_norm_clip)
         self.optimiser.step()
@@ -113,6 +114,8 @@ class QLearner(Learner):
         if (episode_num - self.last_target_update_episode) / self.args.target_update_interval >= 1.0:
             self._update_targets()
             self.last_target_update_episode = episode_num
+
+        self._trained_steps += t_env
 
         # Log learner stats in interval
         if t_env - self.log_stats_t >= self.args.learner_log_interval:
@@ -154,6 +157,3 @@ class QLearner(Learner):
                 th.load("{}/{}mixer.th".format(path, self.name), map_location=lambda storage, loc: storage))
         self.optimiser.load_state_dict(
             th.load("{}/{}opt.th".format(path, self.name), map_location=lambda storage, loc: storage))
-
-    def get_current_step(self):
-        return self.trained_steps

@@ -17,7 +17,7 @@ from utils.logging import LeagueLogger
 
 def debug_learners(learners: List[Learner]):
     for learner in learners:
-        print(f"{learner.name} at step {learner.get_current_step()}")
+        print(f"{learner.name} at step {learner.trained_steps}")
 
 
 class LeagueProcess(Process):
