@@ -1,7 +1,7 @@
 ```diff
 - Under construction
 ```
-This repository relies heavily on components of [oxwhirl/pymarl](https://github.com/oxwhirl/pymarl) but does not hold a dependency to it.
+This repository based on components of [oxwhirl/pymarl](https://github.com/oxwhirl/pymarl) but does not hold a dependency to it.
 
 # Multi-Agent League 
 
