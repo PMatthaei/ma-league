@@ -1,5 +1,7 @@
-REGISTRY = {}
+from .dqn_agent import DQNAgent
+from .dqrn_agent import DRQNAgent
 
-from .rnn_agent import RNNAgent
-
-REGISTRY["rnn"] = RNNAgent
+REGISTRY = {
+    "rnn": DRQNAgent,
+    "dqn": DQNAgent
+}

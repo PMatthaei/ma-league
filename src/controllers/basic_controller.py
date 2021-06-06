@@ -10,7 +10,7 @@ import torch as th
 class BasicMAC(MultiAgentController):
     def __init__(self, scheme, groups, args):
         """
-        This multi-agent controller shares parameters between agents.
+        This is a multi-agent controller shares parameters between agents by using a single fully connected network.
         :param scheme:
         :param groups:
         :param args:
@@ -39,7 +39,8 @@ class BasicMAC(MultiAgentController):
         avail_actions = ep_batch["avail_actions"][:, t]
         if self.hidden_states is None:
             raise HiddenStateNotInitialized()
-        agent_outs, self.hidden_states = self.agent(agent_inputs, self.hidden_states)
+
+        agent_outs = self._compute_agent_outputs(agent_inputs)
 
         # Softmax the agent outputs if they're policy logits
         if self.agent_output_type == "pi_logits":
@@ -65,6 +66,10 @@ class BasicMAC(MultiAgentController):
                     agent_outs[reshaped_avail_actions == 0] = 0.0
 
         return agent_outs.view(ep_batch.batch_size, self.n_agents, -1)
+
+    def _compute_agent_outputs(self, agent_inputs):
+        agent_outs, self.hidden_states = self.agent(agent_inputs, self.hidden_states)
+        return agent_outs
 
     def update_trained_steps(self, trained_steps):
         self.agent.trained_steps = trained_steps

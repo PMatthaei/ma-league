@@ -4,10 +4,10 @@ import torch.nn.functional as F
 from modules.agents.agent import Agent
 
 
-class RNNAgent(Agent):
+class DRQNAgent(Agent):
     def __init__(self, input_shape, args):
         """
-        RNNAgent
+        Deep Q-Network with Recurrent Units
         Architecture:
         1. Fully Connected Layer (MLP): Feature Extraction of observation
         2. Gated Recurrent Unit: Process and remember/forget sequence data (episode).
@@ -15,7 +15,7 @@ class RNNAgent(Agent):
         :param input_shape: shape of the observation(=input)
         :param args:
         """
-        super(RNNAgent, self).__init__(input_shape, args)
+        super(DRQNAgent, self).__init__(input_shape, args)
         self.args = args
 
         self.fc1 = nn.Linear(input_shape, args.rnn_hidden_dim)  # Linear = y = x * A^T + b
