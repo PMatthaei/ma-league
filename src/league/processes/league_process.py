@@ -8,7 +8,8 @@ from types import SimpleNamespace
 from typing import Dict, Union, Tuple, List
 
 from league.components.payoff import MatchResult
-from league.roles.players import Player, MainPlayer
+from league.roles.alphastar.main_player import MainPlayer
+from league.roles.players import Player
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointLearnerCommand
 from runs.league_play_run import LeaguePlayRun
 from utils.logging import LeagueLogger

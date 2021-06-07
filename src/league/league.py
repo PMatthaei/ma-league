@@ -1,7 +1,8 @@
 from typing import Tuple
 
-from league.roles.exploiters import MainExploiter, LeagueExploiter
-from league.roles.players import MainPlayer, Player
+from league.roles.alphastar.exploiters import MainExploiter, LeagueExploiter
+from league.roles.alphastar.main_player import MainPlayer
+from league.roles.players import Player
 from learners.learner import Learner
 
 
@@ -23,7 +24,8 @@ class League(object):
         # Setup initial learning agents
         for i, plan in enumerate(initial_agents):
             for _ in range(self._main_agents_n):
-                main_agent = MainPlayer(player_id, payoff=self._payoff)
+                main_agent = MainPlayer\
+                    (player_id, payoff=self._payoff)
                 self._learning_agents[player_id] = main_agent
                 player_id += 1
 

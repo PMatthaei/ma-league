@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch as th
 
 
 class Agent(nn.Module):
@@ -25,3 +26,23 @@ class Agent(nn.Module):
     def print_parameters(self):
         for name, param in self.state_dict().items():
             print(name, param)
+
+
+class DistinctMultiAgent(Agent):
+    def __init__(self, agent_type, n_agents):
+        """
+        Distinct-Multi-Agent Interface
+        """
+        super(Agent, self).__init__()
+        self.agents: nn.ModuleList = nn.ModuleList([
+            agent_type(self.input_shape, self.args)
+            for _ in range(n_agents)
+        ])
+
+    def init_hidden(self):
+        hidden_states = [agent.init_hidden() for agent in self.agents]
+        return th.stack(hidden_states)
+
+    def forward(self, inputs, hidden_states):
+        outputs = [agent(inputs[:, i, :], hidden_states[i]) for i, agent in enumerate(self.agents)]
+        return th.stack(outputs)

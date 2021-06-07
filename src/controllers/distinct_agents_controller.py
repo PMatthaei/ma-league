@@ -29,8 +29,8 @@ class DistinctMAC(BasicMAC):
     def _compute_agent_outputs(self, agent_inputs):
         # TODO: Distinct Buffers from where is sampled!
         agent_outs = []
-        for i in range(self.n_agents):
-            agent_out, self.hidden_states[i] = self.agents[i](agent_inputs[:, i, :], self.hidden_states[i])
+        for i, agent in enumerate(self.agents):
+            agent_out, self.hidden_states[i] = agent(agent_inputs[:, i, :], self.hidden_states[i])
             agent_outs.append(agent_out)
         agent_outs = th.stack(agent_outs)
         return agent_outs
