@@ -17,7 +17,7 @@ from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
 
 from league.components.payoff import Payoff
-from league.league import League
+from league.alpha_star_league import AlphaStarLeague
 from league.processes.league_process import LeagueProcess
 from league.processes.league_coordinator import LeagueCoordinator
 from league.roles.players import Player
@@ -85,7 +85,7 @@ def run(_run, _config, _log):
 
     # Create league
     payoff = Payoff(p_matrix=p_matrix, players=players)
-    league = League(initial_agents=team_compositions, payoff=payoff)
+    league = AlphaStarLeague(initial_agents=team_compositions, payoff=payoff)
     in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(league.size)])
 
     setup_barrier = Barrier(parties=league.size)

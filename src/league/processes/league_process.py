@@ -10,7 +10,7 @@ from typing import Dict, Union, Tuple, List
 from league.components.payoff import MatchResult
 from league.roles.alphastar.main_player import MainPlayer
 from league.roles.players import Player
-from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointLearnerCommand
+from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand
 from runs.league_play_run import LeaguePlayRun
 from utils.logging import LeagueLogger
 
@@ -87,7 +87,7 @@ class LeagueProcess(Process):
         self._shared_players[self._player_id] = self._home
 
     def _request_checkpoint(self):
-        cmd = CheckpointLearnerCommand(origin=self._player_id)
+        cmd = CheckpointCommand(origin=self._player_id)
         self._in_queue.put(cmd)
 
     def _provide_episode_result(self, env_info: Dict):

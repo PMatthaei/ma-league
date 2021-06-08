@@ -3,8 +3,8 @@ from typing import List, Tuple
 
 from league.components.payoff import Payoff
 from league.roles.players import Player
-from league.utils.commands import ProvideLearnerCommand, Ack, CloseLeagueProcessCommand, PayoffUpdateCommand, \
-    GetLearnerCommand, CheckpointLearnerCommand
+from league.utils.commands import ProvideAgentCommand, Ack, CloseLeagueProcessCommand, PayoffUpdateCommand, \
+    RetrieveAgentCommand, CheckpointCommand
 
 
 class LeagueCoordinator(Process):
@@ -32,22 +32,22 @@ class LeagueCoordinator(Process):
     def _handle_commands(self, queue: Queue):
         # TODO Clean Up unused commands
         cmd = queue.get_nowait()
-        if isinstance(cmd, ProvideLearnerCommand):
+        if isinstance(cmd, ProvideAgentCommand):
             self._update_learner(cmd)
         elif isinstance(cmd, CloseLeagueProcessCommand):
             self.logger.info(f"Closing connection to process {cmd.origin}")
             queue.close()
             self._closed.append(cmd.origin)
-        elif isinstance(cmd, CheckpointLearnerCommand):
+        elif isinstance(cmd, CheckpointCommand):
             self._checkpoint(cmd)
         elif isinstance(cmd, PayoffUpdateCommand):
             self._save_outcome(cmd)
-        elif isinstance(cmd, GetLearnerCommand):
+        elif isinstance(cmd, RetrieveAgentCommand):
             self._provide_learner(cmd)
         else:
             raise Exception("Unknown message.")
 
-    def _checkpoint(self, cmd: CheckpointLearnerCommand):
+    def _checkpoint(self, cmd: CheckpointCommand):
         """
         Save a checkpoint of the agent with the ID provided in the message.
         :param msg:
@@ -71,7 +71,7 @@ class LeagueCoordinator(Process):
         if home_player.ready_to_checkpoint():  # Auto-checkpoint player
             self._players.append(self._players[home_player].checkpoint())
 
-    def _update_learner(self, cmd: ProvideLearnerCommand):
+    def _update_learner(self, cmd: ProvideAgentCommand):
         """
         Receive a learner during the league sub process setup and provide it to its corresponding player.
         These learners can be requested by other sub processes.
@@ -87,7 +87,7 @@ class LeagueCoordinator(Process):
         self.logger.info(f"Updated learner of player {player_id}")
         self._out_queues[player_id].put(Ack(data=cmd.id_))
 
-    def _provide_learner(self, cmd: GetLearnerCommand):
+    def _provide_learner(self, cmd: RetrieveAgentCommand):
         """
         Provide a league sub process with a requested learner, identified by its owning player.
         :param cmd:

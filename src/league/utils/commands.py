@@ -15,7 +15,7 @@ class CommandTypes(Enum):
 
 
 class Resources(Enum):
-    LEARNER = 0,
+    AGENT = 0,
     PAYOFF = 1,
     PROCESS = 2,
 
@@ -35,22 +35,22 @@ class Ack(BaseCommand):
         super().__init__(CommandTypes.ACK, None, None, data)
 
 
-class ProvideLearnerCommand(BaseCommand):
+class ProvideAgentCommand(BaseCommand):
 
     def __init__(self, origin: int, data: Learner):
-        super().__init__(CommandTypes.UPDATE, origin, Resources.LEARNER, data)
+        super().__init__(CommandTypes.UPDATE, origin, Resources.AGENT, data)
 
 
-class GetLearnerCommand(BaseCommand):
+class RetrieveAgentCommand(BaseCommand):
 
     def __init__(self, origin: int, data: int):
-        super().__init__(CommandTypes.GET, origin, Resources.LEARNER, data)
+        super().__init__(CommandTypes.GET, origin, Resources.AGENT, data)
 
 
-class CheckpointLearnerCommand(BaseCommand):
+class CheckpointCommand(BaseCommand):
 
     def __init__(self, origin: int):
-        super().__init__(CommandTypes.POST, origin, Resources.LEARNER, None)
+        super().__init__(CommandTypes.POST, origin, Resources.AGENT, None)
 
 
 class PayoffUpdateCommand(BaseCommand):

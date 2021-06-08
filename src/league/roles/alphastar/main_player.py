@@ -6,7 +6,7 @@ import numpy as np
 
 from league.components.payoff import Payoff
 from league.components.self_play import PrioritizedFictitiousSelfPlay
-from league.utils.various import remove_monotonic_suffix
+from league.utils.helpers import remove_monotonic_suffix
 
 from league.roles.players import Player, HistoricalPlayer
 
