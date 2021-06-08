@@ -4,7 +4,6 @@ import pprint
 import sys
 import threading
 from copy import deepcopy
-from multiprocessing.managers import BaseManager
 
 from torch.multiprocessing import Barrier, Queue, Manager
 from os.path import dirname, abspath
@@ -16,11 +15,10 @@ from sacred import SETTINGS, Experiment
 from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
 
+from league import AlphaStarLeague, SimpleLeague
 from league.components.payoff import Payoff
-from league.alpha_star_league import AlphaStarLeague
 from league.processes.league_process import LeagueProcess
 from league.processes.league_coordinator import LeagueCoordinator
-from league.roles.players import Player
 from league.utils.team_composer import TeamComposer
 from utils.logging import LeagueLogger
 from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy, \
@@ -82,19 +80,28 @@ def run(_run, _config, _log):
 
     # Infrastructure
     runs = []  # All running processes representing an agent playing in the league
+    payoff = Payoff(p_matrix=p_matrix, players=players)  # Hold results of each match
 
     # Create league
-    payoff = Payoff(p_matrix=p_matrix, players=players)
-    league = AlphaStarLeague(initial_agents=team_compositions, payoff=payoff)
+    # league = AlphaStarLeague(initial_agents=team_compositions, payoff=payoff)
+    league = SimpleLeague(initial_agents=team_compositions, payoff=payoff)
+    # Communication
     in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(league.size)])
 
+    # Synchronization across all league instances
     setup_barrier = Barrier(parties=league.size)
 
-    # Start league training
+    # Start league instances
     for idx, (in_q, out_q) in enumerate(zip(in_queues, out_queues)):
-        league_run = LeagueProcess(player_id=idx, players=players, queue=(in_q, out_q), args=args, logger=logger, barrier=setup_barrier)
+        league_run = LeagueProcess(
+            player_id=idx,
+            players=players,
+            queue=(in_q, out_q),
+            args=args,
+            logger=logger,
+            barrier=setup_barrier
+        )
         runs.append(league_run)
-
     [r.start() for r in runs]
 
     # Handle message communication within the league

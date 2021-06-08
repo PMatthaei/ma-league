@@ -34,6 +34,7 @@ class LeaguePlayRun(NormalPlayRun):
         self.args.n_agents = int(self.env_info["n_agents"] / 2)  # TODO: assuming same team size and two teams
 
     def _build_stepper(self):
+        # Difference to NormalPlay! We use as self stepper which allows for a policy to take over the scripted AI
         self.stepper = self_steppers_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
 
     def _init_stepper(self):

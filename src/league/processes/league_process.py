@@ -45,7 +45,9 @@ class LeagueProcess(Process):
         self._setup_barrier = barrier
         self._away_player: Union[Player, None] = None
         self.terminated: bool = False
-
+        # Supply team to match plan
+        self._args.env_args['match_build_plan'][0]['units'] = self._home.team['units']
+        self._args.env_args['match_build_plan'][1]['units'] = self._home.team['units']
         self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._provide_episode_result)
 
     def run(self) -> None:
@@ -55,7 +57,7 @@ class LeagueProcess(Process):
         self._setup_barrier.wait()
 
         # Progress to form initial checkpoint agents after all runs performed setup
-        if isinstance(self._home, MainPlayer):
+        if isinstance(self._home, MainPlayer): # TODO: Allow for different kinds of initial historical players
             self._request_checkpoint()  # MainPlayers are initially added as historical players
 
         start_time = time.time()

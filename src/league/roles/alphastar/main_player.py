@@ -12,8 +12,8 @@ from league.roles.players import Player, HistoricalPlayer
 
 
 class MainPlayer(Player):
-    def __init__(self, player_id: int, payoff: Payoff):
-        super().__init__(player_id, payoff)
+    def __init__(self, player_id: int, payoff: Payoff, team):
+        super().__init__(player_id, payoff, team)
         self._checkpoint_step = 0
         self._pfsp = PrioritizedFictitiousSelfPlay()
 
@@ -117,7 +117,7 @@ class MainPlayer(Player):
 
     def ready_to_checkpoint(self) -> bool:
         """
-
+        Checkpoint Logic - AlphaStars Checkpointing Logic
         :return:
         """
         steps_passed = self.agent.trained_steps - self._checkpoint_step
@@ -130,11 +130,3 @@ class MainPlayer(Player):
         ]
         win_rates = self._payoff[self.id_, historical]
         return win_rates.min() > 0.7 or steps_passed > 4e9  # TODO make constant
-
-    def checkpoint(self) -> HistoricalPlayer:
-        """
-
-        :return:
-        """
-        self._checkpoint_step = self.agent.trained_steps
-        return self._create_checkpoint()

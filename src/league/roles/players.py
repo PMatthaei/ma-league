@@ -11,9 +11,10 @@ from modules.agents.agent import Agent
 
 class Player(object):
 
-    def __init__(self, player_id: int, payoff: Payoff):
+    def __init__(self, player_id: int, payoff: Payoff, team):
         self.id_ = player_id
         self._payoff = payoff
+        self.team = team
         self.agent: Union[Agent, None] = None
 
     def get_match(self) -> Player:
@@ -30,7 +31,8 @@ class Player(object):
         return self._payoff
 
     def checkpoint(self) -> HistoricalPlayer:
-        raise NotImplementedError
+        self._checkpoint_step = self.agent.trained_steps
+        return self._create_checkpoint()
 
     def __str__(self):
         return f"{type(self).__name__}_{self.id_}"

@@ -48,8 +48,8 @@ class PrioritizedFictitiousSelfPlay(OpponentSampling):
         super().__init__()
 
     def sample(self, opponents, win_rates=None, weighting="linear"):
-        if not win_rates:
-            raise NotImplementedError("Please serve up-to-date win rates.")
+        if win_rates is None:
+            raise Exception("Please serve up-to-date win rates.")
         weightings = {
             "variance": lambda x: x * (1 - x),
             "linear": lambda x: 1 - x,

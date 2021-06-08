@@ -49,7 +49,7 @@ class TeamComposer:
         self.logger.debug((["Name {}: - Size: {}".format(c, len(c)) for c in self.characteristics]))
         units = list(itertools.product(*self.characteristics))
         self.logger.debug("Created {} unique units.".format(len(units)))
-        return units
+        return map(lambda unit: {'role': unit[0], 'attack_type': unit[1]}, units)
 
     @staticmethod
     def _to_team_build_plan(tid, units, is_scripted=False):
