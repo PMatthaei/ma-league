@@ -9,7 +9,7 @@ env_args:
   infos: True
   global_reward: True
   grid_size: 10
-  match_build_plan: medium
+  match_build_plan: medium_1h_2t_2a
 
 test_greedy: True
 test_nepisode: 32
