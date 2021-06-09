@@ -23,15 +23,8 @@ class SimplePlayer(Player):
         return self._pfsp_branch()
 
     def _pfsp_branch(self) -> Union[Tuple[Player, bool], Tuple[None, bool]]:
-        simple_players = [
-            player.id_ for player in self._payoff.players
-            if isinstance(player, SimplePlayer)
-        ]
-
-        if len(simple_players) == 0:
-            raise Exception("No opponent of Type Simple Player found.")
-
-        win_rates = self._payoff[self.id_, simple_players]
+        simple_players = self.payoff.get_players_of_type(SimplePlayer)
+        win_rates = self._payoff[self, simple_players]
         chosen = self._pfsp.sample(simple_players, win_rates=win_rates, weighting="squared")
         return self._payoff.players[chosen], True
 

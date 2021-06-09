@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import collections
 from enum import Enum
-from typing import Tuple, Union, List
 
 import numpy as np
 
@@ -12,43 +12,36 @@ class MatchResult(Enum):
     DRAW = 2,
 
 
+def dd():
+    return 0
+
+
 class Payoff:
 
     def __init__(self, p_matrix, players):
-        self.players = players
+        self._players = players
         self.p_matrix = p_matrix
         self.decay = 0.99
+        self._wins = collections.defaultdict(dd)
+        self._draws = collections.defaultdict(dd)
+        self._losses = collections.defaultdict(dd)
+        self._games = collections.defaultdict(dd)
+        self._decay = 0.99
 
-    def _win_rate(self, _home: int, _away: int):
-        """
-        Calculates the win rate of the home team against the away team.
-        Draws are weighted have as much as wins.
-        :param _home:
-        :param _away:
-        :return:
-        """
-        if (_home, _away) not in self.p_matrix:
-            self.p_matrix[_home, _away] = 0
-
-        if self.p_matrix[_home, _away] == 0:
+    def _win_rate(self, _home, _away):
+        if self._games[_home, _away] == 0:
             return 0.5
 
-        return (self.p_matrix[_home, _away, MatchResult.WIN] +
-                0.5 * self.p_matrix[_home, _away, MatchResult.DRAW]) / self.p_matrix[_home, _away]
+        return (self._wins[_home, _away] +
+                0.5 * self._draws[_home, _away]) / self._games[_home, _away]
 
-    def __getitem__(self, match: Union[Tuple[int, List[int]], Tuple[int, int]]):
-        """
-        Get the win rates of the home player against one or more away teams.
-        Away teams can be passed as list.
-        :param match:
-        :return:
-        """
+    def __getitem__(self, match):
         home, away = match
 
-        if isinstance(home, int):
+        from league.roles.players import Player
+        if isinstance(home, Player):
             home = [home]
-
-        if isinstance(away, int):
+        if isinstance(away, Player):
             away = [away]
 
         win_rates = np.array([[self._win_rate(h, a) for a in away] for h in home])
@@ -57,81 +50,41 @@ class Payoff:
 
         return win_rates
 
-    def update(self, home: int, away: int, result: str):
-        """
-        Update the statistic of a certain match with a new result
-        :param home:
-        :param away:
-        :param result:
-        :return:
-        """
-        if not self.has_entries(home, away):  # init if new match
-            self._init_p_matrix_entries(home, away)
+    def update(self, home, away, result):
+        for stats in (self._games, self._wins, self._draws, self._losses):
+            stats[home, away] *= self._decay
+            stats[away, home] *= self._decay
 
-        self._apply_decay(home, away)
-
-        self.p_matrix[home, away] += 1
-        self.p_matrix[away, home] += 1
-
-        if result == MatchResult.WIN:
-            self.p_matrix[home, away, MatchResult.WIN] += 1
-            self.p_matrix[away, home, MatchResult.LOSS] += 1
-        elif result == MatchResult.DRAW:
-            self.p_matrix[home, away, MatchResult.DRAW] += 1
-            self.p_matrix[away, home, MatchResult.DRAW] += 1
+        self._games[home, away] += 1
+        self._games[away, home] += 1
+        if result == "win":
+            self._wins[home, away] += 1
+            self._losses[away, home] += 1
+        elif result == "draw":
+            self._draws[home, away] += 1
+            self._draws[away, home] += 1
         else:
-            self.p_matrix[home, away, MatchResult.LOSS] += 1
-            self.p_matrix[away, home, MatchResult.WIN] += 1
-
-        return self.players[home], self.players[away]
-
-    def _apply_decay(self, home: int, away: int):
-        self.p_matrix[home, away, MatchResult.WIN] *= self.decay
-        self.p_matrix[away, home, MatchResult.WIN] *= self.decay
-        self.p_matrix[home, away, MatchResult.LOSS] *= self.decay
-        self.p_matrix[away, home, MatchResult.LOSS] *= self.decay
-        self.p_matrix[home, away, MatchResult.DRAW] *= self.decay
-        self.p_matrix[away, home, MatchResult.DRAW] *= self.decay
-        self.p_matrix[home, away] *= self.decay
-        self.p_matrix[away, home] *= self.decay
+            self._wins[away, home] += 1
+            self._losses[home, away] += 1
 
     def add_player(self, player) -> None:
-        self.players.append(player)
+        self._players.append(player)
 
     def get_player(self, player_id: int):
-        player = self.players[player_id]
+        player = self._players[player_id]
         assert player.id_ == player_id, "ID mismatch."
         return player
 
-    def has_entries(self, home: int, away: int):
-        """
-        Collect all keys which are needed to capture statistics of the given match
-        and test if they exist for later updates.
-        :param home:
-        :param away:
-        :return:
-        """
-        keys = []
-        for result in [MatchResult.WIN, MatchResult.LOSS, MatchResult.DRAW]:
-            keys.append((home, away, result))
-            keys.append((away, home, result))
-        keys.append((home, away))
-        keys.append((away, home))
+    def get_players_of_type(self, cls):
+        players = [
+            player.id_ for player in self._players
+            if isinstance(player, cls)
+        ]
+        if len(players) == 0:
+            raise Exception(f"No opponent of Type: {cls} found.")
 
-        return all([k in self.p_matrix for k in keys])
+        return players
 
-    def _init_p_matrix_entries(self, home: int, away: int):
-        """
-        Initialize all necessary dict entries to allow for later updates on these statistics.
-        :param home:
-        :param away:
-        :return:
-        """
-        self.p_matrix[home, away, MatchResult.WIN] = 0
-        self.p_matrix[away, home, MatchResult.WIN] = 0
-        self.p_matrix[home, away, MatchResult.LOSS] = 0
-        self.p_matrix[away, home, MatchResult.LOSS] = 0
-        self.p_matrix[home, away, MatchResult.DRAW] = 0
-        self.p_matrix[away, home, MatchResult.DRAW] = 0
-        self.p_matrix[home, away] = 0
-        self.p_matrix[away, home] = 0
+    @property
+    def players(self):
+        return self._players

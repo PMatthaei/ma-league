@@ -4,6 +4,14 @@ from controllers.multi_agent_controller import MultiAgentController
 
 class Learner:
     def __init__(self, mac: MultiAgentController, scheme, logger, args, name=None):
+        """
+        Learners update parameters and networks provided via the Multi-Agent Controller
+        :param mac:
+        :param scheme:
+        :param logger:
+        :param args:
+        :param name:
+        """
         self.mac = mac
         self.scheme = scheme
         self.logger = logger

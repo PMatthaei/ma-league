@@ -71,7 +71,7 @@ def run(_run, _config, _log):
     # Build league teams
     team_size = _config["team_size"]
     team_composer = TeamComposer(RoleTypes, UnitAttackTypes)
-    team_compositions = [team_composer.compose_unique_teams(team_size)[0]]
+    teams = [team_composer.compose_unique_teams(team_size)[0]]
 
     # Shared objects
     manager = Manager()
@@ -84,7 +84,7 @@ def run(_run, _config, _log):
 
     # Create league
     # league = AlphaStarLeague(initial_agents=team_compositions, payoff=payoff)
-    league = SimpleLeague(initial_agents=team_compositions, payoff=payoff)
+    league = SimpleLeague(teams=teams, payoff=payoff)
     # Communication
     in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(league.size)])
 

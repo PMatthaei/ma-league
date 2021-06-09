@@ -67,9 +67,9 @@ class LeagueCoordinator(Process):
         :return:
         """
         (home, away), outcome = cmd.data
-        home_player, _ = self._payoff.update(home, away, outcome)
-        if home_player.ready_to_checkpoint():  # Auto-checkpoint player
-            self._players.append(self._players[home_player].checkpoint())
+        self._payoff.update(home, away, outcome)
+        if home.ready_to_checkpoint():  # Auto-checkpoint player
+            self._players.append(self._players[home].checkpoint())
 
     def _update_learner(self, cmd: ProvideAgentCommand):
         """

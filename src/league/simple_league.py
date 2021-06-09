@@ -4,18 +4,18 @@ from league.roles.simple.simple_player import SimplePlayer
 
 class SimpleLeague(League):
 
-    def __init__(self, initial_agents, payoff, main_agents_n=2):
+    def __init__(self, teams, payoff, main_agents_n=2):
         """
-        Simple Example League
-        :param initial_agents:
+        Simple Example League - Creates one SimplePlayers per Team as main agents to play in the league
+        :param teams:
         :param payoff:
         :param main_agents_n:
         """
-        super().__init__(initial_agents, payoff, main_agents_n)
+        super().__init__(teams, payoff, main_agents_n)
 
-    def _setup(self, initial_agents):
+    def _setup(self, teams):
         player_id = 0
-        for i, plan in enumerate(initial_agents):
+        for _, plan in enumerate(teams):
             for _ in range(self._main_agents_n):
                 main_agent = SimplePlayer(player_id, payoff=self._payoff, team=plan)
                 self._learning_agents[player_id] = main_agent
@@ -26,4 +26,3 @@ class SimpleLeague(League):
 
     def roles_per_initial_agent(self) -> int:
         return self._main_agents_n
-

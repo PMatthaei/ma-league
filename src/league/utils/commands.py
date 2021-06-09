@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Dict, Any, Tuple
 
 from league.components.payoff import MatchResult
+from league.roles.players import Player
 from learners.learner import Learner
 
 
@@ -55,7 +56,7 @@ class CheckpointCommand(BaseCommand):
 
 class PayoffUpdateCommand(BaseCommand):
 
-    def __init__(self, origin: int, data: Tuple[Tuple[int, int], MatchResult]):
+    def __init__(self, origin: int, data: Tuple[Tuple[Player, Player], MatchResult]):
         super().__init__(CommandTypes.UPDATE, origin, Resources.PAYOFF, data)
 
 

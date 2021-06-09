@@ -84,17 +84,28 @@ class LeagueProcess(Process):
         return self._shared_players[player.id_].agent
 
     def _share_agent(self):
-        # Provide agent as part of the player and insert into shared memory list
+        # Fetch agent from training, set as players agent and insert into shared memory list
         self._home.agent = self._play.home_mac.agent
         self._shared_players[self._player_id] = self._home
 
     def _request_checkpoint(self):
+        """
+        Request to checkpoint the current version of the agent, residing in the shared memory list.
+        If the current state of the agent was not propagated to the shared memory,
+        the agent checkpointed is not up-to-date!
+        :return:
+        """
         cmd = CheckpointCommand(origin=self._player_id)
         self._in_queue.put(cmd)
 
     def _provide_episode_result(self, env_info: Dict):
+        """
+        Send the result of an episode the the central coordinator for processing
+        :param env_info:
+        :return:
+        """
         result = self._get_result(env_info)
-        data = ((self._player_id, self._away_player.id_), result)
+        data = ((self._home, self._away_player), result)
         cmd = PayoffUpdateCommand(origin=self._player_id, data=data)
         self._in_queue.put(cmd)
 
