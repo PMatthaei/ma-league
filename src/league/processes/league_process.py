@@ -12,7 +12,7 @@ from league.roles.alphastar.main_player import MainPlayer
 from league.roles.players import Player
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand
 from runs.league_play_run import LeaguePlayRun
-from utils.logging import LeagueLogger
+from custom_logging.logger import LeagueLogger
 
 
 class LeagueProcess(Process):
@@ -56,7 +56,7 @@ class LeagueProcess(Process):
         # Wait at barrier until every league process performed the sharing step before the next step
         self._setup_barrier.wait()
 
-        # Progress to form initial checkpoint agents after all runs performed setup
+        # Progress to save initial checkpoint of agents after all runs performed setup
         if isinstance(self._home, MainPlayer): # TODO: Allow for different kinds of initial historical players
             self._request_checkpoint()  # MainPlayers are initially added as historical players
 
@@ -74,8 +74,7 @@ class LeagueProcess(Process):
             # Start training against new opponent
             self._logger.console_logger.info(str(self))
             play_time_seconds = self._args.league_play_time_mins * 60
-            self._play.start(play_time=play_time_seconds,
-                             train_callback=lambda x: print(self._home.agent.trained_steps))
+            self._play.start(play_time=play_time_seconds)
             end_time = time.time()
 
         self._request_close()

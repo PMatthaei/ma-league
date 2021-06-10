@@ -132,7 +132,7 @@ class ParallelStepper:
 
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch for each un-terminated env
-            actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, bs=running_envs,
+            actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, bs=running_envs,
                                                    test_mode=test_mode)
 
             # Update the actions taken

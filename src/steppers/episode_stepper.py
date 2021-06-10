@@ -1,3 +1,4 @@
+import torch as th
 from bin.controls.headless_controls import HeadlessControls
 
 from envs import REGISTRY as env_REGISTRY
@@ -75,10 +76,13 @@ class EpisodeStepper:
 
         terminated = False
         episode_return = 0
+        actions_taken = []
 
         self.logger.test_mode = test_mode
         self.logger.test_n_episode = self.args.test_nepisode
         self.logger.runner_log_interval = self.args.runner_log_interval
+        self.logger.n_actions = self.args.n_actions
+        self.logger.n_agents = self.args.n_agents
 
         self.home_mac.init_hidden(batch_size=self.batch_size)
 
@@ -97,7 +101,10 @@ class EpisodeStepper:
 
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch of size 1
-            actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+            actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
+                                                              test_mode=test_mode)
+
+            actions_taken.append(th.stack([actions, is_greedy]))
 
             obs, reward, done_n, env_info = self.env.step(actions[0])
             terminated = any(done_n)
@@ -126,12 +133,17 @@ class EpisodeStepper:
         self.home_batch.update(last_data, ts=self.t)
 
         # Select actions in the last stored state
-        actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+        actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
+                                                          test_mode=test_mode)
+
+        actions_taken.append(th.stack([actions, is_greedy]))
+
         self.home_batch.update({"actions": actions}, ts=self.t)
 
         if not test_mode:
             self.t_env += self.t
 
+        self.logger.collect_actions_taken(actions_taken)
         self.logger.collect_episode_returns(episode_return)
         self.logger.collect_episode_stats(env_info, self.t)
         self.logger.add_stats(self.t_env, epsilons=self.epsilon)

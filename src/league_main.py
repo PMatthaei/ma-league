@@ -15,12 +15,12 @@ from sacred import SETTINGS, Experiment
 from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
 
-from league import AlphaStarLeague, SimpleLeague
+from league import SimpleLeague
 from league.components.payoff import Payoff
 from league.processes.league_process import LeagueProcess
 from league.processes.league_coordinator import LeagueCoordinator
 from league.utils.team_composer import TeamComposer
-from utils.logging import LeagueLogger
+from custom_logging.logger import LeagueLogger
 from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy, \
     set_agents_only
 

@@ -1,9 +1,18 @@
+import io
+import itertools
 from collections import defaultdict
 import logging
 from enum import Enum
 from typing import Dict
+import matplotlib.pyplot as plt
 
 import numpy as np
+import torch as th
+import tensorflow as tf
+from matplotlib.cm import get_cmap
+from matplotlib.pyplot import cm
+
+from custom_logging.plots import GreedyActionPlot
 
 
 class Originator(str, Enum):
@@ -33,7 +42,8 @@ class LeagueLogger:
 
     def __init__(self, console_logger):
         """
-
+        Logger for multiple outputs. Supports logging to TensorBoard, file and console. All data is collected,
+        managed, processed and distributed to its respective visualization platform from this class.
         :param console_logger:
         """
         self.console_logger = console_logger
@@ -44,7 +54,7 @@ class LeagueLogger:
 
         self.stats = defaultdict(dd)
 
-        self.tb_logger = None
+        self.tb_scalar = None
         self.sacred_info = None
         self.train_returns = {"home": [], "away": []}
         self.test_returns = {"home": [], "away": []}
@@ -54,16 +64,26 @@ class LeagueLogger:
         self.test_mode = False
         self.test_n_episode = 0
         self.runner_log_interval = 0
+        self.n_actions = None
+        self.n_agents = None
 
         self.log_train_stats_t = -1000000  # Log first run
 
         self.ep_returns = {"home": [], "away": []}
         self.ep_stats = {}
 
+        self.actions_taken = {"home": [], "away": []}
+        self.greedy_actions_distribution = {"home": {}, "away": {}}
+        self.train_actions_taken = {"home": [], "away": []}
+        self.test_actions_taken = {"home": [], "away": []}
+
     def setup_tensorboard(self, dir):
-        from tensorboard_logger import configure, log_value
+        from tensorboard_logger import configure, log_value, log_histogram, log_images
         configure(dir)
-        self.tb_logger = log_value
+        self.tb_scalar = log_value
+        self.tb_histogram = log_histogram
+        self.tb_images = log_images
+        self.file_writer = tf.summary.create_file_writer(dir)
         self.use_tb = True
 
     def setup_sacred(self, sacred_run_dict):
@@ -120,6 +140,26 @@ class LeagueLogger:
             self.add_stat(prefix + f"{origin}_return_std", np.std(self.ep_returns[origin]), t_env)
             self.ep_returns[origin].clear()
 
+            if len(self.actions_taken[origin]) > 0:
+                # Shape: (t_env x 2 x n_agents)
+                actions_taken = th.squeeze(th.stack(self.actions_taken[origin]))
+                is_greedy = actions_taken[:, 1, :] == 1
+                actions_taken = actions_taken[:, 0, :]
+
+                for i in range(self.n_agents):
+                    greedy_actions = th.masked_select(actions_taken[:, i], mask=is_greedy[:, i]).tolist()
+                    if i not in self.greedy_actions_distribution[origin]:
+                        self.greedy_actions_distribution[origin][i] = {}
+                    self.greedy_actions_distribution[origin][i].update({t_env: greedy_actions})
+                    gap = GreedyActionPlot(agent=0, n_actions=self.n_actions)
+                    fig = gap.plot(self.greedy_actions_distribution[origin][i])
+
+                    img = self.plot_to_image(fig)
+                    with self.file_writer.as_default():
+                        tf.summary.image(f"Greedy Actions Taken - Agent {i}", img, step=t_env)
+
+                self.actions_taken[origin].clear()
+
         for k, v in self.ep_stats.items():
             if k == "battle_won":
                 self.add_stat(prefix + k + "_home_mean", v[0] / self.ep_stats["n_episodes"], t_env)
@@ -142,7 +182,7 @@ class LeagueLogger:
         self.stats[key].append((t_env, value))
 
         if self.use_tb:
-            self.tb_logger(key, value, t_env)
+            self.tb_scalar(key, value, t_env)
 
         if self.use_sacred and to_sacred:
             if key in self.sacred_info:
@@ -151,6 +191,13 @@ class LeagueLogger:
             else:
                 self.sacred_info["{}_T".format(key)] = [t_env]
                 self.sacred_info[key] = [value]
+
+    def collect_actions_taken(self, actions_taken, org: Originator = Originator.HOME, parallel=False):
+        self.actions_taken[org] = self.test_actions_taken[org] if self.test_mode else self.train_actions_taken[org]
+        if parallel:
+            self.actions_taken[org].extend(actions_taken)
+        else:
+            self.actions_taken[org] = actions_taken
 
     def collect_episode_returns(self, episode_return, org: Originator = Originator.HOME, parallel=False):
         """
@@ -226,3 +273,14 @@ class LeagueLogger:
         elif stat_type is list:
             return np.array(self.ep_stats.get(k, np.zeros_like(env_info.get(k))), dtype=int) + np.array(
                 env_info.get(k, []), dtype=int)
+
+    def plot_to_image(self, figure):
+        """Converts the matplotlib plot specified by 'figure' to a PNG image and
+        returns it. The supplied figure is closed and inaccessible after this call."""
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        plt.close(figure)
+        image = tf.image.decode_png(buf.getvalue(), channels=4)
+        image = tf.expand_dims(image, 0)
+        return image

@@ -1,7 +1,7 @@
 import torch as th
 
 from steppers import EpisodeStepper
-from utils.logging import Originator
+from custom_logging.logger import Originator
 
 
 class SelfPlayStepper(EpisodeStepper):
@@ -62,9 +62,9 @@ class SelfPlayStepper(EpisodeStepper):
             self.home_batch.update(home_pre_transition_data, ts=self.t)
             self.away_batch.update(away_pre_transition_data, ts=self.t)
 
-            home_actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
+            home_actions, h_is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
                                                         test_mode=test_mode)
-            away_actions = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env,
+            away_actions, a_is_greedy = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env,
                                                         test_mode=test_mode)
 
             all_actions = th.cat((home_actions[0], away_actions[0]))
@@ -99,10 +99,10 @@ class SelfPlayStepper(EpisodeStepper):
         self.away_batch.update(away_last_data, ts=self.t)
 
         # Select actions in the last stored state
-        home_actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+        home_actions, h_is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
         self.home_batch.update({"actions": home_actions}, ts=self.t)
 
-        away_actions = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+        away_actions, a_is_greedy = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
         self.away_batch.update({"actions": away_actions}, ts=self.t)
 
         if not test_mode:

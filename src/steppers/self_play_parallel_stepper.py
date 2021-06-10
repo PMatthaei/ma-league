@@ -8,7 +8,7 @@ from steppers import ParallelStepper
 import torch as th
 
 from steppers.utils.stepper_utils import append_pre_transition_data
-from utils.logging import Originator
+from custom_logging.logger import Originator
 
 
 class SelfPlayParallelStepper(ParallelStepper):
@@ -101,9 +101,9 @@ class SelfPlayParallelStepper(ParallelStepper):
 
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch for each un-terminateds env
-            home_actions = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, bs=running_envs,
+            home_actions, h_is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, bs=running_envs,
                                                         test_mode=test_mode)
-            away_actions = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env, bs=running_envs,
+            away_actions, a_is_greedy = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env, bs=running_envs,
                                                         test_mode=test_mode)
 
             actions = th.cat((home_actions, away_actions), dim=1)

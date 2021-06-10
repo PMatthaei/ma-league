@@ -15,7 +15,7 @@ from sacred.utils import apply_backspaces_and_linefeeds
 import sys
 import torch as th
 
-from utils.logging import LeagueLogger
+from custom_logging.logger import LeagueLogger
 from utils.main_utils import config_copy, get_config, recursive_dict_update, get_default_config, load_match_build_plan, \
     set_agents_only
 from utils.run_utils import args_sanity_check

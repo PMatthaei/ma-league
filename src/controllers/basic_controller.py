@@ -31,8 +31,8 @@ class BasicMAC(MultiAgentController):
         # Run forward propagation for the batch -> Q-values
         agent_outs = self.forward(ep_batch, t_ep, test_mode=test_mode)
         # Choose action by f.e. epsilon-greedy
-        chosen_actions = self.action_selector.select_action(agent_outs[bs], avail_actions[bs], t_env, test_mode)
-        return chosen_actions
+        chosen_actions, is_greedy = self.action_selector.select_action(agent_outs[bs], avail_actions[bs], t_env, test_mode)
+        return chosen_actions, is_greedy
 
     def forward(self, ep_batch, t, test_mode=False):
         agent_inputs = self._build_inputs(ep_batch, t)

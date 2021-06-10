@@ -5,7 +5,7 @@ from collections import Counter
 
 from maenv.core import RoleTypes, UnitAttackTypes
 
-from utils.logging import LeagueLogger
+from custom_logging.logger import LeagueLogger
 
 
 class Team:
