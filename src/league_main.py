@@ -20,7 +20,7 @@ from league.components.payoff import Payoff
 from league.processes.league_process import LeagueProcess
 from league.processes.league_coordinator import LeagueCoordinator
 from league.utils.team_composer import TeamComposer
-from custom_logging.logger import LeagueLogger
+from custom_logging.logger import MainLogger
 from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy, \
     set_agents_only
 
@@ -31,7 +31,7 @@ from types import SimpleNamespace
 from utils.run_utils import args_sanity_check
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
-logger = LeagueLogger.console_logger()
+logger = MainLogger.console_logger()
 
 ex = Experiment("ma-league")
 ex.logger = logger
@@ -50,7 +50,7 @@ def run(_run, _config, _log):
     args = SimpleNamespace(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"
 
-    logger = LeagueLogger(_log)
+    logger = MainLogger(_log)
     _log.info("Experiment Parameters:")
     experiment_params = pprint.pformat(_config,
                                        indent=4,

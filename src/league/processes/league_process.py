@@ -12,7 +12,7 @@ from league.roles.alphastar.main_player import MainPlayer
 from league.roles.players import Player
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand
 from runs.league_play_run import LeaguePlayRun
-from custom_logging.logger import LeagueLogger
+from custom_logging.logger import MainLogger
 
 
 class LeagueProcess(Process):
@@ -21,7 +21,7 @@ class LeagueProcess(Process):
                  player_id: int,
                  queue: Tuple[Queue, Queue],
                  args: SimpleNamespace,
-                 logger: LeagueLogger,
+                 logger: MainLogger,
                  barrier: Barrier):
         """
         The process is running a single League-Play and handles communication with the central component.

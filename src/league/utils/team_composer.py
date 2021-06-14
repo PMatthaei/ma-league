@@ -5,7 +5,7 @@ from collections import Counter
 
 from maenv.core import RoleTypes, UnitAttackTypes
 
-from custom_logging.logger import LeagueLogger
+from custom_logging.logger import MainLogger
 
 
 class Team:
@@ -24,7 +24,7 @@ class Team:
 
 class TeamComposer:
     def __init__(self, *characteristics: [enum.EnumMeta]):
-        self.logger = LeagueLogger.console_logger()
+        self.logger = MainLogger.console_logger()
         assert characteristics is not None and len(
             characteristics) > 0, "Please supply characteristics to create units from."
         self.characteristics = characteristics

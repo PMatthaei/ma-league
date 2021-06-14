@@ -1,6 +1,8 @@
 import torch as th
 from bin.controls.headless_controls import HeadlessControls
 
+from custom_logging.logger import MainLogger, Collectibles
+from custom_logging.utils.enums import Originator
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
@@ -10,7 +12,7 @@ from steppers.utils.stepper_utils import get_policy_team_id
 
 class EpisodeStepper:
 
-    def __init__(self, args, logger):
+    def __init__(self, args, logger: MainLogger):
         """
         Runs a single episode and returns the gathered step data as episode batch to feed into a single learner.
         This runner is only supported one training agent against a AI/environment.
@@ -81,8 +83,7 @@ class EpisodeStepper:
         self.logger.test_mode = test_mode
         self.logger.test_n_episode = self.args.test_nepisode
         self.logger.runner_log_interval = self.args.runner_log_interval
-        self.logger.n_actions = self.args.n_actions
-        self.logger.n_agents = self.args.n_agents
+        self.logger.update_loggers(self.args)
 
         self.home_mac.init_hidden(batch_size=self.batch_size)
 
@@ -143,9 +144,16 @@ class EpisodeStepper:
         if not test_mode:
             self.t_env += self.t
 
-        self.logger.collect_actions_taken(actions_taken)
-        self.logger.collect_episode_returns(episode_return)
-        self.logger.collect_episode_stats(env_info, self.t)
-        self.logger.add_stats(self.t_env, epsilons=self.epsilon)
+        episodal_actions_taken = th.squeeze(th.stack(actions_taken))
+
+        # Send data collected during the episode - this data needs further processing
+        self.logger.collect(Collectibles.RETURN, episode_return, origin=Originator.HOME)
+        self.logger.collect(Collectibles.ACTIONS_TAKEN, episodal_actions_taken, origin=Originator.HOME)
+        self.logger.collect(Collectibles.WON, env_info["battle_won"][0], origin=Originator.HOME)
+        self.logger.collect(Collectibles.WON, env_info["battle_won"][1], origin=Originator.AWAY)
+        self.logger.collect(Collectibles.DRAW, env_info["draw"])
+        self.logger.collect(Collectibles.EPISODE, self.t)
+        self.logger.log_stat("home_epsilon", self.epsilon, self.t)
+        self.logger.log(self.t)
 
         return self.home_batch

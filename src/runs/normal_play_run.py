@@ -153,8 +153,8 @@ class NormalPlayRun(ExperimentRun):
 
             # Log metrics and learner stats once in a while
             if (self.stepper.t_env - self.last_log_T) >= self.args.log_interval:
-                self.logger.add_stat("episode", episode, self.stepper.t_env)
-                self.logger.log_recent_stats()
+                self.logger.log_stat("episode", episode, self.stepper.t_env)
+                self.logger.log_console()
                 self.last_log_T = self.stepper.t_env
 
             self._end_time = time.time()
