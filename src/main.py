@@ -1,3 +1,5 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Lower tf logging level
 import datetime
 import pprint
 import threading
@@ -5,7 +7,6 @@ from types import SimpleNamespace
 import torch
 
 import numpy as np
-import os
 from os.path import dirname, abspath
 from copy import deepcopy
 
@@ -15,13 +16,14 @@ from sacred.utils import apply_backspaces_and_linefeeds
 import sys
 import torch as th
 
-from custom_logging.logger import LeagueLogger
+from custom_logging.logger import MainLogger
+from custom_logging.platforms import CustomConsoleLogger
 from utils.main_utils import config_copy, get_config, recursive_dict_update, get_default_config, load_match_build_plan, \
     set_agents_only
 from utils.run_utils import args_sanity_check
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
-logger = LeagueLogger.console_logger()
+logger = CustomConsoleLogger.console_logger()
 
 ex = Experiment("pymarl")
 ex.logger = logger
@@ -44,7 +46,7 @@ def run(_run, _config, _log):
     args.device = "cuda" if args.use_cuda else "cpu"
 
     # setup loggers
-    logger = LeagueLogger(_log)
+    logger = MainLogger(_log)
 
     _log.info("Experiment Parameters:")
     experiment_params = pprint.pformat(_config,

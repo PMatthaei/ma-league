@@ -119,13 +119,13 @@ class QLearner(Learner):
 
         # Log learner stats in interval
         if t_env - self.log_stats_t >= self.args.learner_log_interval:
-            self.logger.add_stat(self.name + "loss", loss.item(), t_env)
-            self.logger.add_stat(self.name + "grad_norm", grad_norm.cpu().numpy(), t_env)
+            self.logger.log_stat(self.name + "loss", loss.item(), t_env)
+            self.logger.log_stat(self.name + "grad_norm", grad_norm.cpu().numpy(), t_env)
             mask_elems = mask.sum().item()
-            self.logger.add_stat(self.name + "td_error_abs", (masked_td_error.abs().sum().item() / mask_elems), t_env)
-            self.logger.add_stat(self.name + "q_taken_mean",
+            self.logger.log_stat(self.name + "td_error_abs", (masked_td_error.abs().sum().item() / mask_elems), t_env)
+            self.logger.log_stat(self.name + "q_taken_mean",
                                  (chosen_action_qvals * mask).sum().item() / (mask_elems * self.args.n_agents), t_env)
-            self.logger.add_stat(self.name + "target_mean",
+            self.logger.log_stat(self.name + "target_mean",
                                  (targets * mask).sum().item() / (mask_elems * self.args.n_agents), t_env)
             self.log_stats_t = t_env
 
