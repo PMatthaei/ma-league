@@ -50,19 +50,19 @@ class MainLogger:
                     episodal_stats[collectible][k] = defaultdict(dd_dict if is_dict else dd_list)
         return episodal_stats
 
-    def log(self, t):
+    def log(self, t_env):
         """
         Log if either an interval condition matches or finished.
-        :param t:
+        :param t_env:
         :return:
         """
         test_finished = any(
             [len(rs) == self.test_n_episode for rs in self.episodal_stats[Collectibles.RETURN]["test"].values()])
         if self.test_mode and test_finished:  # Collect test data as long as test is running
-            self._log_collectibles(t)  # ... then process and log
-        elif t - self.log_train_stats_t >= self.runner_log_interval:  # Collect train data as defined via interval
-            self._log_collectibles(t)  # ... then process and log
-            self.log_train_stats_t = t
+            self._log_collectibles(t_env)  # ... then process and log collectibles
+        elif t_env - self.log_train_stats_t >= self.runner_log_interval:  # Collect train data as defined via interval
+            self._log_collectibles(t_env)  # ... then process and log collectibles
+            self.log_train_stats_t = t_env
 
     def log_stat(self, key, value, t_env, log_type="scalar"):
         """
@@ -77,9 +77,6 @@ class MainLogger:
         self._tensorboard_logger.log(key, value, t_env, log_type)
         self._sacred_logger.log(key, value, t_env, log_type)
 
-    def _is_empty(self, v):
-        return v is None or (hasattr(v, "len") and len(v) == 0)
-
     def _log_collectibles(self, t):
         """
         Print all collectibles at the given timestep. A collectible describes a collection of values which are collected
@@ -87,17 +84,20 @@ class MainLogger:
         :param t:
         :return:
         """
+        mode = "test" if self.test_mode else "train"
         prefix = "test_" if self.test_mode else ""
         for collectible in Collectibles:
             if collectible.is_global:
                 processed_data = list(zip(collectible.keys, self.preprocess_collectible(collectible)))
                 for k, v in processed_data:  # Log all data generated from the collected data
                     self.log_stat(f"{prefix}{k}", v, t, log_type=collectible.log_type)
+                    self.episodal_stats[collectible][mode].clear()
             else:
                 for i, origin in enumerate(Originator.list()):
                     processed_data = list(zip(collectible.keys, self.preprocess_collectible(collectible, origin)))
                     for k, v in processed_data:  # Log all data generated from the collected data
                         self.log_stat(f"{prefix}{origin}_{k}", v, t, log_type=collectible.log_type)
+                    self.episodal_stats[collectible][mode][origin].clear()
 
     def collect(self, collectible: Collectibles, data, origin: Originator = Originator.HOME, parallel=False):
         """
@@ -147,6 +147,7 @@ class MainLogger:
 
     def update_loggers(self, args):
         self._tensorboard_logger.n_actions = args.n_actions
+        self._tensorboard_logger.n_agents = args.n_agents
 
     def log_console(self):
         self._console_logger.log(self.stats)

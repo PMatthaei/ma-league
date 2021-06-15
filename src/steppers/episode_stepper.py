@@ -154,6 +154,6 @@ class EpisodeStepper:
         self.logger.collect(Collectibles.DRAW, env_info["draw"])
         self.logger.collect(Collectibles.EPISODE, self.t)
         self.logger.log_stat("home_epsilon", self.epsilon, self.t)
-        self.logger.log(self.t)
+        self.logger.log(self.t_env)
 
         return self.home_batch
