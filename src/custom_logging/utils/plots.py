@@ -2,9 +2,10 @@ import io
 import math
 from typing import List
 
+import PIL as pillow
 import matplotlib.pyplot as plt
 
-import tensorflow as tf
+from torchvision.transforms import ToTensor, Tensor
 from matplotlib.cm import get_cmap
 from matplotlib.figure import Figure
 
@@ -19,12 +20,12 @@ def plot_to_image(figure: Figure):
     plt.savefig(buf, format='png')
     buf.seek(0)
     plt.close(figure)
-    image = tf.image.decode_png(buf.getvalue(), channels=4)
-    image = tf.expand_dims(image, 0)
+    image = pillow.Image.open(buf)
+    image = ToTensor()(image)
     return image
 
 
-def plot_greedy_actions(greedy_actions: dict, n_actions: int, n_agents: int, max_labels=5) -> List[tf.Tensor]:
+def plot_greedy_actions(greedy_actions: dict, n_actions: int, n_agents: int, max_labels=5) -> List[Tensor]:
     """
     Receive a dict of an agents greedy actions. Keys of the dict are timesteps at which the greedy actions were
     collected, values is the array of greedy taken action indices since the last plot.

@@ -18,15 +18,3 @@ def extract_greedy_actions(episodal_actions_taken):
     else:
         return []
 
-
-def extract_env_stats(episodal_stats):
-    ret = []
-    for k, v in episodal_stats.items():
-        if k == "battle_won":
-            ret.append(v[0] / episodal_stats["n_episodes"])  # home mean
-            ret.append(v[1] / episodal_stats["n_episodes"])  # away mean
-        elif k == "draw":
-            ret.append(v / episodal_stats["n_episodes"])  # draw mean
-        elif k != "n_episodes":
-            ret.append(v / episodal_stats["n_episodes"])  # episode mean
-    return ret

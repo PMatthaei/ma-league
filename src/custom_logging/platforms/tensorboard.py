@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-import tensorflow as tf
+from torch.utils.tensorboard import SummaryWriter
 
 from custom_logging.utils.plots import plot_greedy_actions
 
@@ -9,7 +9,7 @@ class CustomTensorboardLogger:
 
     def __init__(self, log_dir):
         self.log_dir = log_dir
-        self.file_writer = tf.summary.create_file_writer(log_dir)
+        self.summary_writer = SummaryWriter(log_dir=log_dir)
         self.n_actions = None
         self.n_agents = None
         # Save logged data over time to show trends and tendency in data
@@ -27,9 +27,7 @@ class CustomTensorboardLogger:
             raise NotImplementedError(f"Type {log_type} is not implemented for logging to Tensorboard.")
 
     def log_scalar(self, key, value, t):
-        with self.file_writer.as_default():
-            tf.summary.scalar(key, data=value, step=t)
+            self.summary_writer.add_scalar(tag=key, scalar_value=value, global_step=t)
 
     def log_plot(self, key, value, t):
-        with self.file_writer.as_default():
-            tf.summary.image(key, data=value, step=t)
+            self.summary_writer.add_image(tag=key, img_tensor=value, global_step=t)
