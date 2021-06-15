@@ -2,30 +2,13 @@ import io
 import math
 from typing import List
 
-import PIL as pillow
 import matplotlib.pyplot as plt
 
-from torchvision.transforms import ToTensor, Tensor
 from matplotlib.cm import get_cmap
 from matplotlib.figure import Figure
 
 
-def _plot_to_image(figure: Figure):
-    """
-    Converts the matplotlib plot specified by 'figure' to a PNG image and
-    returns it. The supplied figure is closed and inaccessible after this call.
-    :return:
-    """
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    plt.close(figure)
-    image = pillow.Image.open(buf)
-    image = ToTensor()(image)
-    return image
-
-
-def plot_greedy_actions(greedy_actions: dict, n_actions: int, n_agents: int, max_labels=5) -> List[Tensor]:
+def plot_greedy_actions(greedy_actions: dict, n_actions: int, n_agents: int, max_labels=5) -> List[Figure]:
     """
     Receive a dict of an agents greedy actions. Keys of the dict are timesteps at which the greedy actions were
     collected, values is the array of greedy taken action indices since the last plot.
@@ -42,7 +25,7 @@ def plot_greedy_actions(greedy_actions: dict, n_actions: int, n_agents: int, max
     entries_n = math.ceil(len(greedy_actions.items()) / max_labels)
     ys = []
 
-    images = []
+    figures = []
 
     for a in range(n_agents):  # Iterate over all agent data
         fig = plt.figure(figsize=(10, 10))
@@ -75,8 +58,5 @@ def plot_greedy_actions(greedy_actions: dict, n_actions: int, n_agents: int, max
             ax.set_yticks(ys)
             ax.set_yticklabels(ax.get_yticks(), verticalalignment='baseline', horizontalalignment='left')
             ax.set_zlabel('Relative Pick-Rate (since last recorded timestep')
-            fig.canvas.draw()  # Draw in blocking manner to prevent showing the figure before every bar is plotted
-
-        images.append(_plot_to_image(fig))
-
-    return images
+            figures.append(fig)
+    return figures
