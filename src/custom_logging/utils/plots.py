@@ -10,7 +10,7 @@ from matplotlib.cm import get_cmap
 from matplotlib.figure import Figure
 
 
-def plot_to_image(figure: Figure):
+def _plot_to_image(figure: Figure):
     """
     Converts the matplotlib plot specified by 'figure' to a PNG image and
     returns it. The supplied figure is closed and inaccessible after this call.
@@ -31,6 +31,9 @@ def plot_greedy_actions(greedy_actions: dict, n_actions: int, n_agents: int, max
     collected, values is the array of greedy taken action indices since the last plot.
     Count the occurrence of each greedy action in the time interval taken by the agent and plot as bar diagram to
     visualize action distribution under the past epsilon greedy policy.
+    :param max_labels:
+    :param n_agents:
+    :param n_actions:
     :param greedy_actions:
     :return:
     """
@@ -74,6 +77,6 @@ def plot_greedy_actions(greedy_actions: dict, n_actions: int, n_agents: int, max
             ax.set_zlabel('Relative Pick-Rate (since last recorded timestep')
             fig.canvas.draw()  # Draw in blocking manner to prevent showing the figure before every bar is plotted
 
-        images.append(plot_to_image(fig))
+        images.append(_plot_to_image(fig))
 
     return images

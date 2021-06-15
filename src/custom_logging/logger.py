@@ -78,8 +78,8 @@ class MainLogger:
         :return:
         """
         self.stats[key].append((t_env, value))
-        self._tensorboard_logger.log(key, value, t_env, log_type)
-        self._sacred_logger.log(key, value, t_env, log_type)
+        self._tensorboard_logger.log(key, value, t_env, log_type) if self._tensorboard_logger else None
+        self._sacred_logger.log(key, value, t_env, log_type) if self._tensorboard_logger else None
 
     def _log_collectibles(self, t):
         """

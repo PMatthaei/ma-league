@@ -116,6 +116,9 @@ class SelfPlayStepper(EpisodeStepper):
         if not test_mode:
             self.t_env += self.t
 
+        home_actions_taken = th.squeeze(th.stack(home_actions_taken))
+        away_actions_taken = th.squeeze(th.stack(away_actions_taken))
+
         #
         # Stats and Logging for two learners
         #
