@@ -1,5 +1,6 @@
 import torch as th
 
+from custom_logging.collectibles import Collectibles
 from steppers import EpisodeStepper
 from custom_logging.logger import Originator
 
@@ -55,7 +56,8 @@ class SelfPlayStepper(EpisodeStepper):
         self.away_mac.init_hidden(batch_size=self.batch_size)
 
         env_info = {}
-
+        home_actions_taken = []
+        away_actions_taken = []
         while not terminated:
             home_pre_transition_data, away_pre_transition_data = self._build_pre_transition_data()
 
@@ -66,6 +68,9 @@ class SelfPlayStepper(EpisodeStepper):
                                                         test_mode=test_mode)
             away_actions, a_is_greedy = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env,
                                                         test_mode=test_mode)
+
+            home_actions_taken.append(th.stack([home_actions, h_is_greedy]))
+            away_actions_taken.append(th.stack([away_actions, a_is_greedy]))
 
             all_actions = th.cat((home_actions[0], away_actions[0]))
             obs, reward, done_n, env_info = self.env.step(all_actions)
@@ -105,16 +110,27 @@ class SelfPlayStepper(EpisodeStepper):
         away_actions, a_is_greedy = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
         self.away_batch.update({"actions": away_actions}, ts=self.t)
 
+        home_actions_taken.append(th.stack([home_actions, h_is_greedy]))
+        away_actions_taken.append(th.stack([away_actions, a_is_greedy]))
+
         if not test_mode:
             self.t_env += self.t
 
         #
         # Stats and Logging for two learners
         #
-        self.logger.collect_episode_returns(home_episode_return, org=Originator.HOME)
-        self.logger.collect_episode_returns(away_episode_return, org=Originator.AWAY)
-        self.logger.collect_episode_stats(env_info, self.t)
-        self.logger.add_stats(self.t_env, epsilons=self.epsilons)
+        # Send data collected during the episode - this data needs further processing
+        self.logger.collect(Collectibles.RETURN, home_episode_return, origin=Originator.HOME)
+        self.logger.collect(Collectibles.RETURN, away_episode_return, origin=Originator.AWAY)
+        self.logger.collect(Collectibles.ACTIONS_TAKEN, home_actions_taken, origin=Originator.HOME)
+        self.logger.collect(Collectibles.ACTIONS_TAKEN, away_actions_taken, origin=Originator.AWAY)
+        self.logger.collect(Collectibles.WON, env_info["battle_won"][0], origin=Originator.HOME)
+        self.logger.collect(Collectibles.WON, env_info["battle_won"][1], origin=Originator.AWAY)
+        self.logger.collect(Collectibles.DRAW, env_info["draw"])
+        self.logger.collect(Collectibles.EPISODE, self.t)
+        self.logger.log_stat("home_epsilon", self.epsilons[0], self.t)
+        self.logger.log_stat("away_epsilon", self.epsilons[1], self.t)
+        self.logger.log(self.t_env)
 
         return self.home_batch, self.away_batch, env_info
 

@@ -20,7 +20,7 @@ class EpisodeStepper:
         :param logger: logger
         """
         self.args = args
-        self.logger = logger
+        self.logger: MainLogger = logger
         self.batch_size = self.args.batch_size_run
         assert self.batch_size == 1
 

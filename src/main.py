@@ -1,3 +1,5 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Lower tf logging level
 import datetime
 import pprint
 import threading
@@ -5,7 +7,6 @@ from types import SimpleNamespace
 import torch
 
 import numpy as np
-import os
 from os.path import dirname, abspath
 from copy import deepcopy
 

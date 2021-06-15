@@ -1,5 +1,6 @@
-import datetime
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Lower tf logging level
+import datetime
 import pprint
 import sys
 import threading
@@ -15,6 +16,7 @@ from sacred import SETTINGS, Experiment
 from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
 
+from custom_logging.platforms import CustomConsoleLogger
 from league import SimpleLeague
 from league.components.payoff import Payoff
 from league.processes.league_process import LeagueProcess
@@ -31,7 +33,7 @@ from types import SimpleNamespace
 from utils.run_utils import args_sanity_check
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
-logger = MainLogger.console_logger()
+logger = CustomConsoleLogger.console_logger()
 
 ex = Experiment("ma-league")
 ex.logger = logger
@@ -107,9 +109,9 @@ def run(_run, _config, _log):
     # Handle message communication within the league
     coordinator = LeagueCoordinator(logger=logger, players=players, queues=(in_queues, out_queues), payoff=payoff)
     coordinator.start()
-    coordinator.join()
 
     # Wait for processes to finish
+    coordinator.join()
     [r.join() for r in runs]
 
     # Print win rates for all players

@@ -23,7 +23,8 @@ class CustomConsoleLogger:
         output = self._format(stats)
         self.console.info(output)
 
-    def _format(self, stats):
+    @staticmethod
+    def _format(stats):
         """
         Format provided stats into a single string and print into console.
         :return:

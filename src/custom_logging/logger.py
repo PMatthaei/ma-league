@@ -16,6 +16,10 @@ def dd_dict():
     return {}
 
 
+def dd_collectible():
+    return {"current": Any, "train": Any, "test": Any}
+
+
 class MainLogger:
     def __init__(self, console):
         """
@@ -40,7 +44,7 @@ class MainLogger:
         self.log_train_stats_t = -1000000  # Log first run
 
     def _build_collectible_dict(self):
-        episodal_stats = defaultdict(lambda: {"current": Any, "train": Any, "test": Any})
+        episodal_stats = defaultdict(dd_collectible)
         for collectible in Collectibles:
             for k in episodal_stats[collectible].keys():
                 if collectible.is_global:
