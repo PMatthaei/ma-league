@@ -19,7 +19,8 @@ class MainPlayer(Player):
 
     def get_match(self) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
         """
-        Samples an opponent using the provided self play sampling.
+        Samples an HistoricalPlayer opponent using PFSP with probability 0.5.
+        In other cases play against MainPlayers using SP or verify that no player was omitted.
         :return:
         """
         coin_toss = np.random.random()
@@ -27,6 +28,7 @@ class MainPlayer(Player):
         # Make sure you can beat the League via PFSP
         if coin_toss < 0.5:
             return self._pfsp_branch()
+
         main_agents = [
             player for player in self._payoff.players
             if isinstance(player, MainPlayer)

@@ -17,7 +17,7 @@ class SimplePlayer(Player):
 
     def get_match(self) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
         """
-        Samples an opponent using PFSP
+        Samples an SimplePlayer opponent using PFSP with win rates as prioritization.
         :return:
         """
         return self._pfsp_branch()

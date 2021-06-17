@@ -43,11 +43,10 @@ class LeagueProcess(Process):
         self._args = args
         self._logger = logger
         self._setup_barrier = barrier
-        self._away_player: Union[Player, None] = None
+        self._away: Union[Player, None] = None
         self.terminated: bool = False
         # Supply team to match plan
-        self._args.env_args['match_build_plan'][0]['units'] = self._home.team['units']
-        self._args.env_args['match_build_plan'][1]['units'] = self._home.team['units']
+        self._register_team()
         self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._provide_episode_result)
 
     def run(self) -> None:
@@ -57,15 +56,15 @@ class LeagueProcess(Process):
         self._setup_barrier.wait()
 
         # Progress to save initial checkpoint of agents after all runs performed setup
-        if isinstance(self._home, MainPlayer): # TODO: Allow for different kinds of initial historical players
+        if isinstance(self._home, MainPlayer):  # TODO: Allow for different kinds of initial historical players
             self._request_checkpoint()  # MainPlayers are initially added as historical players
 
         start_time = time.time()
         end_time = time.time()
 
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
-            self._away_player, flag = self._home.get_match()
-            away_agent = self._get_shared_agent(self._away_player)
+            self._away, flag = self._home.get_match()
+            away_agent = self._get_shared_agent(self._away)
             if away_agent is None:
                 warning("No Opponent was found.")
                 continue
@@ -74,10 +73,28 @@ class LeagueProcess(Process):
             # Start training against new opponent
             self._logger.console_logger.info(str(self))
             play_time_seconds = self._args.league_play_time_mins * 60
+            # TODO: Modify environment to use away agents team -> stepper needs new env
+            self._register_team(self._away)
+            self._play.stepper.rebuild_env(self._args.env_args) # Rebuild env with new team
             self._play.start(play_time=play_time_seconds)
             end_time = time.time()
 
         self._request_close()
+
+    def _register_team(self, player: Player = None):
+        """
+        Registers the team within the argument dict upon which the environment will be built
+        :param player:
+        :return:
+        """
+        match_plan = self._args.env_args['match_build_plan']
+        if player is None:
+            match_plan[0]['units'] = self._home.team['units']
+            match_plan[1]['units'] = self._home.team['units']
+        elif player == self._home:
+            match_plan[0]['units'] = player.team['units']
+        elif player == self._away:
+            match_plan[1]['units'] = player.team['units']
 
     def _get_shared_agent(self, player: Player):
         return self._shared_players[player.id_].agent
@@ -104,7 +121,7 @@ class LeagueProcess(Process):
         :return:
         """
         result = self._get_result(env_info)
-        data = ((self._home, self._away_player), result)
+        data = ((self._home, self._away), result)
         cmd = PayoffUpdateCommand(origin=self._player_id, data=data)
         self._in_queue.put(cmd)
 
@@ -113,7 +130,7 @@ class LeagueProcess(Process):
         self._in_queue.put(cmd)
 
     def __str__(self):
-        return f"LeaguePlayRun - {self._home.prettier()} playing against {self._away_player.prettier()}"
+        return f"LeaguePlayRun - {self._home.prettier()} playing against {self._away.prettier()}"
 
     @staticmethod
     def _get_result(env_info):

@@ -61,6 +61,11 @@ class EpisodeStepper:
         self.env.reset()
         self.t = 0
 
+    def rebuild_env(self, env_args):
+        self.env.reset()
+        self.env.close()
+        self.env = env_REGISTRY[self.args.env](**env_args)
+
     @property
     def epsilon(self):
         return getattr(self.home_mac.action_selector, "epsilon", None)

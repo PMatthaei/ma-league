@@ -13,11 +13,11 @@ class SimpleLeague(League):
         """
         super().__init__(teams, payoff, main_agents_n)
 
-    def _setup(self, teams):
+    def _setup(self, initial_agents):
         player_id = 0
-        for _, plan in enumerate(teams):
+        for _, team_plan in enumerate(initial_agents):
             for _ in range(self._main_agents_n):
-                main_agent = SimplePlayer(player_id, payoff=self._payoff, team=plan)
+                main_agent = SimplePlayer(player_id, payoff=self._payoff, team=team_plan)
                 self._learning_agents[player_id] = main_agent
                 player_id += 1
 
