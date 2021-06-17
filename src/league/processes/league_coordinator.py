@@ -19,7 +19,7 @@ class LeagueCoordinator(Process):
         self._players = players
         self._payoff = payoff
         self._closed = []
-        self.logger = logger.console_logger
+        self.logger = logger
 
     def run(self) -> None:
         # Receive messages from all processes over their connections

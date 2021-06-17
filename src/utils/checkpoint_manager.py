@@ -41,7 +41,7 @@ class CheckpointManager:
         timestep_to_load = 0
 
         if not os.path.isdir(self.checkpoint_path):
-            self.logger.console_logger.info("Checkpoint directory {} doesn't exist".format(self.checkpoint_path))
+            self.logger.info("Checkpoint directory {} doesn't exist".format(self.checkpoint_path))
             return -1
 
         # Go through all files in args.checkpoint_path
@@ -60,7 +60,7 @@ class CheckpointManager:
 
         model_path = os.path.join(self.checkpoint_path, str(timestep_to_load))
 
-        self.logger.console_logger.info("Loading model from {}".format(model_path))
+        self.logger.info("Loading model from {}".format(model_path))
         [learner.load_models(model_path) for learner in learners]
 
         return timestep_to_load

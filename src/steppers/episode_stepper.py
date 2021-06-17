@@ -62,7 +62,6 @@ class EpisodeStepper:
         self.t = 0
 
     def rebuild_env(self, env_args):
-        self.env.reset()
         self.env.close()
         self.env = env_REGISTRY[self.args.env](**env_args)
 

@@ -87,7 +87,7 @@ class SelfPlayRun(NormalPlayRun):
             self.away_learner.train(away_sample, self.stepper.t_env, episode_num)
 
     def evaluate_mean_returns(self, episode_n=1):
-        self.logger.console_logger.info("Evaluate for {} episodes.".format(episode_n))
+        self.logger.info("Evaluate for {} episodes.".format(episode_n))
         home_ep_rewards = th.zeros(episode_n, device=th.device('cuda:0'))
         away_ep_rewards = home_ep_rewards.detach().clone()
 

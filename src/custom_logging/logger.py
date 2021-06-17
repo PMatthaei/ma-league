@@ -30,13 +30,12 @@ class MainLogger:
         :param console:
         """
         self._console_logger = CustomConsoleLogger(console)
-        self.console_logger = console
         self._tensorboard_logger: CustomTensorboardLogger = None
         self._sacred_logger: CustomSacredLogger = None
 
         self.stats = defaultdict(dd_list)
 
-        self.episodal_stats = self._build_collectible_dict()
+        self._build_collectible_dict()
 
         self.test_mode = False
         self.test_n_episode = 0
@@ -44,15 +43,17 @@ class MainLogger:
         self.log_train_stats_t = -1000000  # Log first run
 
     def _build_collectible_dict(self):
-        episodal_stats = defaultdict(dd_collectible)
+        self.episodal_stats = defaultdict(dd_collectible)
         for collectible in Collectibles:
-            for k in episodal_stats[collectible].keys():
+            for k in self.episodal_stats[collectible].keys():
                 if collectible.is_global:
-                    episodal_stats[collectible][k] = []
+                    self.episodal_stats[collectible][k] = []
                 else:
                     is_dict = collectible.collection_type is dict
-                    episodal_stats[collectible][k] = defaultdict(dd_dict if is_dict else dd_list)
-        return episodal_stats
+                    self.episodal_stats[collectible][k] = defaultdict(dd_dict if is_dict else dd_list)
+
+    def info(self, info_str):
+        self._console_logger.console.info(info_str)
 
     def log(self, t_env):
         """

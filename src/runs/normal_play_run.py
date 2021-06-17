@@ -121,9 +121,9 @@ class NormalPlayRun(ExperimentRun):
         # start training
         episode = 0
         if play_time:
-            self.logger.console_logger.info("Beginning training for {} seconds.".format(play_time))
+            self.logger.info("Beginning training for {} seconds.".format(play_time))
         else:
-            self.logger.console_logger.info("Beginning training for {} timesteps.".format(self.args.t_max))
+            self.logger.info("Beginning training for {} timesteps.".format(self.args.t_max))
 
         self._start_time = time.time()
         self._end_time = time.time()
@@ -136,8 +136,8 @@ class NormalPlayRun(ExperimentRun):
             # Execute test runs once in a while
             n_test_runs = max(1, self.args.test_nepisode // self.stepper.batch_size)
             if (self.stepper.t_env - self.last_test_T) / self.args.test_interval >= 1.0:
-                self.logger.console_logger.info("t_env: {} / {}".format(self.stepper.t_env, self.args.t_max))
-                self.logger.console_logger.info("Estimated time left: {}. Time passed: {}".format(
+                self.logger.info("t_env: {} / {}".format(self.stepper.t_env, self.args.t_max))
+                self.logger.info("Estimated time left: {}. Time passed: {}".format(
                     time_left(self.last_time, self.last_test_T, self.stepper.t_env, self.args.t_max),
                     time_str(time.time() - self.start_time)))
                 self.last_time = time.time()
@@ -169,12 +169,12 @@ class NormalPlayRun(ExperimentRun):
         self.model_save_time = self.stepper.t_env
         out_path = self.checkpoint_manager.save(learners=self.learners, t_env=self.model_save_time,
                                                 identifier=identifier)
-        self.logger.console_logger.info("Saving models to {}".format(out_path))
+        self.logger.info("Saving models to {}".format(out_path))
         return out_path
 
     def _finish(self):
         self.stepper.close_env()
-        self.logger.console_logger.info("Finished.")
+        self.logger.info("Finished.")
 
     def _train_episode(self, episode_num, callback=None):
         episode_batch = self.stepper.run(test_mode=False)
@@ -199,7 +199,7 @@ class NormalPlayRun(ExperimentRun):
             self.stepper.run(test_mode=True)
 
     def _evaluate_sequential(self):
-        self.logger.console_logger.info("Evaluate for {} steps.".format(self.args.test_nepisode))
+        self.logger.info("Evaluate for {} steps.".format(self.args.test_nepisode))
         for _ in range(self.args.test_nepisode):
             self.stepper.run(test_mode=True)
 

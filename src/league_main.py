@@ -1,5 +1,7 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Lower tf logging level
+from random import sample
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 import datetime
 import pprint
 import sys
@@ -73,7 +75,8 @@ def run(_run, _config, _log):
     # Build league teams
     team_size = _config["team_size"]
     team_composer = TeamComposer(RoleTypes, UnitAttackTypes)
-    teams = [team_composer.compose_unique_teams(team_size)[0]]
+    teams = team_composer.compose_unique_teams(team_size)
+    teams = sample(teams, 2)  # Sample 5 random teams to train
 
     # Shared objects
     manager = Manager()
@@ -84,9 +87,9 @@ def run(_run, _config, _log):
     runs = []  # All running processes representing an agent playing in the league
     payoff = Payoff(p_matrix=p_matrix, players=players)  # Hold results of each match
 
-    # Create league
     # league = AlphaStarLeague(initial_agents=team_compositions, payoff=payoff)
     league = SimpleLeague(teams=teams, payoff=payoff)
+
     # Communication
     in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(league.size)])
 

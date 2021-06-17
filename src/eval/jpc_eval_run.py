@@ -33,8 +33,8 @@ class JointPolicyCorrelationEvaluationRun:
         # Fill JPC matrix with results
         self.jpc_matrix[indices[:, 0], indices[:, 1]] = values
 
-        self.logger.console_logger.info("Finished JPC Evaluation")
-        self.logger.console_logger.info("Avg. Proportional Loss: {}".format(avg_proportional_loss(self.jpc_matrix)))
+        self.logger.info("Finished JPC Evaluation")
+        self.logger.info("Avg. Proportional Loss: {}".format(avg_proportional_loss(self.jpc_matrix)))
 
     def train_instances(self):
         """
@@ -42,7 +42,7 @@ class JointPolicyCorrelationEvaluationRun:
         :return: checkpoints produced by all workers
         """
         instances = list(range(self.instances_num))
-        self.logger.console_logger.info("Train {} instances.".format(len(instances)))
+        self.logger.info("Train {} instances.".format(len(instances)))
         with Pool() as pool:
             results = pool.map(self.train_instance_pair, instances)
         return results
@@ -66,7 +66,7 @@ class JointPolicyCorrelationEvaluationRun:
         """
         pairs = list(itertools.product(range(self.instances_num), repeat=2))
         data = list(zip(pairs, [checkpoints] * len(pairs)))
-        self.logger.console_logger.info("Evaluate {} pairings for {} episodes.".format(len(pairs), self.eval_episodes))
+        self.logger.info("Evaluate {} pairings for {} episodes.".format(len(pairs), self.eval_episodes))
         with Pool() as pool:
             results = pool.starmap(self.evaluate_instance_pair, data)
         indices, values = map(list, zip(*results))
@@ -80,7 +80,7 @@ class JointPolicyCorrelationEvaluationRun:
         """
         i, j = instance_pair
         eval_descriptor = "Eval home player from instance {} against away player from instance {}".format(i, j)
-        self.logger.console_logger.info(eval_descriptor)
+        self.logger.info(eval_descriptor)
         play = SelfPlayRun(args=self.args, logger=self.logger)
         play.home_learner.load_models(checkpoints[i])
         play.away_learner.load_models(checkpoints[j])

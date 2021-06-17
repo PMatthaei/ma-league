@@ -36,20 +36,25 @@ class LeagueProcess(Process):
         :param barrier:
         """
         super().__init__()
-        self._player_id = player_id
-        self._shared_players = players
-        self._home = self._shared_players[self._player_id]  # Process private copy of the player
-        self._in_queue, self._out_queue = queue
         self._args = args
         self._logger = logger
-        self._setup_barrier = barrier
+
+        self._player_id = player_id
+        self._shared_players: List[Player] = players  # Process private copy of the player list
+        self._home: Player = self._shared_players[self._player_id]  # Process private copy of the player
         self._away: Union[Player, None] = None
+
+        # Communication
+        self._in_queue, self._out_queue = queue
+        self._setup_barrier = barrier
+
         self.terminated: bool = False
         # Supply team to match plan
         self._register_team()
         self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._provide_episode_result)
 
     def run(self) -> None:
+        # Share initial agent
         self._share_agent()
 
         # Wait at barrier until every league process performed the sharing step before the next step
@@ -70,18 +75,20 @@ class LeagueProcess(Process):
                 continue
             self._play.set_away_agent(away_agent)
 
-            # Start training against new opponent
-            self._logger.console_logger.info(str(self))
-            play_time_seconds = self._args.league_play_time_mins * 60
-            # TODO: Modify environment to use away agents team -> stepper needs new env
-            self._register_team(self._away)
-            self._play.stepper.rebuild_env(self._args.env_args) # Rebuild env with new team
-            self._play.start(play_time=play_time_seconds)
+            self._logger.info(str(self))
+
+            # Start training against new opponent and integrate the team
+            self._register_team(self._away, rebuild=True)
+            self._play.start(play_time=self._args.league_play_time_mins * 60)
+
+            # Share agent after training
+            self._share_agent()
+
             end_time = time.time()
 
         self._request_close()
 
-    def _register_team(self, player: Player = None):
+    def _register_team(self, player: Player = None, rebuild=False):
         """
         Registers the team within the argument dict upon which the environment will be built
         :param player:
@@ -95,6 +102,8 @@ class LeagueProcess(Process):
             match_plan[0]['units'] = player.team['units']
         elif player == self._away:
             match_plan[1]['units'] = player.team['units']
+        if rebuild:
+            self._play.stepper.rebuild_env(self._args.env_args)  # Rebuild env with new team
 
     def _get_shared_agent(self, player: Player):
         return self._shared_players[player.id_].agent
