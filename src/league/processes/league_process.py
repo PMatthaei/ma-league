@@ -1,13 +1,11 @@
 import time
 from logging import warning
-from torch.multiprocessing import Process
-
-from torch.multiprocessing import Barrier, Queue
+from torch.multiprocessing import Process, Barrier, Queue
 
 from types import SimpleNamespace
 from typing import Dict, Union, Tuple, List
 
-from league.components.payoff import MatchResult
+from league.components.payoff import PayoffEntry
 from league.roles.alphastar.main_player import MainPlayer
 from league.roles.players import Player
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand
@@ -22,7 +20,7 @@ class LeagueProcess(Process):
                  queue: Tuple[Queue, Queue],
                  args: SimpleNamespace,
                  logger: MainLogger,
-                 barrier: Barrier):
+                 sync_barrier: Barrier):
         """
         The process is running a single League-Play and handles communication with the central component.
         League-Play is a form of NormalPlay where the opponent can be swapped out from a pool of agents (=league).
@@ -33,7 +31,7 @@ class LeagueProcess(Process):
         :param queue:
         :param args:
         :param logger:
-        :param barrier:
+        :param sync_barrier: Barrier to synchronize all league processes
         """
         super().__init__()
         self._args = args
@@ -46,7 +44,7 @@ class LeagueProcess(Process):
 
         # Communication
         self._in_queue, self._out_queue = queue
-        self._setup_barrier = barrier
+        self._sync_barrier = sync_barrier
 
         self.terminated: bool = False
         # Supply team to match plan
@@ -58,7 +56,7 @@ class LeagueProcess(Process):
         self._share_agent()
 
         # Wait at barrier until every league process performed the sharing step before the next step
-        self._setup_barrier.wait()
+        self._sync_barrier.wait()
 
         # Progress to save initial checkpoint of agents after all runs performed setup
         if isinstance(self._home, MainPlayer):  # TODO: Allow for different kinds of initial historical players
@@ -77,7 +75,7 @@ class LeagueProcess(Process):
 
             self._logger.info(str(self))
 
-            # Start training against new opponent and integrate the team
+            # Start training against new opponent and integrate the team of the away player
             self._register_team(self._away, rebuild=True)
             self._play.start(play_time=self._args.league_play_time_mins * 60)
 
@@ -85,6 +83,9 @@ class LeagueProcess(Process):
             self._share_agent()
 
             end_time = time.time()
+
+            # Wait until every process finished to sync for printing the payoff table
+            self._sync_barrier.wait()
 
         self._request_close()
 
@@ -147,10 +148,10 @@ class LeagueProcess(Process):
         battle_won = env_info["battle_won"]
         if draw or all(battle_won) or not any(battle_won):
             # Draw if all won or all lost
-            result = MatchResult.DRAW
+            result = PayoffEntry.DRAW
         elif battle_won[
             0]:  # TODO BUG! the battle won bool at position 0 does not have to be the one of the home player
-            result = MatchResult.WIN
+            result = PayoffEntry.WIN
         else:
-            result = MatchResult.LOSS
+            result = PayoffEntry.LOSS
         return result

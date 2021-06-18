@@ -80,12 +80,12 @@ def run(_run, _config, _log):
 
     # Shared objects
     manager = Manager()
-    p_matrix = manager.dict()  # Payoff matrix
+    payoff_dict = manager.dict()  # Payoff dict
     players = manager.list()  # List of current players
 
     # Infrastructure
     runs = []  # All running processes representing an agent playing in the league
-    payoff = Payoff(p_matrix=p_matrix, players=players)  # Hold results of each match
+    payoff = Payoff(payoff_dict=payoff_dict, players=players)  # Hold results of each match
 
     # league = AlphaStarLeague(initial_agents=team_compositions, payoff=payoff)
     league = SimpleLeague(teams=teams, payoff=payoff)
@@ -94,7 +94,7 @@ def run(_run, _config, _log):
     in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(league.size)])
 
     # Synchronization across all league instances
-    setup_barrier = Barrier(parties=league.size)
+    sync_barrier = Barrier(parties=league.size)
 
     # Start league instances
     for idx, (in_q, out_q) in enumerate(zip(in_queues, out_queues)):
@@ -104,13 +104,13 @@ def run(_run, _config, _log):
             queue=(in_q, out_q),
             args=args,
             logger=logger,
-            barrier=setup_barrier
+            sync_barrier=sync_barrier
         )
         runs.append(league_run)
     [r.start() for r in runs]
 
     # Handle message communication within the league
-    coordinator = LeagueCoordinator(logger=logger, players=players, queues=(in_queues, out_queues), payoff=payoff)
+    coordinator = LeagueCoordinator(logger=logger, players=players, queues=(in_queues, out_queues), payoff=payoff, sync_barrier=sync_barrier)
     coordinator.start()
 
     # Wait for processes to finish
@@ -118,7 +118,7 @@ def run(_run, _config, _log):
     [r.join() for r in runs]
 
     # Print win rates for all players
-    league.print_payoff()
+    print(payoff)
 
     # Clean up after finishing
     print("Exiting Main")

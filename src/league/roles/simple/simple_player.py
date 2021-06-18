@@ -20,9 +20,6 @@ class SimplePlayer(Player):
         Samples an SimplePlayer opponent using PFSP with win rates as prioritization.
         :return:
         """
-        return self._pfsp_branch()
-
-    def _pfsp_branch(self) -> Union[Tuple[Player, bool], Tuple[None, bool]]:
         simple_players = self.payoff.get_players_of_type(SimplePlayer)
         win_rates = self._payoff[self, simple_players]
         chosen = self._pfsp.sample(simple_players, win_rates=win_rates, weighting="squared")

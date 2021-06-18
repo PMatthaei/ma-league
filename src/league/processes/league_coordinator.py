@@ -1,4 +1,4 @@
-from torch.multiprocessing import Process, Queue
+from torch.multiprocessing import Process, Queue, Barrier
 from typing import List, Tuple
 
 from league.components.payoff import Payoff
@@ -8,7 +8,7 @@ from league.utils.commands import ProvideAgentCommand, Ack, CloseLeagueProcessCo
 
 
 class LeagueCoordinator(Process):
-    def __init__(self, logger, players: List[Player], queues: Tuple[List, List], payoff: Payoff):
+    def __init__(self, logger, players: List[Player], queues: Tuple[List, List], payoff: Payoff, sync_barrier: Barrier):
         """
         Handles messages sent from league sub processes to the main league process.
         :param league:
@@ -20,10 +20,19 @@ class LeagueCoordinator(Process):
         self._payoff = payoff
         self._closed = []
         self.logger = logger
+        self.sync_barrier = sync_barrier
+
+        self.updates_n = 0
+        self.senders_n = len(players)
+        self.last_waiting = 0
 
     def run(self) -> None:
         # Receive messages from all processes over their connections
         while len(self._closed) != len(set(self._in_queues)):
+            if self.sync_barrier.n_waiting == 0 and self.last_waiting != 0:
+                self.logger.info(str(self._payoff))
+            self.last_waiting = self.sync_barrier.n_waiting
+
             for q in self._in_queues:
                 if not q.empty():
                     self._handle_commands(q)
@@ -41,7 +50,7 @@ class LeagueCoordinator(Process):
         elif isinstance(cmd, CheckpointCommand):
             self._checkpoint(cmd)
         elif isinstance(cmd, PayoffUpdateCommand):
-            self._save_outcome(cmd)
+            self._update_payoff(cmd)
         elif isinstance(cmd, RetrieveAgentCommand):
             self._provide_learner(cmd)
         else:
@@ -56,10 +65,9 @@ class LeagueCoordinator(Process):
         self.logger.info(f"Create historical player of player {cmd.origin}")
         historical_player = self._players[cmd.origin].checkpoint()
         self._players.append(historical_player)
-        # TODO maybe this does not have to be a message.
         # TODO: is the learner being checkpointed also up-to-date?
 
-    def _save_outcome(self, cmd: PayoffUpdateCommand):
+    def _update_payoff(self, cmd: PayoffUpdateCommand):
         """
         Update the payoff matrix.
         Check if the learning (=home) player should be checkpointed after each update
@@ -68,6 +76,7 @@ class LeagueCoordinator(Process):
         """
         (home, away), outcome = cmd.data
         self._payoff.update(home, away, outcome)
+        self.updates_n += 1
         if home.ready_to_checkpoint():  # Auto-checkpoint player
             self._players.append(self._players[home].checkpoint())
 

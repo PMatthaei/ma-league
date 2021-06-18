@@ -1,48 +1,52 @@
 from __future__ import annotations
 
-import collections
 from enum import Enum
+from typing import List, Union
 
 import numpy as np
 
 
-class MatchResult(Enum):
-    WIN = 0,
-    LOSS = 1,
-    DRAW = 2,
-
-
-def dd():
-    return 0
+class PayoffEntry(Enum):
+    GAMES = 0,
+    WIN = 1,
+    LOSS = 2,
+    DRAW = 3,
 
 
 class Payoff:
 
-    def __init__(self, p_matrix, players):
-        self._players = players
-        self.p_matrix = p_matrix
+    def __init__(self, payoff_dict, players):
+        self.players = players
+        self.payoff_dict = payoff_dict
         self.decay = 0.99
-        self._wins = collections.defaultdict(dd)
-        self._draws = collections.defaultdict(dd)
-        self._losses = collections.defaultdict(dd)
-        self._games = collections.defaultdict(dd)
-        self._decay = 0.99
 
-    def _win_rate(self, _home, _away):
-        if self._games[_home, _away] == 0:
+    def _win_rate(self, home: int, away: int):
+        """
+        Calculates the win rate of the home team against the away team.
+        Draws are weighted have as much as wins.
+        :param home:
+        :param away:
+        :return:
+        """
+        if self.payoff_dict[home, away, PayoffEntry.GAMES] == 0:
             return 0.5
 
-        return (self._wins[_home, _away] +
-                0.5 * self._draws[_home, _away]) / self._games[_home, _away]
+        return (self.payoff_dict[home, away, PayoffEntry.WIN] +
+                0.5 * self.payoff_dict[home, away, PayoffEntry.DRAW]) / self.payoff_dict[
+                   home, away, PayoffEntry.GAMES]
 
     def __getitem__(self, match):
+        """
+        Get the win rates of the home player against one or more away teams.
+        Away teams can be passed as list.
+        :param match:
+        :return:
+        """
         home, away = match
-
-        from league.roles.players import Player
-        if isinstance(home, Player):
-            home = [home]
-        if isinstance(away, Player):
-            away = [away]
+        away, home = map(lambda x: [x] if isinstance(x, int) else x, self._map_to_id(away, home))
+        if not self.has_entries(home, away):  # init if new match
+            print("init")
+            self._init_entries(home, away)
 
         win_rates = np.array([[self._win_rate(h, a) for a in away] for h in home])
         if win_rates.shape[0] == 1 or win_rates.shape[1] == 1:
@@ -50,41 +54,104 @@ class Payoff:
 
         return win_rates
 
-    def update(self, home, away, result):
-        for stats in (self._games, self._wins, self._draws, self._losses):
-            stats[home, away] *= self._decay
-            stats[away, home] *= self._decay
+    def update(self, home, away, result: str):
+        """
+        Update the statistic of a certain match with a new result
+        :param home:
+        :param away:
+        :param result:
+        :return:
+        """
+        away, home = self._map_to_id(away, home)
 
-        self._games[home, away] += 1
-        self._games[away, home] += 1
-        if result == "win":
-            self._wins[home, away] += 1
-            self._losses[away, home] += 1
-        elif result == "draw":
-            self._draws[home, away] += 1
-            self._draws[away, home] += 1
+        # On every update decay old data importance
+        self._apply_decay(home, away)
+
+        # Each result means a match between the two players finished
+        self.payoff_dict[home, away, PayoffEntry.GAMES] += 1
+        self.payoff_dict[away, home, PayoffEntry.GAMES] += 1
+
+        if result == PayoffEntry.WIN:
+            self.payoff_dict[home, away, PayoffEntry.WIN] += 1
+            self.payoff_dict[away, home, PayoffEntry.LOSS] += 1
+        elif result == PayoffEntry.DRAW:
+            self.payoff_dict[home, away, PayoffEntry.DRAW] += 1
+            self.payoff_dict[away, home, PayoffEntry.DRAW] += 1
+        elif result == PayoffEntry.LOSS:
+            self.payoff_dict[home, away, PayoffEntry.LOSS] += 1
+            self.payoff_dict[away, home, PayoffEntry.WIN] += 1
         else:
-            self._wins[away, home] += 1
-            self._losses[home, away] += 1
+            raise NotImplementedError("Payoff Update not implemented.")
+
+        return self.players[home], self.players[away]
+
+    def _apply_decay(self, home: int, away: int):
+        for entry in PayoffEntry:
+            self.payoff_dict[home, away, entry] *= self.decay
+            self.payoff_dict[away, home, entry] *= self.decay
+
+    def has_entries(self, home: Union[int, List[int]], away: Union[int, List[int]]):
+        """
+        Collect all keys which are needed to capture statistics of the given match
+        and test if they exist for later updates. If even one key is missing return False
+        :param home:
+        :param away:
+        :return:
+        """
+        keys = self._build_keys(away, home)
+        return all([k in self.payoff_dict for k in keys])
+
+    def _init_entries(self, home: Union[int, List[int]], away: Union[int, List[int]]):
+        """
+        Initialize all necessary dict entries to allow for later updates on these statistics.
+        :param home:
+        :param away:
+        :return:
+        """
+        keys = self._build_keys(away, home)
+        for k in keys:
+            self.payoff_dict[k] = 0
+            self.payoff_dict[k] = 0
 
     def add_player(self, player) -> None:
-        self._players.append(player)
+        self.players.append(player)
 
     def get_player(self, player_id: int):
-        player = self._players[player_id]
-        assert player.id_ == player_id, "ID mismatch."
+        player = self.players[player_id]
+        assert player.id_ == player_id, f"ID mismatch. Player at {player_id} does not match ID {player.id_}"
         return player
 
-    def get_players_of_type(self, cls):
+    def get_players_of_type(self, cls) -> List[int]:
         players = [
-            player.id_ for player in self._players
+            player.id_ for player in self.players
             if isinstance(player, cls)
         ]
         if len(players) == 0:
             raise Exception(f"No opponent of Type: {cls} found.")
-
         return players
 
-    @property
-    def players(self):
-        return self._players
+    def __str__(self):
+        player_ids = [p.id_ for p in self.players]
+        return ''.join(
+            [f"\nWin rates for player {player_id}: \n {self[player_id, player_ids]}\n" for player_id in player_ids])
+
+    def _build_keys(self, away, home):
+        keys = []
+        if isinstance(away, int):
+            away = [away]
+        if isinstance(home, int):
+            home = [home]
+        for h in home:
+            for a in away:
+                for entry in PayoffEntry:
+                    keys.append((h, a, entry))
+                    keys.append((a, h, entry))
+        return keys
+
+    def _map_to_id(self, away, home):
+        from league.roles.players import Player
+        if isinstance(home, Player):
+            home = home.id_
+        if isinstance(away, Player):
+            away = away.id_
+        return away, home

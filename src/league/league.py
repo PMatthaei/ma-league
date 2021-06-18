@@ -31,12 +31,6 @@ class League(object):
     def add_player(self, player: Player):
         self._payoff.add_player(player)
 
-    def print_payoff(self):
-        player_ids = list(range(self.size))
-        for player_id in player_ids:
-            print(f"Win rates for player {player_id}:")
-            print(self._payoff[player_id, player_ids])
-
     @property
     def size(self) -> int:
         return len(self._learning_agents)
