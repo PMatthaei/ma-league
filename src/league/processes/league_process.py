@@ -49,7 +49,7 @@ class LeagueProcess(Process):
 
         self._register_team()  # Supply home team to match plan
 
-        self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._provide_episode_result)
+        self._play = LeaguePlayRun(args=self._args, logger=self._logger, on_episode_end=self._provide_episode_result)
 
     def run(self) -> None:
         # Share initial agent

@@ -1,21 +1,32 @@
+from __future__ import annotations
+
 import itertools
 
 import enum
 from collections import Counter
+from typing import List
 
 from maenv.core import RoleTypes, UnitAttackTypes
 
 
 class Team:
-    def __init__(self):
-        self.unit_occurrence_dict = dict()
+    def __init__(self, tid: int, units: List, is_scripted=False):
+        self.id_ = tid,
+        self.units = list(units)
+        self.unit_ids = [unit["uid"] for unit in self.units]
+        self.is_scripted = is_scripted
 
-    def difference(self, team):
-        t1_counts = Counter(self.unit_occurrence_dict)
-        t2_counts = Counter(team)
+    def difference(self, team: Team):
+        """
+        Calculate the swap-distance for a given team.
+        :param team:
+        :return:
+        """
+        t1_counts = Counter(self.unit_ids)
+        t2_counts = Counter(team.unit_ids)
         diff = [t1_counts[unit] - t2_counts[unit] if unit in t2_counts else t1_counts[unit] for unit in t1_counts]
         in_swaps = [x for x in diff if x > 0]
-        weighting = len(in_swaps) / sum(self.unit_occurrence_dict.values())
+        weighting = len(in_swaps) / sum(t1_counts.values())
         dist = sum(in_swaps) * weighting
         return dist
 
@@ -41,8 +52,12 @@ class TeamComposer:
         Build a pool of unique units defined by the provided characteristics.
         :return:
         """
-        units = list(itertools.product(*self.characteristics))
-        return map(lambda unit: {'role': unit[0], 'attack_type': unit[1]}, units)
+        units = list(enumerate(list(itertools.product(*self.characteristics))))
+        return map(lambda unit: {'uid': unit[0], 'role': unit[1][0], 'attack_type': unit[1][1]}, units)
+
+    @staticmethod
+    def to_teams(plans: List[dict]) -> List[Team]:
+        return [Team(**plan) for plan in plans]
 
     @staticmethod
     def _to_team_build_plan(tid, units, is_scripted=False):
@@ -54,7 +69,7 @@ class TeamComposer:
         :return:
         """
         return {  # Team
-            "id": tid,
+            "tid": tid,
             "is_scripted": is_scripted,
             "units": units
         }

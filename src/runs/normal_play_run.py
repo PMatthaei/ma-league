@@ -15,7 +15,7 @@ from steppers import REGISTRY as stepper_REGISTRY
 
 class NormalPlayRun(ExperimentRun):
 
-    def __init__(self, args, logger):
+    def __init__(self, args, logger, on_episode_end=None):
         """
         NormalPlay performs the standard way of training a single multi-agent against a static opponent.
         :param args:
@@ -28,6 +28,7 @@ class NormalPlayRun(ExperimentRun):
         self.learners = []
         self.start_time = time.time()
         self.last_time = self.start_time
+        self.episode_callback = on_episode_end
 
         # Init stepper so we can get env info
         self._build_stepper()
@@ -131,7 +132,7 @@ class NormalPlayRun(ExperimentRun):
         while self._has_not_reached_time_limit or self._has_not_reached_t_max:
 
             # Run for a whole episode at a time
-            self._train_episode(episode_num=episode, callback=train_callback)
+            self._train_episode(episode_num=episode, after_train=train_callback)
 
             # Execute test runs once in a while
             n_test_runs = max(1, self.args.test_nepisode // self.stepper.batch_size)
@@ -176,9 +177,13 @@ class NormalPlayRun(ExperimentRun):
         self.stepper.close_env()
         self.logger.info("Finished.")
 
-    def _train_episode(self, episode_num, callback=None):
-        episode_batch = self.stepper.run(test_mode=False)
+    def _train_episode(self, episode_num, after_train=None):
+        episode_batch, env_info = self.stepper.run(test_mode=False)
+        if self.episode_callback is not None:
+            self.episode_callback(env_info)
+
         self.home_buffer.insert_episode_batch(episode_batch)
+
         if self.home_buffer.can_sample(self.args.batch_size):
             episode_sample = self.home_buffer.sample(self.args.batch_size)
 
@@ -190,8 +195,9 @@ class NormalPlayRun(ExperimentRun):
                 episode_sample.to(self.args.device)
 
             self.home_learner.train(episode_sample, self.stepper.t_env, episode_num)
-            if callback:
-                callback(self.learners)
+
+            if after_train:
+                after_train(self.learners)
 
     def _test(self, n_test_runs):
         self.last_test_T = self.stepper.t_env

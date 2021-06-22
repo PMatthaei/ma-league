@@ -2,6 +2,9 @@ import os
 from random import sample
 
 from league.components.agent_pool import AgentPool
+from league.components.matchmaking import Matchmaking
+from league.components.payoff_v2 import PayoffV2
+from league.processes.league_process_v2 import LeagueProcessV2
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 import datetime
@@ -22,8 +25,6 @@ from sacred.utils import apply_backspaces_and_linefeeds
 
 from custom_logging.platforms import CustomConsoleLogger
 from league import SimpleLeague
-from league.components.payoff import Payoff
-from league.processes.league_process import LeagueProcess
 from league.processes.league_coordinator import LeagueCoordinator
 from league.utils.team_composer import TeamComposer
 from custom_logging.logger import MainLogger
@@ -78,31 +79,32 @@ def run(_run, _config, _log):
     team_size = _config["team_size"]
     team_composer = TeamComposer(RoleTypes, UnitAttackTypes)
     teams = team_composer.compose_unique_teams(team_size)
-    teams = sample(teams, 2)  # Sample 5 random teams to train
+    teams = sample(teams, 2)  # Sample 2 random teams to train
+    teams = team_composer.to_teams(teams)
 
     # Shared objects
     manager = Manager()
-    payoff_dict = manager.dict()  # Payoff dict
-    players = manager.list()  # List of current players
+    payoff_dict = manager.dict()
+    agents_dict = manager.dict()
 
     # Infrastructure
     procs = []  # All running processes representing an agent playing in the league
-    payoff = Payoff(payoff_dict=payoff_dict, players=players)  # Hold results of each match
-
-    # league = AlphaStarLeague(initial_agents=team_compositions, payoff=payoff)
-    league = SimpleLeague(teams=teams, payoff=payoff)
+    payoff = PayoffV2(payoff_dict=payoff_dict)  # Hold results of each match
+    agent_pool = AgentPool(agents_dict=agents_dict) # Hold each trained agent
+    matchmaking = Matchmaking(agent_pool=agent_pool, payoff=payoff)
 
     # Communication
-    in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(league.size)])
+    in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(len(teams))])
 
     # Synchronization across all league instances
-    sync_barrier = Barrier(parties=league.size)
+    sync_barrier = Barrier(parties=len(teams))
 
     # Start league instances
-    for idx, (in_q, out_q) in enumerate(zip(in_queues, out_queues)):
-        proc = LeagueProcess(
-            player_id=idx,
-            players=players,
+    for idx, (in_q, out_q, team) in enumerate(zip(in_queues, out_queues, teams)):
+        proc = LeagueProcessV2(
+            home_team=team,
+            matchmaking=matchmaking,
+            agent_pool=agent_pool,
             queue=(in_q, out_q),
             args=args,
             logger=logger,
@@ -111,18 +113,7 @@ def run(_run, _config, _log):
         procs.append(proc)
     [r.start() for r in procs]
 
-    # Handle message communication within the league
-    coordinator = LeagueCoordinator(
-        logger=logger,
-        players=players,
-        queues=(in_queues, out_queues),
-        payoff=payoff,
-        sync_barrier=sync_barrier
-    )
-    coordinator.start()
-
     # Wait for processes to finish
-    coordinator.join()
     [r.join() for r in procs]
 
     # Print win rates for all players
