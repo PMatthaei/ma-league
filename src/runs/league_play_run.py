@@ -3,7 +3,7 @@ from modules.agents.agent import Agent
 from runs.normal_play_run import NormalPlayRun
 
 from learners import REGISTRY as le_REGISTRY
-from controllers import REGISTRY as mac_REGISTRY
+from controllers import REGISTRY as mac_REGISTRY, DistinctMAC
 from components.episode_buffer import ReplayBuffer
 from steppers import SELF_REGISTRY as self_steppers_REGISTRY
 import torch as th

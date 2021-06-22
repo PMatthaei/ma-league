@@ -17,6 +17,9 @@ class Learner:
         self.logger = logger
         self.args = args
         self.name = "" if name is None else name
+        self.log_stats_t = -self.args.learner_log_interval - 1
+        # Receive params from the agent from Multi-Agent Controller
+        self.params = list(mac.parameters())
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int) -> None:
         """

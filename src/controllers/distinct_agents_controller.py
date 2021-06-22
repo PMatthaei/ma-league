@@ -10,7 +10,8 @@ import torch as th
 class DistinctMAC(BasicMAC):
     def __init__(self, scheme, groups, args):
         """
-        This is a multi-agent controller without shared parameters between agent networks.
+        This is a multi-agent controller without shared parameters between agent networks. Each agent infers from his
+        own network.
         :param scheme:
         :param groups:
         :param args:
@@ -27,7 +28,6 @@ class DistinctMAC(BasicMAC):
         self.hidden_states = None
 
     def _compute_agent_outputs(self, agent_inputs):
-        # TODO: Distinct Buffers from where is sampled!
         agent_outs = []
         for i, agent in enumerate(self.agents):
             agent_out, self.hidden_states[i] = agent(agent_inputs[:, i, :], self.hidden_states[i])

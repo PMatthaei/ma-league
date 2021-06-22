@@ -42,13 +42,13 @@ class LeagueProcess(Process):
         self._home: Player = self._shared_players[self._player_id]  # Process private copy of the player
         self._away: Union[Player, None] = None
 
-        # Communication
-        self._in_queue, self._out_queue = queue
+        self._in_queue, self._out_queue = queue  # Communication
         self._sync_barrier = sync_barrier
 
         self.terminated: bool = False
-        # Supply team to match plan
-        self._register_team()
+
+        self._register_team()  # Supply home team to match plan
+
         self._play = LeaguePlayRun(args=self._args, logger=self._logger, episode_callback=self._provide_episode_result)
 
     def run(self) -> None:
@@ -66,6 +66,7 @@ class LeagueProcess(Process):
         end_time = time.time()
 
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
+
             self._away, flag = self._home.get_match()
             away_agent = self._get_shared_agent(self._away)
             if away_agent is None:
@@ -130,7 +131,7 @@ class LeagueProcess(Process):
         :param env_info:
         :return:
         """
-        result = self._get_result(env_info)
+        result = self._extract_result(env_info)
         data = ((self._home, self._away), result)
         cmd = PayoffUpdateCommand(origin=self._player_id, data=data)
         self._in_queue.put(cmd)
@@ -142,15 +143,13 @@ class LeagueProcess(Process):
     def __str__(self):
         return f"LeaguePlayRun - {self._home.prettier()} playing against {self._away.prettier()}"
 
-    @staticmethod
-    def _get_result(env_info):
+    def _extract_result(self, env_info: dict):
         draw = env_info["draw"]
         battle_won = env_info["battle_won"]
         if draw or all(battle_won) or not any(battle_won):
             # Draw if all won or all lost
             result = PayoffEntry.DRAW
-        elif battle_won[
-            0]:  # TODO BUG! the battle won bool at position 0 does not have to be the one of the home player
+        elif battle_won[self._play.stepper.policy_team_id]:
             result = PayoffEntry.WIN
         else:
             result = PayoffEntry.LOSS

@@ -1,6 +1,8 @@
 import os
 from random import sample
 
+from league.components.agent_pool import AgentPool
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 import datetime
 import pprint
@@ -81,11 +83,13 @@ def run(_run, _config, _log):
     # Shared objects
     manager = Manager()
     payoff_dict = manager.dict()  # Payoff dict
+    agents_dict = manager.dict()  # Payoff dict
     players = manager.list()  # List of current players
 
     # Infrastructure
-    runs = []  # All running processes representing an agent playing in the league
+    procs = []  # All running processes representing an agent playing in the league
     payoff = Payoff(payoff_dict=payoff_dict, players=players)  # Hold results of each match
+    agent_pool = AgentPool(agent_dict=agents_dict)
 
     # league = AlphaStarLeague(initial_agents=team_compositions, payoff=payoff)
     league = SimpleLeague(teams=teams, payoff=payoff)
@@ -98,7 +102,7 @@ def run(_run, _config, _log):
 
     # Start league instances
     for idx, (in_q, out_q) in enumerate(zip(in_queues, out_queues)):
-        league_run = LeagueProcess(
+        proc = LeagueProcess(
             player_id=idx,
             players=players,
             queue=(in_q, out_q),
@@ -106,16 +110,22 @@ def run(_run, _config, _log):
             logger=logger,
             sync_barrier=sync_barrier
         )
-        runs.append(league_run)
-    [r.start() for r in runs]
+        procs.append(proc)
+    [r.start() for r in procs]
 
     # Handle message communication within the league
-    coordinator = LeagueCoordinator(logger=logger, players=players, queues=(in_queues, out_queues), payoff=payoff, sync_barrier=sync_barrier)
+    coordinator = LeagueCoordinator(
+        logger=logger,
+        players=players,
+        queues=(in_queues, out_queues),
+        payoff=payoff,
+        sync_barrier=sync_barrier
+    )
     coordinator.start()
 
     # Wait for processes to finish
     coordinator.join()
-    [r.join() for r in runs]
+    [r.join() for r in procs]
 
     # Print win rates for all players
     print(payoff)

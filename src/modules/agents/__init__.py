@@ -1,3 +1,4 @@
+from .agent import Agent
 from .dqn_agent import DQNAgent
 from .dqrn_agent import DRQNAgent
 

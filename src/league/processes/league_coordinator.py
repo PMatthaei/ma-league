@@ -3,8 +3,7 @@ from typing import List, Tuple
 
 from league.components.payoff import Payoff
 from league.roles.players import Player
-from league.utils.commands import ProvideAgentCommand, Ack, CloseLeagueProcessCommand, PayoffUpdateCommand, \
-    RetrieveAgentCommand, CheckpointCommand
+from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand
 
 
 class LeagueCoordinator(Process):
@@ -29,21 +28,27 @@ class LeagueCoordinator(Process):
     def run(self) -> None:
         # Receive messages from all processes over their connections
         while len(self._closed) != len(set(self._in_queues)):
-            if self.sync_barrier.n_waiting == 0 and self.last_waiting != 0:
-                self.logger.info(str(self._payoff))
-            self.last_waiting = self.sync_barrier.n_waiting
+
+            self._on_sync()
 
             for q in self._in_queues:
                 if not q.empty():
                     self._handle_commands(q)
+
         self.logger.info("League Coordinator shut down.")
 
+    def _get_agents(self):
+        return [(p.team, p.agent) for p in self._players]
+
+    def _on_sync(self):
+        # All processes have arrived at barrier and passed
+        if self.sync_barrier.n_waiting == 0 and self.last_waiting != 0:
+            self.logger.info(str(self._payoff))
+        self.last_waiting = self.sync_barrier.n_waiting
+
     def _handle_commands(self, queue: Queue):
-        # TODO Clean Up unused commands
         cmd = queue.get_nowait()
-        if isinstance(cmd, ProvideAgentCommand):
-            self._update_learner(cmd)
-        elif isinstance(cmd, CloseLeagueProcessCommand):
+        if isinstance(cmd, CloseLeagueProcessCommand):
             self.logger.info(f"Closing connection to process {cmd.origin}")
             queue.close()
             self._closed.append(cmd.origin)
@@ -51,8 +56,6 @@ class LeagueCoordinator(Process):
             self._checkpoint(cmd)
         elif isinstance(cmd, PayoffUpdateCommand):
             self._update_payoff(cmd)
-        elif isinstance(cmd, RetrieveAgentCommand):
-            self._provide_learner(cmd)
         else:
             raise Exception("Unknown message.")
 
@@ -79,28 +82,3 @@ class LeagueCoordinator(Process):
         self.updates_n += 1
         if home.ready_to_checkpoint():  # Auto-checkpoint player
             self._players.append(self._players[home].checkpoint())
-
-    def _update_learner(self, cmd: ProvideAgentCommand):
-        """
-        Receive a learner during the league sub process setup and provide it to its corresponding player.
-        These learners can be requested by other sub processes.
-        :param cmd:
-        :return:
-        """
-        player_id = cmd.origin
-        # --- ! Do not change this assignment
-        player = self._players[player_id]
-        player.learner = cmd.data
-        self._players[player_id] = player
-        # --- ! Do not change this assignment
-        self.logger.info(f"Updated learner of player {player_id}")
-        self._out_queues[player_id].put(Ack(data=cmd.id_))
-
-    def _provide_learner(self, cmd: RetrieveAgentCommand):
-        """
-        Provide a league sub process with a requested learner, identified by its owning player.
-        :param cmd:
-        :return:
-        """
-        # TODO make sure the most recent version of the sub prcoess is sent
-        self._out_queues[cmd.origin].put(self._players[cmd.data].learner)

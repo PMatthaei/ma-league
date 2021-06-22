@@ -15,7 +15,7 @@ class PayoffEntry(Enum):
 
 class Payoff:
 
-    def __init__(self, payoff_dict, players):
+    def __init__(self, payoff_dict: dict, players: List):
         self.players = players
         self.payoff_dict = payoff_dict
         self.decay = 0.99
@@ -45,7 +45,6 @@ class Payoff:
         home, away = match
         away, home = map(lambda x: [x] if isinstance(x, int) else x, self._map_to_id(away, home))
         if not self.has_entries(home, away):  # init if new match
-            print("init")
             self._init_entries(home, away)
 
         win_rates = np.array([[self._win_rate(h, a) for a in away] for h in home])
@@ -131,9 +130,8 @@ class Payoff:
         return players
 
     def __str__(self):
-        player_ids = [p.id_ for p in self.players]
-        return ''.join(
-            [f"\nWin rates for player {player_id}: \n {self[player_id, player_ids]}\n" for player_id in player_ids])
+        pids = [p.id_ for p in self.players]
+        return ''.join([f"\nWin rates for player {pid}: \n {self[pid, pids]}\n" for pid in pids])
 
     def _build_keys(self, away, home):
         keys = []
