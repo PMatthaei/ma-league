@@ -13,8 +13,6 @@ class QLearner(Learner):
     def __init__(self, mac: MultiAgentController, scheme, logger, args, name=None):
         super().__init__(mac, scheme, logger, args, name)
         self.name += "_qlearner_"
-        # Receive params from the agent from Multi-Agent Controller
-        self.params = list(mac.parameters())
 
         self.last_target_update_episode = 0
 
@@ -34,8 +32,6 @@ class QLearner(Learner):
 
         # TODO: a little wasteful to deepcopy (e.g. duplicates action selector), but should work for any MAC
         self.target_mac = copy.deepcopy(mac)
-
-        self.log_stats_t = -self.args.learner_log_interval - 1
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
         # Get the relevant batch quantities
