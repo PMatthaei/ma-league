@@ -3,15 +3,19 @@ import torch as th
 from custom_logging.collectibles import Collectibles
 from steppers import EpisodeStepper
 from custom_logging.logger import Originator
+from steppers.utils.stepper_utils import build_pre_transition_data
 
 
 class SelfPlayStepper(EpisodeStepper):
 
     def __init__(self, args, logger):
         """
-        Runner to train two multi-agents (home and opponent) in the same environment.
-        The runner steps the environment and creates two batches of episode data one per agent.
-        The resulting batches are returned per run()-cycle and served to its corresponding learner and replay buffer.
+        Stepper which is passing actions of two multi-agents (home and opponent) into the same environment.
+        The stepper steps the environment and creates two batches of episode data one per multi-agent.
+        The resulting batches as well as the final env_info are returned per run()-cycle and
+        served to its corresponding learner and replay buffer. The Self-Play Stepper returns both batches although
+        in Self-Play Training only the "home" multi-agent should learn to prevent a non-stationary environment if the
+        "away" batch is also used for learning and updating the underlying "away" Multi-Agent.
 
         :param args:
         :param logger:
@@ -59,7 +63,7 @@ class SelfPlayStepper(EpisodeStepper):
         home_actions_taken = []
         away_actions_taken = []
         while not terminated:
-            home_pre_transition_data, away_pre_transition_data = self._build_pre_transition_data()
+            home_pre_transition_data, away_pre_transition_data = build_pre_transition_data(self.env)
 
             self.home_batch.update(home_pre_transition_data, ts=self.t)
             self.away_batch.update(away_pre_transition_data, ts=self.t)
@@ -98,7 +102,7 @@ class SelfPlayStepper(EpisodeStepper):
 
             self.t += 1
 
-        home_last_data, away_last_data = self._build_pre_transition_data()
+        home_last_data, away_last_data = build_pre_transition_data(self.env)
 
         self.home_batch.update(home_last_data, ts=self.t)
         self.away_batch.update(away_last_data, ts=self.t)
@@ -136,24 +140,3 @@ class SelfPlayStepper(EpisodeStepper):
         self.logger.log(self.t_env)
 
         return self.home_batch, self.away_batch, env_info
-
-    def _build_pre_transition_data(self):
-        state = self.env.get_state()
-        actions = self.env.get_avail_actions()
-        obs = self.env.get_obs()
-        # TODO: only supports same team sizes! and only two teams
-        home_avail_actions = actions[:len(actions) // 2]
-        home_obs = obs[:len(obs) // 2]
-        home_pre_transition_data = {
-            "state": [state],
-            "avail_actions": [home_avail_actions],
-            "obs": [home_obs]
-        }
-        opponent_avail_actions = actions[len(actions) // 2:]
-        opponent_obs = obs[len(obs) // 2:]
-        opponent_pre_transition_data = {
-            "state": [state],
-            "avail_actions": [opponent_avail_actions],
-            "obs": [opponent_obs]
-        }
-        return home_pre_transition_data, opponent_pre_transition_data

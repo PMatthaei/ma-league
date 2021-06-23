@@ -1,16 +1,13 @@
 import time
-from logging import warning
 from torch.multiprocessing import Process, Barrier, Queue
 
 from types import SimpleNamespace
-from typing import Dict, Union, Tuple, List
+from typing import Dict, Tuple
 
 from league.components.agent_pool import AgentPool
 from league.components.matchmaking import Matchmaking
-from league.components.payoff import PayoffEntry
-from league.roles.alphastar.main_player import MainPlayer
-from league.roles.players import Player
-from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand
+from league.processes.utils import extract_result
+from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand
 from league.utils.team_composer import Team
 from runs.league_play_run import LeaguePlayRun
 from custom_logging.logger import MainLogger
@@ -30,8 +27,8 @@ class LeagueProcessV2(Process):
         self._args = args
         self._logger = logger
 
-        self._home_team = home_team
-        self._away_team = None
+        self._home_team: Team = home_team
+        self._away_team: Team = None
         self._agent_pool: AgentPool = agent_pool  # Process private copy of the agent pool
         self._matchmaking: Matchmaking = matchmaking
 
@@ -42,23 +39,23 @@ class LeagueProcessV2(Process):
 
         self._play = None
 
-        # Register home team
-        self._args.env_args['match_build_plan'][0]['units'] = self._home_team.units
-        self._args.env_args['match_build_plan'][1]['units'] = self._home_team.units
-
     def run(self) -> None:
-        self._play = NormalPlayRun(args=self._args, logger=self._logger, on_episode_end=self._provide_result)
+        # Initial play to train policy against AI
+        self._configure_play(home=self._home_team, is_ai_opponent=True)
+        self._play = NormalPlayRun(args=self._args, logger=self._logger)
+        self._play.start(play_time=self._args.league_play_time_mins * 60)
         self._share_agent()
 
         start_time = time.time()
         end_time = time.time()
 
+        # Run real league play in self-play against pre-trained but fixed multi-agent policies
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
             self._away_team, away_agent = self._matchmaking.get_match(self._home_team)
 
-            # Register away team
-            self._args.env_args['match_build_plan'][1]['units'] = self._away_team.units
+            self._configure_play(home=self._home_team, away=self._away_team)
 
+            self._play = LeaguePlayRun(args=self._args, logger=self._logger, on_episode_end=self._provide_result)
             self._play.set_away_agent(away_agent)
             self._play.start(play_time=self._args.league_play_time_mins * 60)
 
@@ -69,20 +66,26 @@ class LeagueProcessV2(Process):
 
         self._request_close()
 
+    def _configure_play(self, home: Team, away: Team = None, is_ai_opponent=False):
+        self._args.env_args['match_build_plan'][0]['units'] = home.units
+        self._args.env_args['match_build_plan'][1]['units'] = home.units if away is None else away.units
+        self._args.env_args['match_build_plan'][1]['is_scripted'] = is_ai_opponent
+
     def _get_shared_agent(self, team: Team):
         return self._agent_pool[team]
 
     def _share_agent(self):
         self._agent_pool[self._home_team] = self._play.home_mac.agent
-        self._sync_barrier.wait()  # Wait until every process finished to sync
+        # Wait until every process finished to share the agent to ensure every agent is up-to-date before next match
+        self._sync_barrier.wait()
 
     def _provide_result(self, env_info: Dict):
         """
-        Send the result of an episode the the central coordinator for processing
+        Send the result of an episode the the central coordinator for processing.
         :param env_info:
         :return:
         """
-        result = self._extract_result(env_info)
+        result = extract_result(env_info, self._play.stepper.policy_team_id)
         data = ((self._home_team.id_, self._away_team.id_), result)
         cmd = PayoffUpdateCommand(origin=self._home_team.id_, data=data)
         self._in_queue.put(cmd)
@@ -90,15 +93,3 @@ class LeagueProcessV2(Process):
     def _request_close(self):
         cmd = CloseLeagueProcessCommand(origin=self._home_team.id_)
         self._in_queue.put(cmd)
-
-    def _extract_result(self, env_info: dict):
-        draw = env_info["draw"]
-        battle_won = env_info["battle_won"]
-        if draw or all(battle_won) or not any(battle_won):
-            # Draw if all won or all lost
-            result = PayoffEntry.DRAW
-        elif battle_won[self._play.stepper.policy_team_id]:
-            result = PayoffEntry.WIN
-        else:
-            result = PayoffEntry.LOSS
-        return result

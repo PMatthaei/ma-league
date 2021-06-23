@@ -3,16 +3,22 @@ from torch.distributions import Categorical
 from .epsilon_schedules import DecayThenFlatSchedule
 
 
-class MultinomialActionSelector():
+class ActionSelector:
+    def select(self, agent_inputs, avail_actions, t_env, test_mode=False):
+        raise NotImplementedError()
+
+
+class MultinomialActionSelector(ActionSelector):
 
     def __init__(self, args):
         self.args = args
 
-        self.schedule = DecayThenFlatSchedule(args.epsilon_start, args.epsilon_finish, args.epsilon_anneal_time, decay="linear")
+        self.schedule = DecayThenFlatSchedule(args.epsilon_start, args.epsilon_finish, args.epsilon_anneal_time,
+                                              decay="linear")
         self.epsilon = self.schedule.eval(0)
         self.test_greedy = getattr(args, "test_greedy", True)
 
-    def select_action(self, agent_inputs, avail_actions, t_env, test_mode=False):
+    def select(self, agent_inputs, avail_actions, t_env, test_mode=False):
         masked_policies = agent_inputs.clone()
         masked_policies[avail_actions == 0.0] = 0.0
 
@@ -26,15 +32,16 @@ class MultinomialActionSelector():
         return picked_actions, None
 
 
-class EpsilonGreedyActionSelector():
+class EpsilonGreedyActionSelector(ActionSelector):
 
     def __init__(self, args):
         self.args = args
 
-        self.schedule = DecayThenFlatSchedule(args.epsilon_start, args.epsilon_finish, args.epsilon_anneal_time, decay="linear")
+        self.schedule = DecayThenFlatSchedule(args.epsilon_start, args.epsilon_finish, args.epsilon_anneal_time,
+                                              decay="linear")
         self.epsilon = self.schedule.eval(0)
 
-    def select_action(self, agent_inputs, avail_actions, t_env, test_mode=False):
+    def select(self, agent_inputs, avail_actions, t_env, test_mode=False):
         # Assuming agent_inputs is a batch of Q-Values for each agent bav
         self.epsilon = self.schedule.eval(t_env)
 

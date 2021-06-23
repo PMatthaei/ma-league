@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from controllers.multi_agent_controller import MultiAgentController
 from exceptions.mac_exceptions import HiddenStateNotInitialized
-from modules.agents import REGISTRY as agent_REGISTRY
+from modules.agents import REGISTRY as agent_REGISTRY, Agent
 from components.action_selectors import REGISTRY as action_REGISTRY
 import torch as th
 
 
-class BasicMAC(MultiAgentController):
+class CombinedMAC(MultiAgentController):
     def __init__(self, scheme, groups, args):
         """
-        This multi-agent controller shares parameters between agents by using a single fully connected network.
+        This is a multi-agent controller uses a combination of networks for inference. Each agent can choose to either
+        infer with the original/native agent network or a network which was trained within a different team.
         :param scheme:
         :param groups:
         :param args:
@@ -18,7 +19,8 @@ class BasicMAC(MultiAgentController):
         self.n_agents = args.n_agents
         self.args = args
         input_shape = self._get_input_shape(scheme)
-        self.agent = self._build_agents(input_shape)
+        self.native_agent = self._build_agents(input_shape)  # Single sharing native network for the Multi-Agent
+        self.specific_agents = dict()  # Dictionary holding the specific agent network for a given agent
         self.agent_output_type = args.agent_output_type
 
         self.action_selector = action_REGISTRY[args.action_selector](args)
@@ -33,6 +35,19 @@ class BasicMAC(MultiAgentController):
         # Choose action by f.e. epsilon-greedy
         chosen_actions, is_greedy = self.action_selector.select(agent_outs[bs], avail_actions[bs], t_env, test_mode)
         return chosen_actions, is_greedy
+
+    def replace_agent(self, aid: int, agent: Agent):
+        """
+        Replaces inference for the given agent with id = aid with the inference of the provided agent by adding into the
+        dict.
+        :param aid:
+        :param agent:
+        :return:
+        """
+        self.specific_agents.update({aid: agent})
+
+    def _get_specific_agents_ids(self):
+        return self.specific_agents.keys() # All agents that rely on a specific network for inference instead of native
 
     def forward(self, ep_batch, t, test_mode=False):
         agent_inputs = self._build_inputs(ep_batch, t)
@@ -68,30 +83,52 @@ class BasicMAC(MultiAgentController):
         return agent_outs.view(ep_batch.batch_size, self.n_agents, -1)
 
     def _compute_agent_outputs(self, agent_inputs):
-        agent_outs, self.hidden_states = self.agent(agent_inputs, self.hidden_states)
+
+        agent_outs, self.hidden_states = self.native_agent(agent_inputs, self.hidden_states)
+        specific_outs = [agent(agent_inputs[:, aid, :]) for aid, agent in self.specific_agents.items()]
         return agent_outs
 
     def update_trained_steps(self, trained_steps):
-        self.agent.trained_steps = trained_steps
+        self.native_agent.trained_steps = trained_steps
 
     def init_hidden(self, batch_size):
-        self.hidden_states = self.agent.init_hidden().unsqueeze(0).expand(batch_size, self.n_agents, -1)  # bav
+        native_hidden_states = self.native_agent.init_hidden().unsqueeze(0).expand(batch_size, self.n_agents, -1)  # bav
+        specific_hidden_states = [
+            agent.init_hidden().unsqueeze(0).expand(batch_size, 1, -1)  # bav
+            for agent in self.specific_agents.values()
+        ]
 
     def parameters(self):
-        return self.agent.parameters()
+        params = []
+        params += self.native_agent.parameters()
+        [params + list(agent.parameters()) for agent in self.specific_agents.values()]
+        return params
 
-    def load_state(self, other_mac: BasicMAC):
-        self.agent.load_state_dict(other_mac.agent.state_dict())
+    def load_state(self, other_mac: CombinedMAC):
+        self.native_agent.load_state_dict(other_mac.native_agent.state_dict())
+        [
+            agent.load_state_dict(other_mac.specific_agents[aid].state_dict())
+            for aid, agent in enumerate(self.specific_agents.items())
+        ]
 
     def cuda(self):
-        self.agent.cuda()
+        self.native_agent.cuda()
+        [agent.cuda() for agent in self.specific_agents.values()]
 
     def save_models(self, path, name):
-        th.save(self.agent.state_dict(), "{}/{}agent.th".format(path, name))
+        th.save(self.native_agent.state_dict(), "{}/{}agent_native.th".format(path, name))
+        [
+            th.save(agent.state_dict(), "{}/{}agent_specific_{}.th".format(path, name, i))
+            for i, agent in enumerate(self.specific_agents.values())
+        ]
 
     def load_models(self, path, name):
-        self.agent.load_state_dict(
-            th.load("{}/{}agent.th".format(path, name), map_location=lambda storage, loc: storage))
+        self.native_agent.load_state_dict(
+            th.load("{}/{}agent_native.th".format(path, name), map_location=lambda storage, loc: storage))
+        [
+            agent.load_state_dict(th.load("{}/{}agent_specific_{}.th".format(path, name, aid), lambda storage, loc: storage))
+            for aid, agent in enumerate(self.specific_agents.items())
+        ]
 
     def _build_agents(self, input_shape):
         return agent_REGISTRY[self.args.agent](input_shape, self.args)

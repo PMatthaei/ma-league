@@ -151,8 +151,9 @@ class MainLogger:
         self._sacred_logger = CustomSacredLogger(sacred_run_dict)
 
     def update_loggers(self, args):
-        self._tensorboard_logger.n_actions = args.n_actions
-        self._tensorboard_logger.n_agents = args.n_agents
+        if self._tensorboard_logger:
+            self._tensorboard_logger.n_actions = args.n_actions
+            self._tensorboard_logger.n_agents = args.n_agents
 
     def log_console(self):
         self._console_logger.log(self.stats)
