@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import List
+
 from controllers.multi_agent_controller import MultiAgentController
 from exceptions.mac_exceptions import HiddenStateNotInitialized
 from modules.agents import REGISTRY as agent_REGISTRY, Agent
@@ -17,22 +19,40 @@ class CombinedMAC(MultiAgentController):
         :param args:
         """
         self.n_agents = args.n_agents
+        self.n_actions = args.n_actions
         self.args = args
         input_shape = self._get_input_shape(scheme)
-        self.native_agent = self._build_agents(input_shape)  # Single sharing native network for the Multi-Agent
+        self.agent = self._build_agents(input_shape)  # Single sharing native network for the Multi-Agent
         self.specific_agents = dict()  # Dictionary holding the specific agent network for a given agent
+
         self.agent_output_type = args.agent_output_type
 
         self.action_selector = action_REGISTRY[args.action_selector](args)
 
-        self.hidden_states = None
+        self.native_hidden_states = None
+        self.specific_hidden_states = None
+
+        self._all_ids = set(range(self.n_agents))
+
+    @property
+    def n_native_agents(self):
+        return self.n_agents - self.n_specific_agents
+
+    @property
+    def n_specific_agents(self):
+        return len(self.specific_agents)
+
+    @property
+    def native_agents_ids(self):
+        return list(self._all_ids.difference(self.specific_agents_ids))
+
+    @property
+    def specific_agents_ids(self):
+        return list(self.specific_agents.keys())  # Agent IDs that use specific network for inference instead of native
 
     def select_actions(self, ep_batch, t_ep, t_env, bs=slice(None), test_mode=False):
-        # Only select available actions for the selected batch elements in bs
         avail_actions = ep_batch["avail_actions"][:, t_ep]
-        # Run forward propagation for the batch -> Q-values
         agent_outs = self.forward(ep_batch, t_ep, test_mode=test_mode)
-        # Choose action by f.e. epsilon-greedy
         chosen_actions, is_greedy = self.action_selector.select(agent_outs[bs], avail_actions[bs], t_env, test_mode)
         return chosen_actions, is_greedy
 
@@ -46,16 +66,11 @@ class CombinedMAC(MultiAgentController):
         """
         self.specific_agents.update({aid: agent})
 
-    def _get_specific_agents_ids(self):
-        return self.specific_agents.keys() # All agents that rely on a specific network for inference instead of native
-
     def forward(self, ep_batch, t, test_mode=False):
-        agent_inputs = self._build_inputs(ep_batch, t)
+        native_inputs, specific_inputs = self._build_inputs(ep_batch, t)
         avail_actions = ep_batch["avail_actions"][:, t]
-        if self.hidden_states is None:
-            raise HiddenStateNotInitialized()
 
-        agent_outs = self._compute_agent_outputs(agent_inputs)
+        agent_outs = self._compute_agent_outputs(native_inputs, specific_inputs, ep_batch.batch_size)
 
         # Softmax the agent outputs if they're policy logits
         if self.agent_output_type == "pi_logits":
@@ -82,51 +97,53 @@ class CombinedMAC(MultiAgentController):
 
         return agent_outs.view(ep_batch.batch_size, self.n_agents, -1)
 
-    def _compute_agent_outputs(self, agent_inputs):
-
-        agent_outs, self.hidden_states = self.native_agent(agent_inputs, self.hidden_states)
-        specific_outs = [agent(agent_inputs[:, aid, :]) for aid, agent in self.specific_agents.items()]
-        return agent_outs
+    def _compute_agent_outputs(self, native_inputs, specific_inputs, batch_size):
+        native_agent_outs, self.native_hidden_states = self.agent(native_inputs, self.native_hidden_states)
+        agent_outs = native_agent_outs.view(batch_size, self.n_agents, -1)
+        for aid, specific_agent in self.specific_agents.items():
+            agent_outs[:, aid, :], self.specific_hidden_states[aid] = specific_agent(specific_inputs[aid, :].view(batch_size, -1), self.specific_hidden_states[aid])
+        return agent_outs.view(batch_size * self.n_agents, -1)
 
     def update_trained_steps(self, trained_steps):
-        self.native_agent.trained_steps = trained_steps
+        self.agent.trained_steps = trained_steps
 
     def init_hidden(self, batch_size):
-        native_hidden_states = self.native_agent.init_hidden().unsqueeze(0).expand(batch_size, self.n_agents, -1)  # bav
-        specific_hidden_states = [
-            agent.init_hidden().unsqueeze(0).expand(batch_size, 1, -1)  # bav
-            for agent in self.specific_agents.values()
-        ]
+        self.native_hidden_states = self.agent.init_hidden().unsqueeze(0).expand(batch_size, self.n_agents, -1)
+        self.specific_hidden_states = {
+            aid: agent.init_hidden().unsqueeze(0).expand(batch_size, 1, -1)  # bav
+            for aid, agent in self.specific_agents.items()
+        }
 
     def parameters(self):
         params = []
-        params += self.native_agent.parameters()
+        params += self.agent.parameters()
         [params + list(agent.parameters()) for agent in self.specific_agents.values()]
         return params
 
     def load_state(self, other_mac: CombinedMAC):
-        self.native_agent.load_state_dict(other_mac.native_agent.state_dict())
+        self.agent.load_state_dict(other_mac.agent.state_dict())
         [
             agent.load_state_dict(other_mac.specific_agents[aid].state_dict())
-            for aid, agent in enumerate(self.specific_agents.items())
+            for aid, agent in self.specific_agents.items()
         ]
 
     def cuda(self):
-        self.native_agent.cuda()
+        self.agent.cuda()
         [agent.cuda() for agent in self.specific_agents.values()]
 
     def save_models(self, path, name):
-        th.save(self.native_agent.state_dict(), "{}/{}agent_native.th".format(path, name))
+        th.save(self.agent.state_dict(), "{}/{}agent_native.th".format(path, name))
         [
             th.save(agent.state_dict(), "{}/{}agent_specific_{}.th".format(path, name, i))
-            for i, agent in enumerate(self.specific_agents.values())
+            for i, agent in self.specific_agents.items()
         ]
 
     def load_models(self, path, name):
-        self.native_agent.load_state_dict(
+        self.agent.load_state_dict(
             th.load("{}/{}agent_native.th".format(path, name), map_location=lambda storage, loc: storage))
         [
-            agent.load_state_dict(th.load("{}/{}agent_specific_{}.th".format(path, name, aid), lambda storage, loc: storage))
+            agent.load_state_dict(
+                th.load("{}/{}agent_specific_{}.th".format(path, name, aid), lambda storage, loc: storage))
             for aid, agent in enumerate(self.specific_agents.items())
         ]
 
@@ -134,16 +151,6 @@ class CombinedMAC(MultiAgentController):
         return agent_REGISTRY[self.args.agent](input_shape, self.args)
 
     def _build_inputs(self, batch, t):
-        """
-        Select data from the batch which should be served as a input to the agent network.
-        Assumes homogeneous agents with flat observations.
-        Other MACs might want to e.g. delegate building inputs to each agent
-        Runs in every forward pass
-        :param batch:
-        :param t:
-        :return:
-        """
-
         bs = batch.batch_size
         inputs = [batch["obs"][:, t]]
         if self.args.obs_last_action:
@@ -154,8 +161,9 @@ class CombinedMAC(MultiAgentController):
         if self.args.obs_agent_id:
             inputs.append(th.eye(self.n_agents, device=batch.device).unsqueeze(0).expand(bs, -1, -1))
 
-        inputs = th.cat([x.reshape(bs * self.n_agents, -1) for x in inputs], dim=1)
-        return inputs
+        native_inputs = th.cat([x.reshape(bs * self.n_agents, -1) for x in inputs], dim=1)
+        specific_inputs = th.cat([x.reshape(self.n_agents, -1) for x in inputs], dim=1)
+        return native_inputs, specific_inputs
 
     def _get_input_shape(self, scheme):
         input_shape = scheme["obs"]["vshape"]

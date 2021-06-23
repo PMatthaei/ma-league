@@ -32,12 +32,12 @@ class DistinctMAC(BasicMAC):
         for i, agent in enumerate(self.agents):
             agent_out, self.hidden_states[i] = agent(agent_inputs[:, i, :], self.hidden_states[i])
             agent_outs.append(agent_out)
-        agent_outs = th.stack(agent_outs)
+        agent_outs = th.cat(agent_outs, dim=0)
         return agent_outs
 
     def init_hidden(self, batch_size):
         self.hidden_states = [
-            agent.init_hidden().unsqueeze(0).expand(batch_size, 1, -1)  # bav
+            agent.init_hidden().expand(batch_size, 1, -1)  # bav
             for agent in self.agents
         ]
 
