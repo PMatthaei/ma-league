@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Dict
 
 from controllers.multi_agent_controller import MultiAgentController
 from exceptions.mac_exceptions import HiddenStateNotInitialized
@@ -34,6 +34,16 @@ class CombinedMAC(MultiAgentController):
 
         self._all_ids = set(range(self.n_agents))
 
+    def replace_agent(self, aid: int, agent: Agent):
+        """
+        Replaces inference for the given agent with id = aid with the inference of the provided agent by adding into the
+        dict.
+        :param aid:
+        :param agent:
+        :return:
+        """
+        self.specific_agents.update({aid: agent})
+
     @property
     def n_native_agents(self):
         return self.n_agents - self.n_specific_agents
@@ -55,16 +65,6 @@ class CombinedMAC(MultiAgentController):
         agent_outs = self.forward(ep_batch, t_ep, test_mode=test_mode)
         chosen_actions, is_greedy = self.action_selector.select(agent_outs[bs], avail_actions[bs], t_env, test_mode)
         return chosen_actions, is_greedy
-
-    def replace_agent(self, aid: int, agent: Agent):
-        """
-        Replaces inference for the given agent with id = aid with the inference of the provided agent by adding into the
-        dict.
-        :param aid:
-        :param agent:
-        :return:
-        """
-        self.specific_agents.update({aid: agent})
 
     def forward(self, ep_batch, t, test_mode=False):
         native_inputs, specific_inputs = self._build_inputs(ep_batch, t)
@@ -101,7 +101,8 @@ class CombinedMAC(MultiAgentController):
         native_agent_outs, self.native_hidden_states = self.agent(native_inputs, self.native_hidden_states)
         agent_outs = native_agent_outs.view(batch_size, self.n_agents, -1)
         for aid, specific_agent in self.specific_agents.items():
-            agent_outs[:, aid, :], self.specific_hidden_states[aid] = specific_agent(specific_inputs[aid, :].view(batch_size, -1), self.specific_hidden_states[aid])
+            agent_outs[:, aid, :], self.specific_hidden_states[aid] = specific_agent(
+                specific_inputs[aid, :].view(batch_size, -1), self.specific_hidden_states[aid])
         return agent_outs.view(batch_size * self.n_agents, -1)
 
     def update_trained_steps(self, trained_steps):
@@ -120,11 +121,11 @@ class CombinedMAC(MultiAgentController):
         [params + list(agent.parameters()) for agent in self.specific_agents.values()]
         return params
 
-    def load_state(self, other_mac: CombinedMAC):
-        self.agent.load_state_dict(other_mac.agent.state_dict())
+    def load_state(self, other_mac: CombinedMAC, agent: Agent = None, specific_agents: Dict[int, Agent] = None):
+        self.agent.load_state_dict(agent.state_dict() if agent is not None else other_mac.agent.state_dict())
         [
-            agent.load_state_dict(other_mac.specific_agents[aid].state_dict())
-            for aid, agent in self.specific_agents.items()
+            agent.load_state_dict(specific_agents[i].state_dict() if specific_agents is not None else other_mac.specific_agents[i].state_dict())
+            for i, agent in enumerate(self.specific_agents.items())
         ]
 
     def cuda(self):

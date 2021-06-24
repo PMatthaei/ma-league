@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from controllers.multi_agent_controller import MultiAgentController
 from exceptions.mac_exceptions import HiddenStateNotInitialized
-from modules.agents import REGISTRY as agent_REGISTRY
+from modules.agents import REGISTRY as agent_REGISTRY, Agent
 from components.action_selectors import REGISTRY as action_REGISTRY
 import torch as th
 
@@ -80,8 +80,8 @@ class BasicMAC(MultiAgentController):
     def parameters(self):
         return self.agent.parameters()
 
-    def load_state(self, other_mac: BasicMAC):
-        self.agent.load_state_dict(other_mac.agent.state_dict())
+    def load_state(self, other_mac: BasicMAC, agent=None):
+        self.agent.load_state_dict(agent.state_dict() if agent is not None else other_mac.agent.state_dict())
 
     def cuda(self):
         self.agent.cuda()

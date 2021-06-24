@@ -20,8 +20,8 @@ class LeaguePlayRun(SelfPlayRun):
         # WARN: Assuming the away agent uses the same buffer scheme!!
         self.away_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
 
-    def set_away_agent(self, away: Agent):
-        self.away_mac.agent = away
+    def update_away_agent(self, away: Agent):
+        self.away_mac.load_state(other_mac=None, agent=away)
 
     def _test(self, n_test_runs):
         self.last_test_T = self.stepper.t_env

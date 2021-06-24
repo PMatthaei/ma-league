@@ -126,7 +126,7 @@ class QLearner(Learner):
             self.log_stats_t = t_env
 
     def _update_targets(self):
-        self.target_mac.load_state(self.mac)
+        self.target_mac.load_state(other_mac=self.mac)
         if self.mixer is not None:
             self.target_mixer.load_state_dict(self.mixer.state_dict())
         self.logger.info("Updated {0}target network.".format(self.name))
