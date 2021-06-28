@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict, Sized
 from typing import Any
-
+import numpy as np
 from custom_logging.collectibles import Collectibles
 from custom_logging.platforms import CustomSacredLogger, CustomTensorboardLogger, CustomConsoleLogger
 from custom_logging.utils.enums import Originator
@@ -141,7 +141,8 @@ class MainLogger:
             data = self.episodal_stats[collectible][mode]
         else:
             data = self.episodal_stats[collectible][mode][origin]
-        processed = [func(data) for func in collectible.preprocessing if isinstance(data, Sized) and len(data) > 0]
+        processed = [func(data) if isinstance(data, Sized) and len(data) > 0 else np.nan for func in
+                     collectible.preprocessing]
         return processed
 
     def setup_tensorboard(self, log_dir):

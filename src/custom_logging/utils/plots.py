@@ -1,5 +1,6 @@
 import io
 import math
+from collections import Sized
 from typing import List
 
 import matplotlib.pyplot as plt
@@ -32,7 +33,7 @@ def plot_greedy_actions(greedy_actions: dict, n_actions: int, n_agents: int, max
         ax = fig.add_subplot(111, projection='3d')
 
         for i, (t, all_greedy_actions_t) in enumerate(greedy_actions.items()):  # Iterate data of all timesteps
-            if len(all_greedy_actions_t) < n_agents:
+            if not isinstance(all_greedy_actions_t, list) or len(all_greedy_actions_t) < n_agents:
                 continue
 
             greedy_actions_a = all_greedy_actions_t[a]

@@ -10,6 +10,7 @@ env_args:
   global_reward: True
   grid_size: 10
   match_build_plan: medium_1h_4t
+  ai: focus
 
 test_greedy: True
 test_nepisode: 32

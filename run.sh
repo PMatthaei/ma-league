@@ -31,7 +31,7 @@ base_command="python src/main.py "
 #
 title="Select experiment mode:"
 prompt="Pick:"
-mode_options=("Normal Play" "Self Play" "League Play" "JPC Evaluation" "Quit")
+mode_options=("Normal Play" "Self Play" "League Play" "League Play V2" "JPC Evaluation" "Quit")
 echo "$title"
 PS3="$prompt "
 select mode in "${mode_options[@]}"; do
@@ -49,16 +49,22 @@ select mode in "${mode_options[@]}"; do
 
   3)
     base_command="python src/league_main.py "
-    mode="play_mode=league "
+    mode="play_mode=league --league-config=default "
     break
     ;;
 
   4)
-    mode="play_mode=self eval=jpc "
+    base_command="python src/league_main_v2.py "
+    mode="play_mode=league --league-config=default "
     break
     ;;
 
   5)
+    mode="play_mode=self eval=jpc "
+    break
+    ;;
+
+  6)
     echo "User forced quit."
     exit
     ;;
@@ -159,6 +165,7 @@ select save_model in "${save_options[@]}"; do
   esac
 done
 
+
 #
 #
 # PARALLELISM SELECT
@@ -204,7 +211,7 @@ select parallel in "${parallel_options[@]}"; do
   esac
 done
 
-run=$base_command$alg$env_config$mode$save_model$save_model_interval$parallel$instances" headless_controls=False"
+run=$base_command$alg$env_config$mode$save_model$save_model_interval$parallel$instances" headless_controls=False use_tensorboard=False"
 
 # Split run command string to array of strings
 read -ra run -d '' <<<"$run"

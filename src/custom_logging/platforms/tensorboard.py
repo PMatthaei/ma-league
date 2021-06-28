@@ -3,6 +3,7 @@ from collections import defaultdict
 from torch.utils.tensorboard import SummaryWriter
 
 from custom_logging.utils.plots import plot_greedy_actions
+import matplotlib.pyplot as plt
 
 
 class CustomTensorboardLogger:
@@ -23,6 +24,7 @@ class CustomTensorboardLogger:
             figures = plot_greedy_actions(self._custom_temporal_data[key], self.n_actions, self.n_agents)
             for i, figure in enumerate(figures):
                 self.log_plot(f"{key}_agent_{i}", figure, t)
+            plt.close('all')
         else:
             raise NotImplementedError(f"Type {log_type} is not implemented for logging to Tensorboard.")
 
