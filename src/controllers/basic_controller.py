@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from controllers.multi_agent_controller import MultiAgentController
 from exceptions.mac_exceptions import HiddenStateNotInitialized
-from modules.agents import REGISTRY as agent_REGISTRY, Agent
-from components.action_selectors import REGISTRY as action_REGISTRY
+from modules.agents import REGISTRY as agent_REGISTRY
 import torch as th
 
 
@@ -11,19 +10,18 @@ class BasicMAC(MultiAgentController):
     def __init__(self, scheme, groups, args):
         """
         This multi-agent controller shares parameters between agents by using a single fully connected network.
+
+        Input Building:
+        Select data from the batch which should be served as a input to the agent network.
+        Assumes homogeneous agents with flat observations.
+        Other MACs might want to e.g. delegate building inputs to each agent
+        Runs in every forward pass
+
         :param scheme:
         :param groups:
         :param args:
         """
-        self.n_agents = args.n_agents
-        self.args = args
-        input_shape = self._get_input_shape(scheme)
-        self.agent = self._build_agents(input_shape)
-        self.agent_output_type = args.agent_output_type
-
-        self.action_selector = action_REGISTRY[args.action_selector](args)
-
-        self.hidden_states = None
+        super().__init__(scheme, groups, args)
 
     def select_actions(self, ep_batch, t_ep, t_env, bs=slice(None), test_mode=False):
         # Only select available actions for the selected batch elements in bs
@@ -36,7 +34,6 @@ class BasicMAC(MultiAgentController):
 
     def forward(self, ep_batch, t, test_mode=False):
         agent_inputs = self._build_inputs(ep_batch, t)
-        avail_actions = ep_batch["avail_actions"][:, t]
         if self.hidden_states is None:
             raise HiddenStateNotInitialized()
 
@@ -45,25 +42,7 @@ class BasicMAC(MultiAgentController):
         # Softmax the agent outputs if they're policy logits
         if self.agent_output_type == "pi_logits":
 
-            if getattr(self.args, "mask_before_softmax", True):
-                # Make the logits for unavailable actions very negative to minimise their affect on the softmax
-                reshaped_avail_actions = avail_actions.reshape(ep_batch.batch_size * self.n_agents, -1)
-                agent_outs[reshaped_avail_actions == 0] = -1e10
-
-            agent_outs = th.nn.functional.softmax(agent_outs, dim=-1)
-            if not test_mode:
-                # Epsilon floor
-                epsilon_action_num = agent_outs.size(-1)
-                if getattr(self.args, "mask_before_softmax", True):
-                    # With probability epsilon, we will pick an available action uniformly
-                    epsilon_action_num = reshaped_avail_actions.sum(dim=1, keepdim=True).float()
-
-                agent_outs = ((1 - self.action_selector.epsilon) * agent_outs
-                              + th.ones_like(agent_outs) * self.action_selector.epsilon / epsilon_action_num)
-
-                if getattr(self.args, "mask_before_softmax", True):
-                    # Zero out the unavailable actions
-                    agent_outs[reshaped_avail_actions == 0] = 0.0
+            agent_outs = self._softmax(agent_outs, ep_batch, t, test_mode)
 
         return agent_outs.view(ep_batch.batch_size, self.n_agents, -1)
 
@@ -97,16 +76,6 @@ class BasicMAC(MultiAgentController):
         return agent_REGISTRY[self.args.agent](input_shape, self.args)
 
     def _build_inputs(self, batch, t):
-        """
-        Select data from the batch which should be served as a input to the agent network.
-        Assumes homogeneous agents with flat observations.
-        Other MACs might want to e.g. delegate building inputs to each agent
-        Runs in every forward pass
-        :param batch:
-        :param t:
-        :return:
-        """
-
         bs = batch.batch_size
         inputs = [batch["obs"][:, t]]
         if self.args.obs_last_action:

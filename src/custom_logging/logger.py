@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import defaultdict, Sized
 from typing import Any
 
 from custom_logging.collectibles import Collectibles
@@ -35,14 +35,14 @@ class MainLogger:
 
         self.stats = defaultdict(dd_list)
 
-        self._build_collectible_dict()
+        self._build_collectible_episodal_stats_dict()
 
         self.test_mode = False
         self.test_n_episode = 0
         self.runner_log_interval = 0
         self.log_train_stats_t = -1000000  # Log first run
 
-    def _build_collectible_dict(self):
+    def _build_collectible_episodal_stats_dict(self):
         self.episodal_stats = defaultdict(dd_collectible)
         for collectible in Collectibles:
             for k in self.episodal_stats[collectible].keys():
@@ -52,7 +52,7 @@ class MainLogger:
                     is_dict = collectible.collection_type is dict
                     self.episodal_stats[collectible][k] = defaultdict(dd_dict if is_dict else dd_list)
 
-    def info(self, info_str):
+    def info(self, info_str: str):
         self._console_logger.console.info(info_str)
 
     def log(self, t_env):
@@ -141,7 +141,7 @@ class MainLogger:
             data = self.episodal_stats[collectible][mode]
         else:
             data = self.episodal_stats[collectible][mode][origin]
-        processed = [func(data) for func in collectible.preprocessing]
+        processed = [func(data) for func in collectible.preprocessing if isinstance(data, Sized) and len(data) > 0]
         return processed
 
     def setup_tensorboard(self, log_dir):

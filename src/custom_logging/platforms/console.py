@@ -29,14 +29,22 @@ class CustomConsoleLogger:
         Format provided stats into a single string and print into console.
         :return:
         """
+        def _skip(collectible: str):
+            """
+            Decide which elements of the stats dict to skip.
+            :param collectible:
+            :return:
+            """
+            return collectible == "episode" or "actions_taken_extract_greedy_actions" in collectible
+
         log_str = "Recent Stats | t_env: {:>10} | Episode: {:>8}\n".format(*stats["episode"][-1])
         i = 0
-        for (k, v) in sorted(stats.items()):
-            if k == "episode" or "actions_taken_extract_greedy_actions" in k:
+        for (collectible, data) in sorted(stats.items()):
+            if _skip(collectible):
                 continue
             i += 1
-            window = 5 if k != "epsilon" else 1
-            item = "{:.4f}".format(np.mean([x[1] for x in stats[k][-window:]]))
-            log_str += "{:<25}{:>8}".format(k + ":", item)
+            window = 5 if collectible != "epsilon" else 1
+            item = "{:.4f}".format(np.mean([x[1] for x in stats[collectible][-window:]]))
+            log_str += "{:<25}{:>8}".format(collectible + ":", item)
             log_str += "\n" if i % 4 == 0 else "\t"
         return log_str
