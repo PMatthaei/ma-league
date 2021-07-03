@@ -48,7 +48,7 @@ def run(_run, _config, _log):
     args = SimpleNamespace(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"
 
-    logger = MainLogger(_log, args)
+    main_logger = MainLogger(_log, args)
 
     # configure tensorboard logger
     unique_token = "{}__{}".format(args.name, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
@@ -56,10 +56,10 @@ def run(_run, _config, _log):
     if args.use_tensorboard:
         tb_logs_direc = os.path.join(dirname(dirname(abspath(__file__))), "results", "tb_logs")
         tb_exp_direc = os.path.join(tb_logs_direc, "{}").format(unique_token)
-        logger.setup_tensorboard(tb_exp_direc)
+        main_logger.setup_tensorboard(tb_exp_direc)
 
     # sacred is on by default
-    logger.setup_sacred(_run)
+    main_logger.setup_sacred(_run)
 
     # Build league teams
     team_size = _config["team_size"]
@@ -77,7 +77,7 @@ def run(_run, _config, _log):
     procs = []  # All running processes representing an agent playing in the league
     payoff = PayoffV2(payoff_dict=payoff_dict)  # Hold results of each match
     agent_pool = AgentPool(agents_dict=agents_dict)  # Hold each trained agent
-    matchmaking = Matchmaking(agent_pool=agent_pool, payoff=payoff)
+    matchmaking = Matchmaking(agent_pool=agent_pool, payoff=payoff)  # Match agents against each other
 
     # Communication
     in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(len(teams))])
@@ -93,7 +93,7 @@ def run(_run, _config, _log):
             agent_pool=agent_pool,
             queue=(in_q, out_q),
             args=args,
-            logger=logger,
+            logger=main_logger,
             sync_barrier=sync_barrier
         )
         procs.append(proc)

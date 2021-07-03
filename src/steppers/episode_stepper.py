@@ -6,7 +6,7 @@ from custom_logging.utils.enums import Originator
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
-from exceptions.runner_exceptions import RunnerMACNotInitialized
+from exceptions.runner_exceptions import MultiAgentControllerNotInitialized
 from steppers.utils.stepper_utils import get_policy_team_id
 
 
@@ -78,7 +78,7 @@ class EpisodeStepper:
         self.reset()
 
         if self.home_mac is None:
-            raise RunnerMACNotInitialized()
+            raise MultiAgentControllerNotInitialized()
 
         terminated = False
         episode_return = 0
@@ -154,7 +154,9 @@ class EpisodeStepper:
         self.logger.collect(Collectibles.WON, env_info["battle_won"][1], origin=Originator.AWAY)
         self.logger.collect(Collectibles.DRAW, env_info["draw"])
         self.logger.collect(Collectibles.EPISODE, self.t)
+        # Log epsilon from mac directly
         self.logger.log_stat("home_epsilon", self.epsilon, self.t)
+        # Log collectibles if conditions suffice
         self.logger.log(self.t_env)
 
         return self.home_batch, env_info

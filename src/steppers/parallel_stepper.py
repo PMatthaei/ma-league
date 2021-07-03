@@ -4,6 +4,8 @@ import torch
 from gym.vector.utils import CloudpickleWrapper
 from torch.multiprocessing import Queue
 
+from custom_logging.collectibles import Collectibles
+from custom_logging.utils.enums import Originator
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
@@ -113,8 +115,6 @@ class ParallelStepper:
         self.reset()
 
         self.logger.test_mode = test_mode
-        self.logger.test_n_episode = self.args.test_nepisode
-        self.logger.runner_log_interval = self.args.runner_log_interval
 
         all_terminated = False
         episode_returns = [0 for _ in range(self.batch_size)]
@@ -126,7 +126,7 @@ class ParallelStepper:
         running_envs = [idx for idx, terminated in enumerate(terminateds) if not terminated]
         env_infos = []  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
 
-        actions_batch = torch.zeros((self.batch_size, self.args.n_agents))
+        actions_batch = torch.zeros((self.batch_size, self.env_info["n_agents"]))
 
         while True:
 
@@ -206,8 +206,13 @@ class ParallelStepper:
         if not test_mode:
             self.t_env += self.env_steps_this_run
 
-        self.logger.collect_episode_returns(episode_returns, parallel=True)
-        self.logger.collect_episode_stats(env_infos, self.t, parallel=True, batch_size=self.batch_size, ep_lens=eps)
-        self.logger.add_stats(self.t_env, epsilons=self.home_mac.action_selector.epsilon)
+        # Send data collected during the episode - this data needs further processing
+        self.logger.collect(Collectibles.RETURN, episode_returns, origin=Originator.HOME, parallel=True)
+        self.logger.collect(Collectibles.WON, [env_info["battle_won"][0] for env_info in env_infos], origin=Originator.HOME)
+        self.logger.collect(Collectibles.WON, [env_info["battle_won"][1] for env_info in env_infos], origin=Originator.AWAY)
+        self.logger.collect(Collectibles.DRAW, [env_info["draw"] for env_info in env_infos])
+        self.logger.collect(Collectibles.EPISODE, self.t)
+        # Log collectibles if conditions suffice
+        self.logger.log(self.t_env)
 
-        return self.home_batch
+        return self.home_batch, env_infos

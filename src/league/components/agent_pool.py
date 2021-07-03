@@ -22,11 +22,16 @@ class AgentPool:
 
     @property
     def collected_teams(self) -> List[Team]:
+        """
+        :return: List of teams for which an agent exists in the pool
+        """
         return list(self._agents_dict.keys())
+
+    def sample(self) -> Tuple[Team, Agent]:
+        """
+        :return: Sample a random (team, agent) tuple
+        """
+        return random.choice(self._agents_dict.items())
 
     def can_sample(self) -> bool:
         return len(self._agents_dict) > 0
-
-    def sample(self) -> Tuple[Team, Agent]:
-        return random.choice(self._agents_dict.items())
-

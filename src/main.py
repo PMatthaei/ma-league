@@ -44,7 +44,7 @@ def run(_run, _config, _log):
     args.device = "cuda" if args.use_cuda else "cpu"
 
     # setup loggers
-    logger = MainLogger(_log, args)
+    main_logger = MainLogger(_log, args)
 
     # configure tensorboard logger
     unique_token = "{}__{}".format(args.name, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
@@ -52,26 +52,26 @@ def run(_run, _config, _log):
     if args.use_tensorboard:
         tb_logs_direc = os.path.join(dirname(dirname(abspath(__file__))), "results", "tb_logs")
         tb_exp_direc = os.path.join(tb_logs_direc, "{}").format(unique_token)
-        logger.setup_tensorboard(tb_exp_direc)
+        main_logger.setup_tensorboard(tb_exp_direc)
 
     # sacred is on by default
-    logger.setup_sacred(_run)
+    main_logger.setup_sacred(_run)
 
     # Run and train
     if _config['play_mode'] == "self":
         eval_method = _config['eval']
         if not eval_method:
             from runs.self_play_run import SelfPlayRun
-            play = SelfPlayRun(args=args, logger=logger)
+            play = SelfPlayRun(args=args, logger=main_logger)
         elif eval_method == "jpc":
             from eval.jpc_eval_run import JointPolicyCorrelationEvaluationRun
-            play = JointPolicyCorrelationEvaluationRun(args=args, logger=logger)
+            play = JointPolicyCorrelationEvaluationRun(args=args, logger=main_logger)
         else:
             from runs.self_play_run import SelfPlayRun
-            play = SelfPlayRun(args=args, logger=logger)
+            play = SelfPlayRun(args=args, logger=main_logger)
     else:
         from runs.normal_play_run import NormalPlayRun
-        play = NormalPlayRun(args=args, logger=logger)
+        play = NormalPlayRun(args=args, logger=main_logger)
 
     play.start()
 

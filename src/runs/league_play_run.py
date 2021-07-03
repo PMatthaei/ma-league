@@ -1,6 +1,5 @@
 from modules.agents.agent import Agent
 
-from controllers import REGISTRY as mac_REGISTRY
 from runs.self_play_run import SelfPlayRun
 
 

@@ -15,15 +15,15 @@ class Matchmaking:
         self._sampling_strategy = sampling_strategy
         pass
 
-    def get_match(self, team: Team) -> Tuple[Team, Agent]:
+    def get_match(self, home_team: Team) -> Tuple[Team, Agent]:
         """
         Find a opponent for the given team using various methods.
-        :param team:
+        :param home_team:
         :return:
         """
         teams = self._agent_pool.collected_teams
 
         if not self._agent_pool.can_sample():
-            return team, self._agent_pool[team]  # Self-Play if no one available
+            return home_team, self._agent_pool[home_team]  # Self-Play if no one available
 
         return self._agent_pool.sample()

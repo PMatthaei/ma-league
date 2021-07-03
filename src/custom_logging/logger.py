@@ -62,8 +62,8 @@ class MainLogger:
         :param t_env:
         :return:
         """
-        test_finished = any(
-            [len(rs) == self.test_n_episode for rs in self.episodal_stats[Collectibles.RETURN]["test"].values()])
+        test_entries = len(self.episodal_stats[Collectibles.RETURN]["test"][Originator.HOME]) # how many test results arrived
+        test_finished = test_entries == self.test_n_episode
         if self.test_mode and test_finished:  # Collect test data as long as test is running
             self._log_collectibles(t_env)  # ... then process and log collectibles
         elif t_env - self.log_train_stats_t >= self.runner_log_interval:  # Collect train data as defined via interval
@@ -95,13 +95,13 @@ class MainLogger:
         for collectible in Collectibles:
             if collectible.is_global:
                 processed_data = list(zip(collectible.keys, self.preprocess_collectible(collectible)))
-                for k, v in processed_data:  # Log all data generated from the collected data
+                for k, v in processed_data:  # Log all data generated from the collected data via the preprocessing
                     self.log_stat(f"{prefix}{k}", v, t, log_type=collectible.log_type)
                     self.episodal_stats[collectible][mode].clear()
             else:
                 for i, origin in enumerate(Originator.list()):
                     processed_data = list(zip(collectible.keys, self.preprocess_collectible(collectible, origin)))
-                    for k, v in processed_data:  # Log all data generated from the collected data
+                    for k, v in processed_data:
                         self.log_stat(f"{prefix}{origin}_{k}", v, t, log_type=collectible.log_type)
                     self.episodal_stats[collectible][mode][origin].clear()
 

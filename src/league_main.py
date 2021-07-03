@@ -46,7 +46,7 @@ def run(_run, _config, _log):
     args = SimpleNamespace(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"
 
-    logger = MainLogger(_log, args)
+    main_logger = MainLogger(_log, args)
 
     # configure tensorboard logger
     unique_token = "{}__{}".format(args.name, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
@@ -54,10 +54,10 @@ def run(_run, _config, _log):
     if args.use_tensorboard:
         tb_logs_direc = os.path.join(dirname(dirname(abspath(__file__))), "results", "tb_logs")
         tb_exp_direc = os.path.join(tb_logs_direc, "{}").format(unique_token)
-        logger.setup_tensorboard(tb_exp_direc)
+        main_logger.setup_tensorboard(tb_exp_direc)
 
     # sacred is on by default
-    logger.setup_sacred(_run)
+    main_logger.setup_sacred(_run)
 
     # Build league teams
     team_size = _config["team_size"]
@@ -90,7 +90,7 @@ def run(_run, _config, _log):
             players=players,
             queue=(in_q, out_q),
             args=args,
-            logger=logger,
+            logger=main_logger,
             sync_barrier=sync_barrier
         )
         procs.append(proc)
@@ -100,7 +100,7 @@ def run(_run, _config, _log):
 
     # Handle message communication within the league
     coordinator = LeagueCoordinator(
-        logger=logger,
+        logger=main_logger,
         players=players,
         queues=(in_queues, out_queues),
         payoff=payoff,
