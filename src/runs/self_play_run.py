@@ -9,8 +9,8 @@ class SelfPlayRun(NormalPlayRun):
 
     def __init__(self, args, logger, finish_callback=None, episode_callback=None):
         """
-        SelfPlay performs training of two multi-agents in the same environment,
-        thus causing inter-non-stationarity between two agents since the opposite agent becomes part of the environment.
+        Self-Play replaces the opposing agent previously controlled by a static scripted AI with another static policy
+        controlled agent.
         :param args:
         :param logger:
         :param finish_callback:
@@ -24,8 +24,6 @@ class SelfPlayRun(NormalPlayRun):
 
     def _update_shapes(self):
         shapes = super()._update_shapes()
-        # Override number of agents with per agent value
-
         total_n_agents = self.env_info["total_n_agents"]
         assert total_n_agents % 2 == 0, f"{total_n_agents} agents do not fit in the symmetric two-team scenario."
         per_team_n_agents = int(total_n_agents / 2)
@@ -74,7 +72,7 @@ class SelfPlayRun(NormalPlayRun):
 
     def evaluate_mean_returns(self, episode_n=1):
         self.logger.info("Evaluate for {} episodes.".format(episode_n))
-        home_ep_rewards = th.zeros(episode_n, device=th.device('cuda:0'))
+        home_ep_rewards = th.zeros(episode_n)
         away_ep_rewards = home_ep_rewards.detach().clone()
 
         self._init_stepper()

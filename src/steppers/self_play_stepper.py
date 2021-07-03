@@ -10,12 +10,13 @@ class SelfPlayStepper(EpisodeStepper):
 
     def __init__(self, args, logger):
         """
-        Stepper which is passing actions of two multi-agents (home and opponent) into the same environment.
-        The stepper steps the environment and creates two batches of episode data one per multi-agent.
-        The resulting batches as well as the final env_info are returned per run()-cycle and
+        Stepper which is passing actions of two policies (home and opponent) into the same environment instead of
+        hading one teams action selection over to an scripted AI.
+        The stepper steps the environment and creates two batches of episode data one per policy.
+        The resulting batches as well as the final env_info are returned per run()-cycle and can be
         served to its corresponding learner and replay buffer. The Self-Play Stepper returns both batches although
-        in Self-Play Training only the "home" multi-agent should learn to prevent a non-stationary environment if the
-        "away" batch is also used for learning and updating the underlying "away" Multi-Agent.
+        in Self-Play Training only the "home" multi-agent should learn to prevent a non-stationary environment in case
+         the "away" batch is used for learning and updating the underlying "away" Multi-Agent.
 
         :param args:
         :param logger:

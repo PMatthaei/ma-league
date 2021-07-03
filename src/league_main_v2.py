@@ -55,7 +55,8 @@ def run(_run, _config, _log):
     args = SimpleNamespace(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"
 
-    logger = MainLogger(_log)
+    logger = MainLogger(_log, args)
+
     _log.info("Experiment Parameters:")
     experiment_params = pprint.pformat(_config,
                                        indent=4,

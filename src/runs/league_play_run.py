@@ -17,12 +17,10 @@ class LeaguePlayRun(SelfPlayRun):
         super().__init__(args, logger)
         self.finish_callback = finish_callback
         self.episode_callback = on_episode_end
-        # WARN: Assuming the away agent uses the same buffer scheme!!
-        self.away_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
 
-    def update_away_agent(self, away: Agent):
+    def load_away_agent(self, away: Agent):
         self.away_mac.load_state(other_mac=None, agent=away)
 
     def _test(self, n_test_runs):
         self.last_test_T = self.stepper.t_env
-        pass  # Skip tests in league
+        pass  # Skip tests in league to save computing time

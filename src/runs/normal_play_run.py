@@ -19,7 +19,7 @@ class NormalPlayRun(ExperimentRun):
 
     def __init__(self, args, logger, on_episode_end=None):
         """
-        NormalPlay performs the standard way of training a single multi-agent against a static opponent.
+        NormalPlay performs the standard way of training a single multi-agent against a static scripted AI opponent.
         :param args:
         :param logger:
         """
@@ -221,3 +221,17 @@ class NormalPlayRun(ExperimentRun):
             self.stepper.save_replay()
 
         self.stepper.close_env()
+
+    def evaluate_mean_returns(self, episode_n=1):
+        self.logger.info("Evaluate for {} episodes.".format(episode_n))
+        ep_rewards = th.zeros(episode_n)
+
+        self._init_stepper()
+
+        for i in range(episode_n):
+            episode_batch, env_info = self.stepper.run(test_mode=True)
+            ep_rewards[i] = th.sum(episode_batch["reward"].flatten())
+
+        self._finish()
+
+        return th.mean(ep_rewards)

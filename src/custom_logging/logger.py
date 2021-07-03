@@ -156,4 +156,6 @@ class MainLogger:
         self._console_logger.log(self.stats)
 
     def update_shapes(self, shapes):
-        self._tensorboard_logger.shapes = shapes
+        # TODO: manage meta data for logging somewhere else
+        if self._tensorboard_logger:
+            self._tensorboard_logger.shapes = shapes
