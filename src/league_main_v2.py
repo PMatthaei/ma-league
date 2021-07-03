@@ -1,39 +1,34 @@
 import os
+import datetime
+import sys
+import threading
+import numpy as np
+import torch as th
+
 from random import sample
 
 from league.components.agent_pool import AgentPool
 from league.components.matchmaking import Matchmaking
 from league.components.payoff_v2 import PayoffV2
 from league.processes.league_process_v2 import LeagueProcessV2
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
-import datetime
-import pprint
-import sys
-import threading
 from copy import deepcopy
-
 from torch.multiprocessing import Barrier, Queue, Manager
 from os.path import dirname, abspath
-
-import torch
 from maenv.core import RoleTypes, UnitAttackTypes
-
 from sacred import SETTINGS, Experiment
 from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
-
 from custom_logging.platforms import CustomConsoleLogger
 from league.utils.team_composer import TeamComposer
 from custom_logging.logger import MainLogger
 from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy, \
     set_agents_only
 
-import numpy as np
-import torch as th
 from types import SimpleNamespace
 
 from utils.run_utils import args_sanity_check
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
 logger = CustomConsoleLogger.console_logger()
@@ -81,7 +76,7 @@ def run(_run, _config, _log):
     # Infrastructure
     procs = []  # All running processes representing an agent playing in the league
     payoff = PayoffV2(payoff_dict=payoff_dict)  # Hold results of each match
-    agent_pool = AgentPool(agents_dict=agents_dict) # Hold each trained agent
+    agent_pool = AgentPool(agents_dict=agents_dict)  # Hold each trained agent
     matchmaking = Matchmaking(agent_pool=agent_pool, payoff=payoff)
 
     # Communication
@@ -103,7 +98,7 @@ def run(_run, _config, _log):
         )
         procs.append(proc)
 
-    torch.multiprocessing.set_start_method('spawn', force=True)
+    th.multiprocessing.set_start_method('spawn', force=True)
     [r.start() for r in procs]
 
     # Wait for processes to finish

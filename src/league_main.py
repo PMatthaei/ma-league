@@ -1,25 +1,19 @@
 import os
-from random import sample
 
-from league.components.agent_pool import AgentPool
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 import datetime
-import pprint
 import sys
 import threading
-from copy import deepcopy
+import numpy as np
+import torch as th
 
+from copy import deepcopy
+from random import sample
 from torch.multiprocessing import Barrier, Queue, Manager
 from os.path import dirname, abspath
-
-import torch
 from maenv.core import RoleTypes, UnitAttackTypes
-
 from sacred import SETTINGS, Experiment
 from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
-
 from custom_logging.platforms import CustomConsoleLogger
 from league import SimpleLeague
 from league.components.payoff import Payoff
@@ -30,12 +24,10 @@ from custom_logging.logger import MainLogger
 from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy, \
     set_agents_only
 
-import numpy as np
-import torch as th
 from types import SimpleNamespace
-
 from utils.run_utils import args_sanity_check
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
 logger = CustomConsoleLogger.console_logger()
 
@@ -103,7 +95,7 @@ def run(_run, _config, _log):
         )
         procs.append(proc)
 
-    torch.multiprocessing.set_start_method('spawn', force=True)
+    th.multiprocessing.set_start_method('spawn', force=True)
     [r.start() for r in procs]
 
     # Handle message communication within the league

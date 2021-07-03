@@ -1,27 +1,23 @@
 import os
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
+import sys
+import torch as th
 import datetime
-import pprint
 import threading
-from types import SimpleNamespace
-import torch
 
+from types import SimpleNamespace
 import numpy as np
 from os.path import dirname, abspath
 from copy import deepcopy
-
 from sacred import Experiment, SETTINGS
 from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
-import sys
-import torch as th
-
 from custom_logging.logger import MainLogger
 from custom_logging.platforms import CustomConsoleLogger
 from utils.main_utils import config_copy, get_config, recursive_dict_update, get_default_config, load_match_build_plan, \
     set_agents_only
 from utils.run_utils import args_sanity_check
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
 logger = CustomConsoleLogger.console_logger()
@@ -41,7 +37,7 @@ def run(_run, _config, _log):
         set_agents_only(_config)
 
     if _config["runner"] == "parallel" or _config['eval'] == "jpc":
-        torch.multiprocessing.set_start_method('spawn', force=True)
+        th.multiprocessing.set_start_method('spawn', force=True)
         # multiprocessing.set_start_method('spawn')
 
     args = SimpleNamespace(**_config)
