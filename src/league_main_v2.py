@@ -50,18 +50,10 @@ def run(_run, _config, _log):
     _config['play_mode'] = "self"
     set_agents_only(_config)
 
-    torch.multiprocessing.set_start_method('spawn', force=True)
-
     args = SimpleNamespace(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"
 
     logger = MainLogger(_log, args)
-
-    _log.info("Experiment Parameters:")
-    experiment_params = pprint.pformat(_config,
-                                       indent=4,
-                                       width=1)
-    _log.info("\n\n" + experiment_params + "\n")
 
     # configure tensorboard logger
     unique_token = "{}__{}".format(args.name, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
@@ -110,6 +102,8 @@ def run(_run, _config, _log):
             sync_barrier=sync_barrier
         )
         procs.append(proc)
+
+    torch.multiprocessing.set_start_method('spawn', force=True)
     [r.start() for r in procs]
 
     # Wait for processes to finish

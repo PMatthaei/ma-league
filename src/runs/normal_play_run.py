@@ -1,3 +1,4 @@
+import pprint
 import time
 from types import SimpleNamespace
 from typing import Dict
@@ -113,10 +114,13 @@ class NormalPlayRun(ExperimentRun):
 
     def start(self, play_time=None, train_callback=None):
         """
-
         :param play_time: Play the run for a certain time in seconds.
         :return:
         """
+        self.logger.info("Experiment Parameters:")
+        experiment_params = pprint.pformat(self.args.__dict__, indent=4, width=1)
+        self.logger.info("\n\n" + experiment_params + "\n")
+
         self._play_time = play_time
         self._init_stepper()
 
