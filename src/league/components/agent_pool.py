@@ -1,5 +1,5 @@
 import random
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 from league.utils.team_composer import Team
 from modules.agents import Agent
@@ -8,6 +8,10 @@ from modules.agents import Agent
 class AgentPool:
 
     def __init__(self, agents_dict: Dict[Team, Agent]):
+        """
+        Manages the current set of trained multi-agents which themselves are linked to their underlying team.
+        :param agents_dict:
+        """
         self._agents_dict = agents_dict
 
     def __setitem__(self, team: Team, value: Agent):
@@ -16,12 +20,13 @@ class AgentPool:
     def __getitem__(self, team: Team):
         return self._agents_dict[team]
 
+    @property
+    def collected_teams(self) -> List[Team]:
+        return list(self._agents_dict.keys())
+
     def can_sample(self) -> bool:
         return len(self._agents_dict) > 0
 
     def sample(self) -> Tuple[Team, Agent]:
         return random.choice(self._agents_dict.items())
 
-    def get_neighbors(self, team):
-        # TODO: get agents of teams which have a similar constellation
-        pass

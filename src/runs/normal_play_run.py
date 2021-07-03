@@ -1,4 +1,6 @@
 import time
+from types import SimpleNamespace
+from typing import Dict
 
 import torch as th
 
@@ -36,8 +38,10 @@ class NormalPlayRun(ExperimentRun):
         # Get env info from stepper
         self.env_info = self.stepper.get_env_info()
 
-        # Retrieve important data from the env and set to build schemes
-        self._set_scheme_meta()
+        # Retrieve important data from the env and set in args
+        shapes = self._update_shapes()
+
+        self.logger.update_shapes(shapes)
 
         # Default/Base scheme- call AFTER extracting env info
         self.groups, self.preprocess, self.scheme = self._build_schemes()
@@ -65,10 +69,14 @@ class NormalPlayRun(ExperimentRun):
         # Register in list of learners
         self.learners.append(self.home_learner)
 
-    def _set_scheme_meta(self):
-        self.args.n_agents = int(self.env_info["n_agents"])
-        self.args.n_actions = self.env_info["n_actions"]
-        self.args.state_shape = self.env_info["state_shape"]
+    def _update_shapes(self) -> Dict:
+        shapes = {
+            "n_agents": int(self.env_info["n_agents"]),
+            "n_actions": int(self.env_info["n_actions"]),
+            "state_shape": int(self.env_info["state_shape"])
+        }
+        self.args = SimpleNamespace(**{**vars(self.args), **shapes})
+        return shapes
 
     def _build_schemes(self):
         scheme = {

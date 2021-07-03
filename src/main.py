@@ -1,5 +1,6 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Lower tf logging level
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 import datetime
 import pprint
 import threading
@@ -31,6 +32,7 @@ ex.captured_out_filter = apply_backspaces_and_linefeeds
 
 results_path = os.path.join(dirname(dirname(abspath(__file__))), "results")
 
+
 def run(_run, _config, _log):
     # check args sanity
     _config = args_sanity_check(_config, _log)
@@ -40,18 +42,16 @@ def run(_run, _config, _log):
 
     if _config["runner"] == "parallel" or _config['eval'] == "jpc":
         torch.multiprocessing.set_start_method('spawn', force=True)
-        #multiprocessing.set_start_method('spawn')
+        # multiprocessing.set_start_method('spawn')
 
     args = SimpleNamespace(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"
 
     # setup loggers
-    logger = MainLogger(_log)
+    logger = MainLogger(_log, args)
 
     _log.info("Experiment Parameters:")
-    experiment_params = pprint.pformat(_config,
-                                       indent=4,
-                                       width=1)
+    experiment_params = pprint.pformat(_config, indent=4, width=1)
     _log.info("\n\n" + experiment_params + "\n")
 
     # configure tensorboard logger

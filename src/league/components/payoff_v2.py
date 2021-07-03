@@ -81,6 +81,10 @@ class PayoffV2:
         else:
             raise NotImplementedError("Payoff Update not implemented.")
 
+    def has_played(self, home: int, away: int):
+        key = (home, away, PayoffEntry.GAMES)
+        return key in self.payoff_dict and self.payoff_dict[key] > 0
+
     def _apply_decay(self, home: int, away: int):
         for entry in PayoffEntry:
             self.payoff_dict[home, away, entry] *= self.decay

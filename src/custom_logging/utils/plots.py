@@ -9,18 +9,18 @@ from matplotlib.cm import get_cmap
 from matplotlib.figure import Figure
 
 
-def plot_greedy_actions(greedy_actions: dict, n_actions: int, n_agents: int, max_labels=5) -> List[Figure]:
+def plot_greedy_actions(greedy_actions: dict, shapes: dict, max_labels=5) -> List[Figure]:
     """
     Receive a dict of an agents greedy actions. Keys of the dict are timesteps at which the greedy actions were
     collected, values is the array of greedy taken action indices since the last plot.
     Count the occurrence of each greedy action in the time interval taken by the agent and plot as bar diagram to
     visualize action distribution under the past epsilon greedy policy.
     :param max_labels:
-    :param n_agents:
-    :param n_actions:
+    :param shapes:
     :param greedy_actions:
     :return:
     """
+    n_actions, n_agents = shapes["n_actions"], shapes["n_agents"]
     colors = get_cmap(lut=len(greedy_actions))  # Each timestep with its greedy actions receives a unique color
     xs = range(0, n_actions)
     entries_n = math.ceil(len(greedy_actions.items()) / max_labels)

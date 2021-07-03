@@ -31,5 +31,5 @@ class ExperimentRun:
     def _finish(self):
         raise NotImplementedError()
 
-    def _set_scheme_meta(self):
+    def _update_shapes(self):
         raise NotImplementedError()

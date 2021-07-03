@@ -85,10 +85,6 @@ class EpisodeStepper:
         actions_taken = []
 
         self.logger.test_mode = test_mode
-        # TODO: Find better place to init this since it will not change
-        self.logger.test_n_episode = self.args.test_nepisode
-        self.logger.runner_log_interval = self.args.runner_log_interval
-        self.logger.update_loggers(self.args)
 
         self.home_mac.init_hidden(batch_size=self.batch_size)
 

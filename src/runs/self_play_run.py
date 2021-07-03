@@ -22,10 +22,15 @@ class SelfPlayRun(NormalPlayRun):
         # WARN: Assuming the away agent uses the same buffer scheme!!
         self.away_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
 
-    def _set_scheme_meta(self):
-        super()._set_scheme_meta()
+    def _update_shapes(self):
+        shapes = super()._update_shapes()
         # Override number of agents with per agent value
-        self.args.n_agents = int(self.env_info["n_agents"] / 2)  # TODO: assuming same team size and two teams
+
+        total_n_agents = self.env_info["total_n_agents"]
+        assert total_n_agents % 2 == 0, f"{total_n_agents} agents do not fit in the symmetric two-team scenario."
+        per_team_n_agents = int(total_n_agents / 2)
+        self.args.n_agents = per_team_n_agents
+        return shapes.update({"total_n_agents": per_team_n_agents})
 
     def _build_stepper(self):
         self.stepper = self_steppers_REGISTRY[self.args.runner](args=self.args, logger=self.logger)

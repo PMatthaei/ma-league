@@ -4,17 +4,17 @@ import itertools
 
 import enum
 from collections import Counter
-from typing import List
+from typing import List, Dict
 
 from maenv.core import RoleTypes, UnitAttackTypes
 
 
 class Team:
-    def __init__(self, tid: int, units: List, is_scripted=False):
+    def __init__(self, tid: int, units: List, is_scripted: bool = False):
         self.id_ = tid,
-        self.units = list(units)
-        self.unit_ids = [unit["uid"] for unit in self.units]
-        self.is_scripted = is_scripted
+        self.units: List[Dict] = list(units)
+        self.unit_ids: List[int] = [unit["uid"] for unit in self.units]
+        self.is_scripted: bool = is_scripted
 
     def difference(self, team: Team):
         """
@@ -29,6 +29,16 @@ class Team:
         weighting = len(in_swaps) / sum(t1_counts.values())
         dist = sum(in_swaps) * weighting
         return dist
+
+    def contains(self, unit_id: int):
+        return unit_id in self.unit_ids
+
+    @property
+    def roles(self, unique=True):
+        roles = [unit['role'] for unit in self.units]
+        if unique:
+            return set(roles)
+        return roles
 
 
 class TeamComposer:
@@ -78,6 +88,6 @@ class TeamComposer:
 if __name__ == '__main__':
     n = 3
     teams = TeamComposer(RoleTypes, UnitAttackTypes).compose_unique_teams(n)
-    team_hash = hash(str(teams[0]))
+    teams = TeamComposer.to_teams(teams)
+    roles = teams[0].roles
     print(teams[0])
-    print("Creating build plan for team with hash {}".format(team_hash))

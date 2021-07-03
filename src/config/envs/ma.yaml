@@ -8,9 +8,9 @@ env_args:
   draw_grid: False
   infos: True
   global_reward: True
-  grid_size: 10
+  grid_size: 20
   match_build_plan: medium_1h_4t
-  ai: focus
+  ai: basic
 
 test_greedy: True
 test_nepisode: 32

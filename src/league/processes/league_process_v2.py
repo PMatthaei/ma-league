@@ -40,8 +40,9 @@ class LeagueProcessV2(Process):
         self._play = None
 
     def run(self) -> None:
-        # Initial play to train policy against AI
-        self._configure_play(home=self._home_team, is_ai_opponent=True)
+        # Initial play to train policy of the team against AI against mirrored team
+        self._configure_play(home=self._home_team, ai_opponent=True)
+        print(self._args.env_args)
         self._play = NormalPlayRun(args=self._args, logger=self._logger)
         self._play.start(play_time=self._args.league_play_time_mins * 60)
         self._share_agent()
@@ -66,10 +67,10 @@ class LeagueProcessV2(Process):
 
         self._request_close()
 
-    def _configure_play(self, home: Team, away: Team = None, is_ai_opponent=False):
-        self._args.env_args['match_build_plan'][0]['units'] = home.units
+    def _configure_play(self, home: Team, away: Team = None, ai_opponent=False):
+        self._args.env_args['match_build_plan'][0]['units'] = home.units # mirror if no away units passed
         self._args.env_args['match_build_plan'][1]['units'] = home.units if away is None else away.units
-        self._args.env_args['match_build_plan'][1]['is_scripted'] = is_ai_opponent
+        self._args.env_args['match_build_plan'][1]['is_scripted'] = ai_opponent
 
     def _get_shared_agent(self, team: Team):
         return self._agent_pool[team]

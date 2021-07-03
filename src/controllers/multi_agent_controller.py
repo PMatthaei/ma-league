@@ -3,9 +3,18 @@ from __future__ import annotations
 from components.episode_buffer import EpisodeBatch
 from components.action_selectors import REGISTRY as action_REGISTRY
 
+import torch as th
+
 
 class MultiAgentController:
     def __init__(self, scheme, groups, args):
+        """
+        The Multi-Agent Controller defines how an Multi-Agent is built from a registry of existing agents and how its
+        actions are selected. It manages the hidden state and offers a saving and loading strategy of models.
+        :param scheme:
+        :param groups:
+        :param args:
+        """
         self.n_agents = args.n_agents
         self.n_actions = args.n_actions
         self.args = args

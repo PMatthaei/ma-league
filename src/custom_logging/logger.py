@@ -21,7 +21,7 @@ def dd_collectible():
 
 
 class MainLogger:
-    def __init__(self, console):
+    def __init__(self, console, args):
         """
         Logger for multiple outputs. Supports logging to TensorBoard as well as to file and console via sacred.
         All data is collected, managed, processed and distributed to its respective visualization platform.
@@ -29,6 +29,7 @@ class MainLogger:
         lessen memory consumption.
         :param console:
         """
+        self.args = args
         self._console_logger = CustomConsoleLogger(console)
         self._tensorboard_logger: CustomTensorboardLogger = None
         self._sacred_logger: CustomSacredLogger = None
@@ -38,8 +39,8 @@ class MainLogger:
         self._build_collectible_episodal_stats_dict()
 
         self.test_mode = False
-        self.test_n_episode = 0
-        self.runner_log_interval = 0
+        self.test_n_episode = self.args.test_nepisode
+        self.runner_log_interval = self.args.runner_log_interval
         self.log_train_stats_t = -1000000  # Log first run
 
     def _build_collectible_episodal_stats_dict(self):
@@ -151,10 +152,8 @@ class MainLogger:
     def setup_sacred(self, sacred_run_dict):
         self._sacred_logger = CustomSacredLogger(sacred_run_dict)
 
-    def update_loggers(self, args):
-        if self._tensorboard_logger:
-            self._tensorboard_logger.n_actions = args.n_actions
-            self._tensorboard_logger.n_agents = args.n_agents
-
     def log_console(self):
         self._console_logger.log(self.stats)
+
+    def update_shapes(self, shapes):
+        self._tensorboard_logger.shapes = shapes
