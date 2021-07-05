@@ -56,7 +56,7 @@ class LeagueProcessV2(Process):
             self._configure_play(home=self._home_team, away=self._away_team)
 
             self._play = LeaguePlayRun(args=self._args, logger=self._logger, on_episode_end=self._provide_result)
-            self._play.load_away_agent(away_agent)
+            self._play.build_inference_mac(away=away_agent)
             self._play.start(play_time=self._args.league_play_time_mins * 60)
 
             end_time = time.time()

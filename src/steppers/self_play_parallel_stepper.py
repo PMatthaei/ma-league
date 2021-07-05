@@ -14,9 +14,8 @@ from custom_logging.logger import Originator
 class SelfPlayParallelStepper(ParallelStepper):
     def __init__(self, args, logger):
         """
-        Based (very) heavily on SubprocVecEnv from OpenAI Baselines
-        https://github.com/openai/baselines/blob/master/baselines/common/vec_env/subproc_vec_env.py
-        Runs multiple environments in parallel to play and collects episode batches to feed into a single learner.
+        Combination of the parallel episode stepper and a self-play stepper which uses another policy to serve the
+        opponents actions instead of an AI.
         :param args:
         :param logger:
         """

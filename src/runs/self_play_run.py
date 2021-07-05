@@ -24,7 +24,7 @@ class SelfPlayRun(NormalPlayRun):
 
     def _update_shapes(self):
         shapes = super()._update_shapes()
-        total_n_agents = self.env_info["total_n_agents"]
+        total_n_agents = self.env_info["n_agents"]
         assert total_n_agents % 2 == 0, f"{total_n_agents} agents do not fit in the symmetric two-team scenario."
         per_team_n_agents = int(total_n_agents / 2)
         self.args.n_agents = per_team_n_agents

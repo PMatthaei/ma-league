@@ -1,7 +1,6 @@
 from copy import deepcopy
 
 import torch
-from gym.vector.utils import CloudpickleWrapper
 from torch.multiprocessing import Queue
 
 from custom_logging.collectibles import Collectibles

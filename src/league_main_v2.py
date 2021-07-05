@@ -28,6 +28,8 @@ from types import SimpleNamespace
 
 from utils.run_utils import args_sanity_check
 
+th.multiprocessing.set_start_method('spawn', force=True)
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
@@ -98,7 +100,6 @@ def run(_run, _config, _log):
         )
         procs.append(proc)
 
-    th.multiprocessing.set_start_method('spawn', force=True)
     [r.start() for r in procs]
 
     # Wait for processes to finish

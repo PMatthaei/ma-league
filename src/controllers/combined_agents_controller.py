@@ -4,27 +4,30 @@ from typing import Dict
 
 from controllers.multi_agent_controller import MultiAgentController
 from modules.agents import REGISTRY as agent_REGISTRY, Agent
-from components.action_selectors import REGISTRY as action_REGISTRY
 import torch as th
 
 
-class CombinedMAC(MultiAgentController):
+class EnsembleInferenceMAC(MultiAgentController):
     def __init__(self, scheme, groups, args):
         """
         This is a multi-agent controller uses a combination of networks for inference. Each agent can choose to either
-        infer with the original/native agent network or a network which was trained within a different team.
+        infer with the original/native agent network or an ensemble of networks which were trained within different teams.
+
+        This MAC can only be used as a fixed policy opponent within league training!
+
         :param scheme:
         :param groups:
         :param args:
         """
         super().__init__(scheme, groups, args)
-        self.specific_agents = dict()  # Dictionary holding the specific agent network for a given agent
+        self.ensemble = dict()  # Dictionary holding the specific agent network for a given agent
         self.native_hidden_states = None
         self.specific_hidden_states = None
 
+        self.update(0, self.agent)
         self._all_ids = set(range(self.n_agents))
 
-    def replace_agent(self, aid: int, agent: Agent):
+    def update(self, aid: int, agent: Agent):
         """
         Replaces inference for the given agent with id = aid with the inference of the provided agent by adding into the
         dict.
@@ -32,7 +35,7 @@ class CombinedMAC(MultiAgentController):
         :param agent:
         :return:
         """
-        self.specific_agents.update({aid: agent})
+        self.ensemble.update({aid: agent})
 
     @property
     def n_native_agents(self):
@@ -40,7 +43,7 @@ class CombinedMAC(MultiAgentController):
 
     @property
     def n_specific_agents(self):
-        return len(self.specific_agents)
+        return len(self.ensemble)
 
     @property
     def native_agents_ids(self):
@@ -48,7 +51,7 @@ class CombinedMAC(MultiAgentController):
 
     @property
     def specific_agents_ids(self):
-        return list(self.specific_agents.keys())  # Agent IDs that use specific network for inference instead of native
+        return list(self.ensemble.keys())  # Agent IDs that use specific network for inference instead of native
 
     def select_actions(self, ep_batch, t_ep, t_env, bs=slice(None), test_mode=False):
         avail_actions = ep_batch["avail_actions"][:, t_ep]
@@ -63,7 +66,6 @@ class CombinedMAC(MultiAgentController):
 
         # Softmax the agent outputs if they're policy logits
         if self.agent_output_type == "pi_logits":
-
             agent_outs = self._softmax(agent_outs, ep_batch, t, test_mode)
 
         return agent_outs.view(ep_batch.batch_size, self.n_agents, -1)
@@ -71,7 +73,7 @@ class CombinedMAC(MultiAgentController):
     def _compute_agent_outputs(self, native_inputs, specific_inputs, batch_size):
         native_agent_outs, self.native_hidden_states = self.agent(native_inputs, self.native_hidden_states)
         agent_outs = native_agent_outs.view(batch_size, self.n_agents, -1)
-        for aid, specific_agent in self.specific_agents.items():
+        for aid, specific_agent in self.ensemble.items():
             agent_outs[:, aid, :], self.specific_hidden_states[aid] = specific_agent(
                 specific_inputs[aid, :].view(batch_size, -1), self.specific_hidden_states[aid])
         return agent_outs.view(batch_size * self.n_agents, -1)
@@ -83,41 +85,28 @@ class CombinedMAC(MultiAgentController):
         self.native_hidden_states = self.agent.init_hidden().unsqueeze(0).expand(batch_size, self.n_agents, -1)
         self.specific_hidden_states = {
             aid: agent.init_hidden().unsqueeze(0).expand(batch_size, 1, -1)  # bav
-            for aid, agent in self.specific_agents.items()
+            for aid, agent in self.ensemble.items()
         }
 
-    def parameters(self):
-        params = []
-        params += self.agent.parameters()
-        [params + list(agent.parameters()) for agent in self.specific_agents.values()]
-        return params
-
-    def load_state(self, other_mac: CombinedMAC, agent: Agent = None, specific_agents: Dict[int, Agent] = None):
-        self.agent.load_state_dict(agent.state_dict() if agent is not None else other_mac.agent.state_dict())
+    def load_state(self, agent: Agent = None, ensemble: Dict[int, Agent] = None):
+        self.agent.load_state_dict(agent.state_dict()) if agent is not None else None
         [
-            agent.load_state_dict(specific_agents[i].state_dict() if specific_agents is not None else other_mac.specific_agents[i].state_dict())
-            for i, agent in enumerate(self.specific_agents.items())
-        ]
+            agent.load_state_dict(ensemble[i].state_dict())
+            for i, agent in self.ensemble.items()
+        ] if ensemble is not None else None
 
     def cuda(self):
         self.agent.cuda()
-        [agent.cuda() for agent in self.specific_agents.values()]
+        [agent.cuda() for agent in self.ensemble.values()]
+
+    def parameters(self):
+        raise NotImplementedError("This functionality is not available because this MAC can only perform inference.")
 
     def save_models(self, path, name):
-        th.save(self.agent.state_dict(), "{}/{}agent_native.th".format(path, name))
-        [
-            th.save(agent.state_dict(), "{}/{}agent_specific_{}.th".format(path, name, i))
-            for i, agent in self.specific_agents.items()
-        ]
+        raise NotImplementedError("This functionality is not available because this MAC can only perform inference.")
 
     def load_models(self, path, name):
-        self.agent.load_state_dict(
-            th.load("{}/{}agent_native.th".format(path, name), map_location=lambda storage, loc: storage))
-        [
-            agent.load_state_dict(
-                th.load("{}/{}agent_specific_{}.th".format(path, name, aid), lambda storage, loc: storage))
-            for aid, agent in enumerate(self.specific_agents.items())
-        ]
+        raise NotImplementedError("This functionality is not available because this MAC can only perform inference.")
 
     def _build_agents(self, input_shape):
         return agent_REGISTRY[self.args.agent](input_shape, self.args)

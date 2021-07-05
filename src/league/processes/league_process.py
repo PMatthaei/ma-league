@@ -72,7 +72,7 @@ class LeagueProcess(Process):
             if away_agent is None:
                 warning("No Opponent was found.")
                 continue
-            self._play.load_away_agent(away_agent)
+            self._play.load_away_inference_agent(away_agent)
 
             self._logger.info(str(self))
 

@@ -27,6 +27,8 @@ from utils.main_utils import get_default_config, get_config, load_match_build_pl
 from types import SimpleNamespace
 from utils.run_utils import args_sanity_check
 
+th.multiprocessing.set_start_method('spawn', force=True)
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
 logger = CustomConsoleLogger.console_logger()
@@ -95,7 +97,6 @@ def run(_run, _config, _log):
         )
         procs.append(proc)
 
-    th.multiprocessing.set_start_method('spawn', force=True)
     [r.start() for r in procs]
 
     # Handle message communication within the league

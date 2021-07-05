@@ -27,7 +27,7 @@ class DRQNAgent(Agent):
         return self.fc1.weight.new(1, self.args.rnn_hidden_dim).zero_()
 
     def forward(self, inputs, hidden_state):
-        x = self.fc1(inputs)  # Feed observation tensor with shape (n_agents, obs_shape)
+        x = self.fc1(inputs)  # Input with shape (batch_size, obs) in learning and (n_agents, obs) in inference
         x = F.relu(x)  # ReLu activation function
         h_in = hidden_state.reshape(-1, self.args.rnn_hidden_dim)  # (1, n_agents, hidden) -> (n_agents, hidden)
         new_hidden_state = self.gru(x, h_in)  # Feed hidden at t-1 and x at t into GRU -> receive new hidden
