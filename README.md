@@ -8,3 +8,7 @@ This repository based on components of [oxwhirl/pymarl](https://github.com/oxwhi
 Framework to train Multi-Agent algorithms in Vanilla, Self-Play or League-Play.
 
 See Wiki for in-depth guides and visit [Getting Started](https://github.com/PMatthaei/ma-league/wiki/Getting-started)
+
+# Multi-Agent Environment
+
+The main supported MA Environment is: https://github.com/PMatthaei/ma-env
