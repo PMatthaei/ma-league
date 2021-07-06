@@ -64,7 +64,7 @@ def run(_run, _config, _log):
             from runs.self_play_run import SelfPlayRun
             play = SelfPlayRun(args=args, logger=main_logger)
         elif eval_method == "jpc":
-            from eval.jpc_eval_run import JointPolicyCorrelationEvaluationRun
+            from runs.evaluation.jpc_eval_run import JointPolicyCorrelationEvaluationRun
             play = JointPolicyCorrelationEvaluationRun(args=args, logger=main_logger)
         else:
             from runs.self_play_run import SelfPlayRun

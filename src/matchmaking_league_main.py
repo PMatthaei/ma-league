@@ -10,6 +10,7 @@ from random import sample
 from league.components.agent_pool import AgentPool
 from league.components.matchmaking import Matchmaking
 from league.components.payoff_matchmaking import MatchmakingPayoff
+from league.processes.ensemble_league_process import EnsembleLeagueProcess
 from league.processes.matchmaking_league_process import MatchmakingLeagueProcess
 from copy import deepcopy
 from torch.multiprocessing import Barrier, Queue, Manager
@@ -89,7 +90,7 @@ def run(_run, _config, _log):
 
     # Start league instances
     for idx, (in_q, out_q, team) in enumerate(zip(in_queues, out_queues, teams)):
-        proc = MatchmakingLeagueProcess(
+        proc = EnsembleLeagueProcess(
             home_team=team,
             matchmaking=matchmaking,
             agent_pool=agent_pool,
@@ -110,7 +111,6 @@ def run(_run, _config, _log):
 
     # Clean up after finishing
     print("Exiting Main")
-    manager.shutdown()
     print("Stopping all threads")
     for t in threading.enumerate():
         if t.name != "MainThread":

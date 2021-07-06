@@ -24,10 +24,11 @@ class LeagueCoordinator(Process):
         self.updates_n = 0
         self.senders_n = len(players)
         self.last_waiting = 0
+        self.active = True
 
     def run(self) -> None:
         # Receive messages from all processes over their connections
-        while len(self._closed) != len(set(self._in_queues)):
+        while self.active:
 
             self._on_sync()
 
@@ -52,6 +53,8 @@ class LeagueCoordinator(Process):
             self.logger.info(f"Closing connection to process {cmd.origin}")
             queue.close()
             self._closed.append(cmd.origin)
+            if len(self._closed) != len(self._in_queues):
+                self.active = False
         elif isinstance(cmd, CheckpointCommand):
             self._checkpoint(cmd)
         elif isinstance(cmd, PayoffUpdateCommand):

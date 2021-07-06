@@ -118,7 +118,7 @@ def run(_run, _config, _log):
 
     # Clean up after finishing
     print("Exiting Main")
-    manager.shutdown()
+
     print("Stopping all threads")
     for t in threading.enumerate():
         if t.name != "MainThread":

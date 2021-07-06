@@ -5,13 +5,14 @@ from typing import Dict
 
 import torch as th
 
+from modules.agents import Agent
 from runs.experiment_run import ExperimentRun
 from steppers.episode_stepper import EnvStepper
 from utils.checkpoint_manager import CheckpointManager
 from utils.timehelper import time_left, time_str
 
 from learners import REGISTRY as le_REGISTRY
-from controllers import REGISTRY as mac_REGISTRY
+from controllers import REGISTRY as mac_REGISTRY, EnsembleInferenceMAC
 from components.episode_buffer import ReplayBuffer
 from components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
@@ -33,6 +34,7 @@ class NormalPlayRun(ExperimentRun):
         self.start_time = time.time()
         self.last_time = self.start_time
         self.episode_callback = on_episode_end
+        self.home_mac, self.home_buffer, self.home_learner = None, None, None
 
         # Init stepper so we can get env info
         self.stepper = self._build_stepper()
@@ -55,6 +57,10 @@ class NormalPlayRun(ExperimentRun):
             [learner.cuda() for learner in self.learners]
 
         self.checkpoint_manager = CheckpointManager(args=self.args, logger=self.logger)
+
+    def build_inference_mac(self, ensemble: Dict[int, Agent] = None):
+        self.home_mac = EnsembleInferenceMAC(self.home_buffer.scheme, self.groups, self.args)
+        self.home_mac.load_state(ensemble=ensemble)
 
     def _build_learners(self):
         # Buffers
@@ -101,8 +107,9 @@ class NormalPlayRun(ExperimentRun):
         return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
 
     def _init_stepper(self):
-        self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
-                                home_mac=self.home_mac)
+        if not self.stepper.is_initalized:
+            self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
+                                    home_mac=self.home_mac)
 
     @property
     def _has_not_reached_t_max(self):
@@ -112,29 +119,29 @@ class NormalPlayRun(ExperimentRun):
     def _has_not_reached_time_limit(self):
         return self._play_time is not None and ((self._end_time - self._start_time) <= self._play_time)
 
-    def start(self, play_time=None, train_callback=None):
+    def start(self, play_time_seconds=None, train_callback=None):
         """
-        :param play_time: Play the run for a certain time in seconds.
+        :param play_time_seconds: Play the run for a certain time in seconds.
         :return:
         """
         self.logger.info("Experiment Parameters:")
         experiment_params = pprint.pformat(self.args.__dict__, indent=4, width=1)
         self.logger.info("\n\n" + experiment_params + "\n")
 
-        self._play_time = play_time
+        self._play_time = play_time_seconds
         self._init_stepper()
 
         if self.args.checkpoint_path != "":
             self.load_learners()
 
             if self.args.evaluate or self.args.save_replay:
-                self._evaluate_sequential()
+                self.evaluate_sequential()
                 return
 
         # start training
         episode = 0
-        if play_time:
-            self.logger.info("Beginning training for {} seconds.".format(play_time))
+        if play_time_seconds:
+            self.logger.info("Beginning training for {} seconds.".format(play_time_seconds))
         else:
             self.logger.info("Beginning training for {} timesteps.".format(self.args.t_max))
 
@@ -216,15 +223,22 @@ class NormalPlayRun(ExperimentRun):
         for _ in range(n_test_runs):
             self.stepper.run(test_mode=True)
 
-    def _evaluate_sequential(self):
-        self.logger.info("Evaluate for {} steps.".format(self.args.test_nepisode))
-        for _ in range(self.args.test_nepisode):
+    def evaluate_sequential(self, test_n_episode=None):
+        n_episode = self.args.test_nepisode if test_n_episode is None else test_n_episode
+        self.logger.info("Evaluate for {} steps.".format(n_episode))
+
+        self._init_stepper()
+
+        for _ in range(n_episode):
             self.stepper.run(test_mode=True)
 
         if self.args.save_replay:
             self.stepper.save_replay()
 
         self.stepper.close_env()
+
+        self.logger.log_stat("episode", n_episode, self.stepper.t_env)
+        self.logger.log_console()
 
     def evaluate_mean_returns(self, episode_n=1):
         self.logger.info("Evaluate for {} episodes.".format(episode_n))

@@ -4,6 +4,7 @@ from torch.multiprocessing import Process, Barrier, Queue
 from types import SimpleNamespace
 from typing import Dict, Tuple
 
+from controllers import EnsembleInferenceMAC
 from league.components.agent_pool import AgentPool
 from league.components.matchmaking import Matchmaking
 from league.processes.utils import extract_result
@@ -14,7 +15,7 @@ from custom_logging.logger import MainLogger
 from runs.normal_play_run import NormalPlayRun
 
 
-class MatchmakingLeagueProcess(Process):
+class EnsembleLeagueProcess(Process):
     def __init__(self,
                  agent_pool: AgentPool,
                  matchmaking: Matchmaking,
@@ -55,35 +56,28 @@ class MatchmakingLeagueProcess(Process):
 
         self._play = None
 
+        self._ensemble = None
+
     def run(self) -> None:
-        # Initial play to train policy of the team against AI against mirrored team
+        # Initial play to train policy of the team against AI against mirrored team -> Performed for each team
         self._configure_play(home=self._home_team, ai_opponent=True)
         self._play = NormalPlayRun(args=self._args, logger=self._logger)
         self._play.start(play_time_seconds=self._args.league_play_time_mins * 60)
         self._share_agent()
 
-        start_time = time.time()
-        end_time = time.time()
+        # Fetch agents from other teams trained previously and combine them into an ensemble
+        self._ensemble = self._matchmaking.get_ensemble(self._home_team)
+        self._play = NormalPlayRun(args=self._args, logger=self._logger, on_episode_end=self._provide_result)
+        self._play.build_inference_mac(self._ensemble)
+        self._play.evaluate_sequential(test_n_episode=200)
 
-        # Run real league play in self-play against pre-trained but fixed multi-agent policies
-        while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
-            self._away_team, away_agent = self._matchmaking.get_match(self._home_team)
-
-            self._configure_play(home=self._home_team, away=self._away_team)
-
-            self._play = LeaguePlayRun(args=self._args, logger=self._logger, on_episode_end=self._provide_result)
-            self._play.build_inference_mac(agent=away_agent)
-            self._play.start(play_time_seconds=self._args.league_play_time_mins * 60)
-
-            end_time = time.time()
-
-            # Share agent after training to make its current state accessible to other processes
-            self._share_agent()
+        # Share agent after training to make its current state accessible to other processes
+        self._share_agent()
 
         self._request_close()
 
     def _configure_play(self, home: Team, away: Team = None, ai_opponent=False):
-        self._args.env_args['match_build_plan'][0]['units'] = home.units # mirror if no away units passed
+        self._args.env_args['match_build_plan'][0]['units'] = home.units  # mirror if no away units passed
         self._args.env_args['match_build_plan'][1]['units'] = home.units if away is None else away.units
         self._args.env_args['match_build_plan'][1]['is_scripted'] = ai_opponent
 

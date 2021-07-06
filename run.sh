@@ -31,7 +31,7 @@ base_command="python src/main.py "
 #
 title="Select experiment mode:"
 prompt="Pick:"
-mode_options=("Normal Play" "Self Play" "League Play" "League Play V2" "JPC Evaluation" "Quit")
+mode_options=("Normal Play" "Self Play" "Role-based League Play" "Matchmaking League Play" "JPC Evaluation" "Quit")
 echo "$title"
 PS3="$prompt "
 select mode in "${mode_options[@]}"; do
@@ -48,13 +48,13 @@ select mode in "${mode_options[@]}"; do
     ;;
 
   3)
-    base_command="python src/league_main.py "
+    base_command="python src/rolebased_league_main.py "
     mode="play_mode=league --league-config=default "
     break
     ;;
 
   4)
-    base_command="python src/league_main_v2.py "
+    base_command="python src/matchmaking_league_main.py "
     mode="play_mode=league --league-config=default "
     break
     ;;

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Dict
 
 from league.components.agent_pool import AgentPool
 from league.components.payoff_matchmaking import MatchmakingPayoff
@@ -27,3 +27,10 @@ class Matchmaking:
             return home_team, self._agent_pool[home_team]  # Self-Play if no one available
 
         return self._agent_pool.sample()
+
+    def get_ensemble(self, home_team: Team) -> Dict[int, Agent]:
+        teams = self._agent_pool.collected_teams
+        others = [team for team in teams if team.id_ != home_team.id_]
+        return {
+            0: self._agent_pool[others.pop()]
+        }

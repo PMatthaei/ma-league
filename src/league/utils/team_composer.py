@@ -11,9 +11,9 @@ from maenv.core import RoleTypes, UnitAttackTypes
 
 class Team:
     def __init__(self, tid: int, units: List, is_scripted: bool = False):
-        self.id_ = tid,
+        self.id_ = tid
         self.units: List[Dict] = list(units)
-        self.unit_ids: List[int] = [unit["uid"] for unit in self.units]
+        self.unit_types: List[int] = [unit["uid"] for unit in self.units]
         self.is_scripted: bool = is_scripted
 
     def difference(self, team: Team):
@@ -22,8 +22,8 @@ class Team:
         :param team:
         :return:
         """
-        t1_counts = Counter(self.unit_ids)
-        t2_counts = Counter(team.unit_ids)
+        t1_counts = Counter(self.unit_types)
+        t2_counts = Counter(team.unit_types)
         diff = [t1_counts[unit] - t2_counts[unit] if unit in t2_counts else t1_counts[unit] for unit in t1_counts]
         in_swaps = [x for x in diff if x > 0]
         weighting = len(in_swaps) / sum(t1_counts.values())
@@ -31,7 +31,7 @@ class Team:
         return dist
 
     def contains(self, unit_id: int):
-        return unit_id in self.unit_ids
+        return unit_id in self.unit_types
 
     @property
     def roles(self, unique=True):
@@ -39,6 +39,12 @@ class Team:
         if unique:
             return set(roles)
         return roles
+
+    def __hash__(self):
+        return self.id_
+
+    def __eq__(self, other):
+        return self.id_ == other.id_
 
 
 class TeamComposer:

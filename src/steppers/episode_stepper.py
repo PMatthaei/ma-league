@@ -14,6 +14,7 @@ class EnvStepper:
     def __init__(self):
         self.batch_size = None
         self.t_env = None
+        self.is_initalized = False
 
     def run(self, test_mode=False):
         raise NotImplementedError()
@@ -68,6 +69,7 @@ class EpisodeStepper(EnvStepper):
         self.new_batch_fn = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,  # last step
                                     preprocess=preprocess, device=self.args.device)
         self.home_mac = home_mac
+        self.is_initalized = True
 
     def get_env_info(self):
         return self.env.get_env_info()

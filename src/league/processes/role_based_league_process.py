@@ -82,7 +82,7 @@ class RolebasedLeagueProcess(Process):
 
             # Start training against new opponent and integrate the team of the away player
             self._register_team(self._away, rebuild=True)
-            self._play.start(play_time=self._args.league_play_time_mins * 60)
+            self._play.start(play_time_seconds=self._args.league_play_time_mins * 60)
 
             # Share agent after training
             self._share_agent()
