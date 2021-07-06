@@ -10,7 +10,28 @@ from exceptions.runner_exceptions import MultiAgentControllerNotInitialized
 from steppers.utils.stepper_utils import get_policy_team_id
 
 
-class EpisodeStepper:
+class EnvStepper:
+    def __init__(self):
+        self.batch_size = None
+        self.t_env = None
+
+    def run(self, test_mode=False):
+        raise NotImplementedError()
+
+    def initialize(self, scheme, groups, preprocess, home_mac):
+        raise NotImplementedError()
+
+    def close_env(self):
+        raise NotImplementedError()
+
+    def save_replay(self):
+        raise NotImplementedError()
+
+    def get_env_info(self):
+        raise NotImplementedError()
+
+
+class EpisodeStepper(EnvStepper):
 
     def __init__(self, args, logger: MainLogger):
         """
@@ -19,6 +40,7 @@ class EpisodeStepper:
         :param args: args passed from main
         :param logger: logger
         """
+        super().__init__()
         self.args = args
         self.logger: MainLogger = logger
         self.batch_size = self.args.batch_size_run

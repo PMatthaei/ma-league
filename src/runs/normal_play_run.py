@@ -6,6 +6,7 @@ from typing import Dict
 import torch as th
 
 from runs.experiment_run import ExperimentRun
+from steppers.episode_stepper import EnvStepper
 from utils.checkpoint_manager import CheckpointManager
 from utils.timehelper import time_left, time_str
 
@@ -34,7 +35,7 @@ class NormalPlayRun(ExperimentRun):
         self.episode_callback = on_episode_end
 
         # Init stepper so we can get env info
-        self._build_stepper()
+        self.stepper = self._build_stepper()
 
         # Get env info from stepper
         self.env_info = self.stepper.get_env_info()
@@ -96,9 +97,8 @@ class NormalPlayRun(ExperimentRun):
         }
         return groups, preprocess, scheme
 
-    def _build_stepper(self):
-        # Give runner the scheme
-        self.stepper = stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
+    def _build_stepper(self) -> EnvStepper:
+        return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
 
     def _init_stepper(self):
         self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,

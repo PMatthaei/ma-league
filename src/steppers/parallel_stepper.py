@@ -8,12 +8,13 @@ from custom_logging.utils.enums import Originator
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
+from steppers.episode_stepper import EnvStepper
 
 from steppers.utils.env_worker_process import EnvWorker
 from steppers.utils.stepper_utils import get_policy_team_id
 
 
-class ParallelStepper:
+class ParallelStepper(EnvStepper):
     def __init__(self, args, logger):
         """
         Based (very) heavily on SubprocVecEnv from OpenAI Baselines
@@ -22,6 +23,7 @@ class ParallelStepper:
         :param args:
         :param logger:
         """
+        super().__init__()
         self.args = args
         self.logger = logger
         self.batch_size = self.args.batch_size_run

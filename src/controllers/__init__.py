@@ -1,5 +1,5 @@
 from .basic_controller import BasicMAC
-from .combined_agents_controller import EnsembleInferenceMAC
+from .ensemble_agent_controller import EnsembleInferenceMAC
 from .distinct_agents_controller import DistinctMAC
 
 REGISTRY = {

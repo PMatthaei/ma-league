@@ -4,6 +4,8 @@ from controllers import REGISTRY as mac_REGISTRY
 from steppers import SELF_REGISTRY as self_steppers_REGISTRY
 import torch as th
 
+from steppers.episode_stepper import EnvStepper
+
 
 class SelfPlayRun(NormalPlayRun):
 
@@ -30,8 +32,8 @@ class SelfPlayRun(NormalPlayRun):
         self.args.n_agents = per_team_n_agents
         return shapes.update({"total_n_agents": per_team_n_agents})
 
-    def _build_stepper(self):
-        self.stepper = self_steppers_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
+    def _build_stepper(self) -> EnvStepper:
+        return self_steppers_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
 
     def _init_stepper(self):
         # Give runner the scheme and most importantly BOTH multi-agent controllers

@@ -71,11 +71,14 @@ class EnsembleInferenceMAC(MultiAgentController):
         return agent_outs.view(ep_batch.batch_size, self.n_agents, -1)
 
     def _compute_agent_outputs(self, native_inputs, specific_inputs, batch_size):
+        # Infer with a shared parameter network
         native_agent_outs, self.native_hidden_states = self.agent(native_inputs, self.native_hidden_states)
         agent_outs = native_agent_outs.view(batch_size, self.n_agents, -1)
-        for aid, specific_agent in self.ensemble.items():
-            agent_outs[:, aid, :], self.specific_hidden_states[aid] = specific_agent(
-                specific_inputs[aid, :].view(batch_size, -1), self.specific_hidden_states[aid])
+        # Replace inference for specific agents with their own network
+        for aid, ensemble_agent in self.ensemble.items():
+            specific_input = specific_inputs[aid, :].view(batch_size, -1)
+            agent_outs[:, aid, :], self.specific_hidden_states[aid] = ensemble_agent(
+                specific_input, self.specific_hidden_states[aid])
         return agent_outs.view(batch_size * self.n_agents, -1)
 
     def update_trained_steps(self, trained_steps):
@@ -87,26 +90,6 @@ class EnsembleInferenceMAC(MultiAgentController):
             aid: agent.init_hidden().unsqueeze(0).expand(batch_size, 1, -1)  # bav
             for aid, agent in self.ensemble.items()
         }
-
-    def load_state(self, agent: Agent = None, ensemble: Dict[int, Agent] = None):
-        self.agent.load_state_dict(agent.state_dict()) if agent is not None else None
-        [
-            agent.load_state_dict(ensemble[i].state_dict())
-            for i, agent in self.ensemble.items()
-        ] if ensemble is not None else None
-
-    def cuda(self):
-        self.agent.cuda()
-        [agent.cuda() for agent in self.ensemble.values()]
-
-    def parameters(self):
-        raise NotImplementedError("This functionality is not available because this MAC can only perform inference.")
-
-    def save_models(self, path, name):
-        raise NotImplementedError("This functionality is not available because this MAC can only perform inference.")
-
-    def load_models(self, path, name):
-        raise NotImplementedError("This functionality is not available because this MAC can only perform inference.")
 
     def _build_agents(self, input_shape):
         return agent_REGISTRY[self.args.agent](input_shape, self.args)
@@ -134,3 +117,23 @@ class EnsembleInferenceMAC(MultiAgentController):
             input_shape += self.n_agents
 
         return input_shape
+
+    def load_state(self, agent: Agent = None, ensemble: Dict[int, Agent] = None):
+        self.agent.load_state_dict(agent.state_dict()) if agent is not None else None
+        [
+            agent.load_state_dict(ensemble[i].state_dict())
+            for i, agent in self.ensemble.items()
+        ] if ensemble is not None else None
+
+    def cuda(self):
+        self.agent.cuda()
+        [agent.cuda() for agent in self.ensemble.values()]
+
+    def parameters(self):
+        raise NotImplementedError("This functionality is not available because this MAC can only perform inference.")
+
+    def save_models(self, path, name):
+        raise NotImplementedError("This functionality is not available because this MAC can only perform inference.")
+
+    def load_models(self, path, name):
+        raise NotImplementedError("This functionality is not available because this MAC can only perform inference.")
