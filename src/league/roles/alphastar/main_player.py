@@ -4,7 +4,7 @@ from typing import Tuple, Union, Any
 
 import numpy as np
 
-from league.components.payoff import Payoff
+from league.components.payoff_role_based import RolebasedPayoff
 from league.components.self_play import PrioritizedFictitiousSelfPlay
 from league.utils.helpers import remove_monotonic_suffix
 
@@ -12,7 +12,7 @@ from league.roles.players import Player, HistoricalPlayer
 
 
 class MainPlayer(Player):
-    def __init__(self, player_id: int, payoff: Payoff, team):
+    def __init__(self, player_id: int, payoff: RolebasedPayoff, team):
         super().__init__(player_id, payoff, team)
         self._checkpoint_step = 0
         self._pfsp = PrioritizedFictitiousSelfPlay()

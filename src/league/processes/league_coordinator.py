@@ -1,13 +1,13 @@
 from torch.multiprocessing import Process, Queue, Barrier
 from typing import List, Tuple
 
-from league.components.payoff import Payoff
+from league.components.payoff_role_based import RolebasedPayoff
 from league.roles.players import Player
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand
 
 
 class LeagueCoordinator(Process):
-    def __init__(self, logger, players: List[Player], queues: Tuple[List, List], payoff: Payoff, sync_barrier: Barrier):
+    def __init__(self, logger, players: List[Player], queues: Tuple[List, List], payoff: RolebasedPayoff, sync_barrier: Barrier):
         """
         Handles messages sent from league sub processes to the main league process.
         :param league:

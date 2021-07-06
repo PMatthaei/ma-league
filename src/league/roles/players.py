@@ -4,14 +4,14 @@ import re
 from copy import deepcopy
 from typing import Tuple, Union
 
-from league.components.payoff import Payoff
+from league.components.payoff_role_based import RolebasedPayoff
 
 from modules.agents.agent import Agent
 
 
 class Player(object):
 
-    def __init__(self, player_id: int, payoff: Payoff, team):
+    def __init__(self, player_id: int, payoff: RolebasedPayoff, team):
         self.id_ = player_id
         self._payoff = payoff
         self.team = team
@@ -27,7 +27,7 @@ class Player(object):
         return HistoricalPlayer(self.id_, self._payoff, deepcopy(self.agent))
 
     @property
-    def payoff(self) -> Payoff:
+    def payoff(self) -> RolebasedPayoff:
         return self._payoff
 
     def checkpoint(self) -> HistoricalPlayer:
@@ -43,7 +43,7 @@ class Player(object):
 
 class HistoricalPlayer(Player):
 
-    def __init__(self, player_id: int, payoff: Payoff, agent: Agent):
+    def __init__(self, player_id: int, payoff: RolebasedPayoff, agent: Agent):
         """
 
         :param player_id:

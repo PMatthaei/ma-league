@@ -1,17 +1,13 @@
 import os
+
 import datetime
 import sys
 import threading
 import numpy as np
 import torch as th
 
-from random import sample
-
-from league.components.agent_pool import AgentPool
-from league.components.matchmaking import Matchmaking
-from league.components.payoff_v2 import PayoffV2
-from league.processes.league_process_v2 import LeagueProcessV2
 from copy import deepcopy
+from random import sample
 from torch.multiprocessing import Barrier, Queue, Manager
 from os.path import dirname, abspath
 from maenv.core import RoleTypes, UnitAttackTypes
@@ -19,19 +15,21 @@ from sacred import SETTINGS, Experiment
 from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
 from custom_logging.platforms import CustomConsoleLogger
+from league import SimpleLeague
+from league.components.payoff_role_based import RolebasedPayoff
+from league.processes.role_based_league_process import RolebasedLeagueProcess
+from league.processes.league_coordinator import LeagueCoordinator
 from league.utils.team_composer import TeamComposer
 from custom_logging.logger import MainLogger
 from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy, \
     set_agents_only
 
 from types import SimpleNamespace
-
 from utils.run_utils import args_sanity_check
 
 th.multiprocessing.set_start_method('spawn', force=True)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
-
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
 logger = CustomConsoleLogger.console_logger()
 
@@ -67,32 +65,31 @@ def run(_run, _config, _log):
     team_size = _config["team_size"]
     team_composer = TeamComposer(RoleTypes, UnitAttackTypes)
     teams = team_composer.compose_unique_teams(team_size)
-    teams = sample(teams, 2)  # Sample 2 random teams to train
-    teams = team_composer.to_teams(teams)
+    teams = sample(teams, 2)  # Sample 5 random teams to train
 
     # Shared objects
     manager = Manager()
-    payoff_dict = manager.dict()
-    agents_dict = manager.dict()
+    payoff_dict = manager.dict()  # Payoff dict
+    players = manager.list()  # List of current players
 
     # Infrastructure
     procs = []  # All running processes representing an agent playing in the league
-    payoff = PayoffV2(payoff_dict=payoff_dict)  # Hold results of each match
-    agent_pool = AgentPool(agents_dict=agents_dict)  # Hold each trained agent
-    matchmaking = Matchmaking(agent_pool=agent_pool, payoff=payoff)  # Match agents against each other
+    payoff = RolebasedPayoff(payoff_dict=payoff_dict, players=players)  # Hold results of each match
+
+    # league = AlphaStarLeague(initial_agents=team_compositions, payoff=payoff)
+    league = SimpleLeague(teams=teams, payoff=payoff)
 
     # Communication
-    in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(len(teams))])
+    in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(league.size)])
 
     # Synchronization across all league instances
-    sync_barrier = Barrier(parties=len(teams))
+    sync_barrier = Barrier(parties=league.size)
 
     # Start league instances
-    for idx, (in_q, out_q, team) in enumerate(zip(in_queues, out_queues, teams)):
-        proc = LeagueProcessV2(
-            home_team=team,
-            matchmaking=matchmaking,
-            agent_pool=agent_pool,
+    for idx, (in_q, out_q) in enumerate(zip(in_queues, out_queues)):
+        proc = RolebasedLeagueProcess(
+            player_id=idx,
+            players=players,
             queue=(in_q, out_q),
             args=args,
             logger=main_logger,
@@ -102,7 +99,18 @@ def run(_run, _config, _log):
 
     [r.start() for r in procs]
 
+    # Handle message communication within the league
+    coordinator = LeagueCoordinator(
+        logger=main_logger,
+        players=players,
+        queues=(in_queues, out_queues),
+        payoff=payoff,
+        sync_barrier=sync_barrier
+    )
+    coordinator.start()
+
     # Wait for processes to finish
+    coordinator.join()
     [r.join() for r in procs]
 
     # Print win rates for all players

@@ -14,7 +14,7 @@ from custom_logging.logger import MainLogger
 from runs.normal_play_run import NormalPlayRun
 
 
-class LeagueProcessV2(Process):
+class MatchmakingLeagueProcess(Process):
     def __init__(self,
                  agent_pool: AgentPool,
                  matchmaking: Matchmaking,
@@ -23,6 +23,22 @@ class LeagueProcessV2(Process):
                  args: SimpleNamespace,
                  logger: MainLogger,
                  sync_barrier: Barrier):
+        """
+        The process is running a single League-Play and handles communication with the central components.
+        League-Play is a form of NormalPlay where the opponent can be swapped out from a pool of agents (=league).
+        The opponent is fixed and is therefore not learning to prevent non-stationary environment.
+        Opponents are sampled via Self-Play Sampling such as FSP, PFSP or SP.
+
+        Opponent sampling is decided via a matchmaking component.
+
+        :param agent_pool:
+        :param matchmaking:
+        :param home_team:
+        :param queue:
+        :param args:
+        :param logger:
+        :param sync_barrier:
+        """
         super().__init__()
         self._args = args
         self._logger = logger

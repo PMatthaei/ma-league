@@ -2,7 +2,7 @@ import uuid
 from enum import Enum
 from typing import Dict, Any, Tuple
 
-from league.components.payoff import PayoffEntry
+from league.components.payoff_role_based import PayoffEntry
 from league.roles.players import Player
 from learners.learner import Learner
 

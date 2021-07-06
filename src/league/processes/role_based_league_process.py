@@ -5,7 +5,7 @@ from torch.multiprocessing import Process, Barrier, Queue
 from types import SimpleNamespace
 from typing import Dict, Union, Tuple, List
 
-from league.components.payoff import PayoffEntry
+from league.components.payoff_role_based import PayoffEntry
 from league.roles.alphastar.main_player import MainPlayer
 from league.roles.players import Player
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand
@@ -13,7 +13,7 @@ from runs.league_play_run import LeaguePlayRun
 from custom_logging.logger import MainLogger
 
 
-class LeagueProcess(Process):
+class RolebasedLeagueProcess(Process):
     def __init__(self,
                  players: List[Player],
                  player_id: int,
@@ -26,6 +26,10 @@ class LeagueProcess(Process):
         League-Play is a form of NormalPlay where the opponent can be swapped out from a pool of agents (=league).
         The opponent is fixed and is therefore not learning to prevent non-stationary environment.
         Opponents are sampled via Self-Play Sampling such as FSP, PFSP or SP.
+
+        Opponent sampling is decided by the current player. Each player has a different strategy for sampling/searching
+        his opponent. (AlphaStar)
+
         :param players:
         :param player_id:
         :param queue:

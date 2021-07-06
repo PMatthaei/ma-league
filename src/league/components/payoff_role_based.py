@@ -13,9 +13,10 @@ class PayoffEntry(Enum):
     DRAW = 3,
 
 
-class PayoffV2:
+class RolebasedPayoff:
 
-    def __init__(self, payoff_dict: dict):
+    def __init__(self, payoff_dict: dict, players: List):
+        self.players = players
         self.payoff_dict = payoff_dict
         self.decay = 0.99
 
@@ -81,9 +82,7 @@ class PayoffV2:
         else:
             raise NotImplementedError("Payoff Update not implemented.")
 
-    def has_played(self, home: int, away: int):
-        key = (home, away, PayoffEntry.GAMES)
-        return key in self.payoff_dict and self.payoff_dict[key] > 0
+        return self.players[home], self.players[away]
 
     def _apply_decay(self, home: int, away: int):
         for entry in PayoffEntry:
@@ -112,6 +111,27 @@ class PayoffV2:
         for k in keys:
             self.payoff_dict[k] = 0
             self.payoff_dict[k] = 0
+
+    def add_player(self, player) -> None:
+        self.players.append(player)
+
+    def get_player(self, player_id: int):
+        player = self.players[player_id]
+        assert player.id_ == player_id, f"ID mismatch. Player at {player_id} does not match ID {player.id_}"
+        return player
+
+    def get_players_of_type(self, cls) -> List[int]:
+        players = [
+            player.id_ for player in self.players
+            if isinstance(player, cls)
+        ]
+        if len(players) == 0:
+            raise Exception(f"No opponent of Type: {cls} found.")
+        return players
+
+    def __str__(self):
+        pids = [p.id_ for p in self.players]
+        return ''.join([f"\nWin rates for player {pid}: \n {self[pid, pids]}\n" for pid in pids])
 
     def _build_keys(self, away, home):
         keys = []
