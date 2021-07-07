@@ -42,6 +42,70 @@ ex.captured_out_filter = apply_backspaces_and_linefeeds
 
 results_path = os.path.join(dirname(dirname(abspath(__file__))), "results")
 
+H1_T4 = {
+    "tid": 0,
+    "is_scripted": False,
+    "units": [  # Team 1
+        {
+            "uid": 0,
+            "role": RoleTypes.TANK,
+            "attack_type": UnitAttackTypes.RANGED
+        },
+        {
+            "uid": 0,
+            "role": RoleTypes.TANK,
+            "attack_type": UnitAttackTypes.RANGED
+        },
+        {
+            "uid": 1,
+            "role": RoleTypes.HEALER,
+            "attack_type": UnitAttackTypes.RANGED
+        },
+        {
+            "uid": 0,
+            "role": RoleTypes.TANK,
+            "attack_type": UnitAttackTypes.RANGED
+        },
+        {
+            "uid": 0,
+            "role": RoleTypes.TANK,
+            "attack_type": UnitAttackTypes.RANGED
+        },
+    ]
+}
+
+H1_A4 = {
+    "tid": 1,
+    "is_scripted": False,
+    "units": [  # Team 1
+        {
+            "uid": 2,
+            "role": RoleTypes.ADC,
+            "attack_type": UnitAttackTypes.RANGED
+        },
+        {
+            "uid": 2,
+            "role": RoleTypes.ADC,
+            "attack_type": UnitAttackTypes.RANGED
+        },
+        {
+            "uid": 1,
+            "role": RoleTypes.HEALER,
+            "attack_type": UnitAttackTypes.RANGED
+        },
+        {
+            "uid": 2,
+            "role": RoleTypes.ADC,
+            "attack_type": UnitAttackTypes.RANGED
+        },
+        {
+            "uid": 2,
+            "role": RoleTypes.ADC,
+            "attack_type": UnitAttackTypes.RANGED
+        },
+    ]
+}
+
 
 def run(_run, _config, _log):
     _config = args_sanity_check(_config, _log)
@@ -67,8 +131,9 @@ def run(_run, _config, _log):
     # Build league teams
     team_size = _config["team_size"]
     team_composer = TeamComposer(RoleTypes, UnitAttackTypes)
-    teams = team_composer.compose_unique_teams(team_size)
-    teams = sample(teams, 2)  # Sample 2 random teams to train
+    #teams = team_composer.compose_unique_teams(team_size)
+    #teams = sample(teams, 2)  # Sample 2 random teams to train
+    teams = [H1_A4, H1_T4]
     teams = team_composer.to_teams(teams)
 
     # Shared objects

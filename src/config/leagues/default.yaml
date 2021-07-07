@@ -1,3 +1,3 @@
 team_size: 3 # default size of a team within the league
-league_play_time_mins: 1 # how long is a play against one opponent running in minutes
-league_runtime_hours: 48 # how long is the hole league running in hours
+league_play_time_mins: 60 # how long is a play against one opponent running in minutes
+league_runtime_hours: 48 # hofcw long is the hole league running in hours

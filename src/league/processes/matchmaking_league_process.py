@@ -9,9 +9,9 @@ from league.components.matchmaking import Matchmaking
 from league.processes.utils import extract_result
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand
 from league.utils.team_composer import Team
-from runs.league_play_run import LeaguePlayRun
+from runs.train.league_play_run import LeaguePlayRun
 from custom_logging.logger import MainLogger
-from runs.normal_play_run import NormalPlayRun
+from runs.train.normal_play_run import NormalPlayRun
 
 
 class MatchmakingLeagueProcess(Process):

@@ -6,7 +6,7 @@ import torch as th
 
 from eval.methods import avg_proportional_loss
 from learners.learner import Learner
-from runs.self_play_run import SelfPlayRun
+from runs.train.self_play_run import SelfPlayRun
 
 
 class JointPolicyCorrelationEvaluationRun:
@@ -56,7 +56,7 @@ class JointPolicyCorrelationEvaluationRun:
         """
         play = SelfPlayRun(args=self.args, logger=self.logger)
         play.start()
-        path = play.save_learners(identifier=f"instance_{instance}")
+        path = play.save_models(identifier=f"instance_{instance}")
         return path
 
     def evaluate_instances(self, checkpoints) -> Tuple[th.Tensor, th.Tensor]:

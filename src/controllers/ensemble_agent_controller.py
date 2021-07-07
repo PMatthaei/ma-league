@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Dict
+import copy
+from typing import Dict, OrderedDict
 
 from controllers.multi_agent_controller import MultiAgentController
 from modules.agents import REGISTRY as agent_REGISTRY, Agent
@@ -23,19 +24,7 @@ class EnsembleInferenceMAC(MultiAgentController):
         self.ensemble = dict()  # Dictionary holding the specific agent network for a given agent
         self.native_hidden_states = None
         self.specific_hidden_states = None
-
-        self.update(0, self.agent)
         self._all_ids = set(range(self.n_agents))
-
-    def update(self, aid: int, agent: Agent):
-        """
-        Replaces inference for the given agent with id = aid with the inference of the provided agent by adding into the
-        dict.
-        :param aid:
-        :param agent:
-        :return:
-        """
-        self.ensemble.update({aid: agent})
 
     @property
     def n_native_agents(self):
@@ -120,10 +109,18 @@ class EnsembleInferenceMAC(MultiAgentController):
 
     def load_state(self, agent: Agent = None, ensemble: Dict[int, Agent] = None):
         self.agent.load_state_dict(agent.state_dict()) if agent is not None else None
-        [
-            agent.load_state_dict(ensemble[i].state_dict())
-            for i, agent in self.ensemble.items()
-        ] if ensemble is not None else None
+        self.ensemble.update(ensemble)
+
+    def load_state_dict(self, agent: OrderedDict, ensemble: Dict[int, OrderedDict] = None):
+        self.agent.load_state_dict(agent) if agent is not None else None
+        if ensemble is not None:
+            for aid, state in ensemble.items():
+                if aid in self.ensemble:
+                    self.ensemble[aid].load_state_dict(state)
+                else:
+                    agent = copy.deepcopy(self.agent)
+                    agent.load_state_dict(state)
+                    self.ensemble.update({aid: agent})
 
     def cuda(self):
         self.agent.cuda()

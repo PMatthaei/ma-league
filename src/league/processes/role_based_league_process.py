@@ -9,7 +9,7 @@ from league.components.payoff_role_based import PayoffEntry
 from league.roles.alphastar.main_player import MainPlayer
 from league.roles.players import Player
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand
-from runs.league_play_run import LeaguePlayRun
+from runs.train.league_play_run import LeaguePlayRun
 from custom_logging.logger import MainLogger
 
 

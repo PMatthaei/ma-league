@@ -1,4 +1,4 @@
-from runs.normal_play_run import NormalPlayRun
+from runs.train.normal_play_run import NormalPlayRun
 
 from controllers import REGISTRY as mac_REGISTRY
 from steppers import SELF_REGISTRY as self_steppers_REGISTRY

@@ -1,18 +1,16 @@
-import time
 from torch.multiprocessing import Process, Barrier, Queue
 
 from types import SimpleNamespace
 from typing import Dict, Tuple
 
-from controllers import EnsembleInferenceMAC
 from league.components.agent_pool import AgentPool
 from league.components.matchmaking import Matchmaking
 from league.processes.utils import extract_result
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand
 from league.utils.team_composer import Team
-from runs.league_play_run import LeaguePlayRun
+from modules.agents import Agent
 from custom_logging.logger import MainLogger
-from runs.normal_play_run import NormalPlayRun
+from runs.train.normal_play_run import NormalPlayRun
 
 
 class EnsembleLeagueProcess(Process):
@@ -63,20 +61,22 @@ class EnsembleLeagueProcess(Process):
         self._configure_play(home=self._home_team, ai_opponent=True)
         self._play = NormalPlayRun(args=self._args, logger=self._logger)
         self._play.start(play_time_seconds=self._args.league_play_time_mins * 60)
-        self._share_agent()
+        self._share_agent(agent=self._play.home_mac.agent)
 
         # Fetch agents from other teams trained previously and combine them into an ensemble
         self._ensemble = self._matchmaking.get_ensemble(self._home_team)
-        self._play = NormalPlayRun(args=self._args, logger=self._logger, on_episode_end=self._provide_result)
+        self._play = NormalPlayRun(args=self._args, logger=self._logger)
         self._play.build_inference_mac(self._ensemble)
         self._play.evaluate_sequential(test_n_episode=200)
-
+        self._play.save_models()
         # Share agent after training to make its current state accessible to other processes
-        self._share_agent()
+        self._share_agent(agent=self._play.home_mac.agent)
 
         self._request_close()
 
     def _configure_play(self, home: Team, away: Team = None, ai_opponent=False):
+        # In case this process needs to save models -> modify token
+        self._args.unique_token += f"_team_{self._home_team.id_}"
         self._args.env_args['match_build_plan'][0]['units'] = home.units  # mirror if no away units passed
         self._args.env_args['match_build_plan'][1]['units'] = home.units if away is None else away.units
         self._args.env_args['match_build_plan'][1]['is_scripted'] = ai_opponent
@@ -84,8 +84,8 @@ class EnsembleLeagueProcess(Process):
     def _get_shared_agent(self, team: Team):
         return self._agent_pool[team]
 
-    def _share_agent(self):
-        self._agent_pool[self._home_team] = self._play.home_mac.agent
+    def _share_agent(self, agent: Agent):
+        self._agent_pool[self._home_team] = agent
         # Wait until every process finished to share the agent to ensure every agent is up-to-date before next match
         self._sync_barrier.wait()
 

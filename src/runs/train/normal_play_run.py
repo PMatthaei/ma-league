@@ -132,7 +132,7 @@ class NormalPlayRun(ExperimentRun):
         self._init_stepper()
 
         if self.args.checkpoint_path != "":
-            self.load_learners()
+            self.load_models()
 
             if self.args.evaluate or self.args.save_replay:
                 self.evaluate_sequential()
@@ -166,7 +166,7 @@ class NormalPlayRun(ExperimentRun):
             # Save model if configured
             save_interval_reached = (self.stepper.t_env - self.model_save_time) >= self.args.save_model_interval
             if self.args.save_model and (save_interval_reached or self.model_save_time == 0):
-                self.save_learners()
+                self.save_models()
 
             # Update episode counter with number of episodes run in the batch
             episode += self.args.batch_size_run
@@ -181,11 +181,11 @@ class NormalPlayRun(ExperimentRun):
         # Finish and clean up
         self._finish()
 
-    def load_learners(self, checkpoint_path=None):
+    def load_models(self, checkpoint_path=None):
         timestep_to_load = self.checkpoint_manager.load(learners=self.learners, load_step=self.args.load_step)
         self.stepper.t_env = timestep_to_load
 
-    def save_learners(self, identifier=None):
+    def save_models(self, identifier=None):
         self.model_save_time = self.stepper.t_env
         out_path = self.checkpoint_manager.save(learners=self.learners, t_env=self.model_save_time,
                                                 identifier=identifier)

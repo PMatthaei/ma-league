@@ -31,6 +31,7 @@ class Matchmaking:
     def get_ensemble(self, home_team: Team) -> Dict[int, Agent]:
         teams = self._agent_pool.collected_teams
         others = [team for team in teams if team.id_ != home_team.id_]
+        # TODO: change fixed mapping to sensible
         return {
-            0: self._agent_pool[others.pop()]
+            2: self._agent_pool[others.pop()]
         }

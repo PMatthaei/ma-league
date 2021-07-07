@@ -1,9 +1,9 @@
-from typing import List, Dict
+from typing import Dict
 
 from controllers import EnsembleInferenceMAC
 from modules.agents.agent import Agent
 
-from runs.self_play_run import SelfPlayRun
+from runs.train.self_play_run import SelfPlayRun
 
 
 class LeaguePlayRun(SelfPlayRun):
