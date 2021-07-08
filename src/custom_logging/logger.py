@@ -81,7 +81,7 @@ class MainLogger:
         """
         self.stats[key].append((t_env, value))
         self._tensorboard_logger.log(key, value, t_env, log_type) if self._tensorboard_logger else None
-        self._sacred_logger.log(key, value, t_env, log_type) if self._tensorboard_logger else None
+        self._sacred_logger.log(key, value, t_env, log_type) if self._sacred_logger else None
 
     def _log_collectibles(self, t):
         """
@@ -153,7 +153,9 @@ class MainLogger:
         self._sacred_logger = CustomSacredLogger(sacred_run_dict)
 
     def log_console(self):
-        self._console_logger.log(self.stats)
+        info_str = self._console_logger._format(self.stats)
+        self._console_logger.console.info(info_str)
+        #self._console_logger.log(self.stats)
 
     def update_shapes(self, shapes):
         # TODO: manage meta data for logging somewhere else

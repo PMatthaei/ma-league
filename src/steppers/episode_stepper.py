@@ -7,29 +7,8 @@ from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
 from exceptions.runner_exceptions import MultiAgentControllerNotInitialized
+from steppers.env_stepper import EnvStepper
 from steppers.utils.stepper_utils import get_policy_team_id
-
-
-class EnvStepper:
-    def __init__(self):
-        self.batch_size = None
-        self.t_env = None
-        self.is_initalized = False
-
-    def run(self, test_mode=False):
-        raise NotImplementedError()
-
-    def initialize(self, scheme, groups, preprocess, home_mac):
-        raise NotImplementedError()
-
-    def close_env(self):
-        raise NotImplementedError()
-
-    def save_replay(self):
-        raise NotImplementedError()
-
-    def get_env_info(self):
-        raise NotImplementedError()
 
 
 class EpisodeStepper(EnvStepper):
@@ -127,8 +106,7 @@ class EpisodeStepper(EnvStepper):
 
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch of size 1
-            actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
-                                                              test_mode=test_mode)
+            actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
 
             actions_taken.append(th.stack([actions, is_greedy]))
 
@@ -159,8 +137,7 @@ class EpisodeStepper(EnvStepper):
         self.home_batch.update(last_data, ts=self.t)
 
         # Select actions in the last stored state
-        actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
-                                                          test_mode=test_mode)
+        actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
 
         actions_taken.append(th.stack([actions, is_greedy]))
 
@@ -177,9 +154,9 @@ class EpisodeStepper(EnvStepper):
         self.logger.collect(Collectibles.WON, env_info["battle_won"][0], origin=Originator.HOME)
         self.logger.collect(Collectibles.WON, env_info["battle_won"][1], origin=Originator.AWAY)
         self.logger.collect(Collectibles.DRAW, env_info["draw"])
-        self.logger.collect(Collectibles.EPISODE, self.t)
+        self.logger.collect(Collectibles.STEPS, self.t)
         # Log epsilon from mac directly
-        self.logger.log_stat("home_epsilon", self.epsilon, self.t)
+        self.logger.log_stat("home_epsilon", self.epsilon, self.t_env)
         # Log collectibles if conditions suffice
         self.logger.log(self.t_env)
 

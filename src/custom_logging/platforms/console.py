@@ -1,5 +1,6 @@
 import logging
 from logging import Logger
+from typing import Dict
 
 import numpy as np
 
@@ -24,7 +25,7 @@ class CustomConsoleLogger:
         self.console.info(output)
 
     @staticmethod
-    def _format(stats):
+    def _format(stats: Dict) -> str:
         """
         Format provided stats into a single string and print into console.
         :return:

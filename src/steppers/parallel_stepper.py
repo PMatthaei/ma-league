@@ -8,7 +8,7 @@ from custom_logging.utils.enums import Originator
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
-from steppers.episode_stepper import EnvStepper
+from steppers.env_stepper import EnvStepper
 
 from steppers.utils.env_worker_process import EnvWorker
 from steppers.utils.stepper_utils import get_policy_team_id
@@ -212,7 +212,7 @@ class ParallelStepper(EnvStepper):
         self.logger.collect(Collectibles.WON, [env_info["battle_won"][0] for env_info in env_infos], origin=Originator.HOME)
         self.logger.collect(Collectibles.WON, [env_info["battle_won"][1] for env_info in env_infos], origin=Originator.AWAY)
         self.logger.collect(Collectibles.DRAW, [env_info["draw"] for env_info in env_infos])
-        self.logger.collect(Collectibles.EPISODE, self.t)
+        self.logger.collect(Collectibles.STEPS, self.t)
         # Log collectibles if conditions suffice
         self.logger.log(self.t_env)
 

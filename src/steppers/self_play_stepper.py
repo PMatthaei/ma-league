@@ -135,7 +135,7 @@ class SelfPlayStepper(EpisodeStepper):
         self.logger.collect(Collectibles.WON, env_info["battle_won"][0], origin=Originator.HOME)
         self.logger.collect(Collectibles.WON, env_info["battle_won"][1], origin=Originator.AWAY)
         self.logger.collect(Collectibles.DRAW, env_info["draw"])
-        self.logger.collect(Collectibles.EPISODE, self.t)
+        self.logger.collect(Collectibles.STEPS, self.t)
         # Log epsilon from mac directly
         self.logger.log_stat("home_epsilon", self.epsilons[0], self.t)
         self.logger.log_stat("away_epsilon", self.epsilons[1], self.t)

@@ -67,7 +67,7 @@ def run(_run, _config, _log):
             from runs.evaluation.jpc_eval_run import JointPolicyCorrelationEvaluationRun
             play = JointPolicyCorrelationEvaluationRun(args=args, logger=main_logger)
         elif eval_method == "replay":
-            from runs.evaluation.replay_generation_run import ReplayGenerationRun
+            from runs.evaluation.replay_eval_run import ReplayGenerationRun
             play = ReplayGenerationRun(args=args, logger=main_logger)
         else:
             from runs.train.self_play_run import SelfPlayRun

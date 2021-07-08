@@ -32,10 +32,10 @@ class Collectibles(Enum):
                "preprocessing": [percentage],
                "log_type": "scalar"
            },
-    EPISODE = {  # Collected at episode end
+    STEPS = {  # Collected at episode end
                   "is_global": True,
                   "collection_type": list,
-                  "preprocessing": [np.mean, len],
+                  "preprocessing": [np.mean],
                   "log_type": "scalar"
               },
 

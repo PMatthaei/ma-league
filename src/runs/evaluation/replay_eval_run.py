@@ -149,8 +149,13 @@ class ReplayGenerationRun(ExperimentRun):
 
     def _build_stepper(self) -> EnvStepper:
         self.args.env_args["record"] = True
+        self.args.env_args["debug_range"] = True
         self.args.env_args['match_build_plan'][0] = copy(H1_A4)
         self.args.env_args['match_build_plan'][1] = copy(H1_A4)
+
+        self.args.env_args['match_build_plan'][0] = copy(H1_T4)
+        self.args.env_args['match_build_plan'][1] = copy(H1_T4)
+
         self.args.env_args['match_build_plan'][0]['tid'] = 0
         self.args.env_args['match_build_plan'][1]['tid'] = 1
         self.args.env_args['match_build_plan'][1]['is_scripted'] = True
@@ -161,7 +166,16 @@ class ReplayGenerationRun(ExperimentRun):
             self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
                                     home_mac=self.home_mac)
 
-    def start(self, play_time_seconds=None, episodes=200):
+    def load_agents(self):
+        path1 = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_1/500040"
+        path2 = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0/500053"
+        name = "home_qlearner_"
+        state_dict1 = th.load("{}/{}agent.th".format(path1, name), map_location=lambda storage, loc: storage)
+        state_dict2 = th.load("{}/{}agent.th".format(path2, name), map_location=lambda storage, loc: storage)
+        # self.home_mac.load_state_dict(agent=state_dict2, ensemble={2: state_dict1})
+        self.home_mac.load_state_dict(agent=state_dict2)
+
+    def start(self, play_time_seconds=None):
         """
         :param play_time_seconds: Play the run for a certain time in seconds.
         :return:
@@ -172,25 +186,19 @@ class ReplayGenerationRun(ExperimentRun):
 
         self._init_stepper()
 
-        path1 = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_1/500040"
-        path2 = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0/500053"
-        name = "home_qlearner_"
-        state_dict1 = th.load("{}/{}agent.th".format(path1, name), map_location=lambda storage, loc: storage)
-        state_dict2 = th.load("{}/{}agent.th".format(path2, name), map_location=lambda storage, loc: storage)
-        self.home_mac.load_state_dict(agent=state_dict1, ensemble={0:state_dict2, 1: state_dict2})
+        self.load_agents()
 
         # start training
-        self.logger.info("Beginning inference for {} episodes.".format(episodes))
+        self.logger.info("Beginning inference for {} episodes.".format(200))
         episode = 0
 
-        while episode <= episodes:
+        while episode < 200:
             # Run for a whole episode at a time
             episode_batch, env_info = self.stepper.run(test_mode=True)
+            self.logger.log_stat("episode", episode, self.stepper.t_env)
 
-            # Update episode counter with number of episodes run in the batch
-            episode += self.args.batch_size_run
+            episode += 1
 
-        self.logger.log_stat("episode", episode, self.stepper.t_env)
         self.logger.log_console()
 
         # Finish and clean up
