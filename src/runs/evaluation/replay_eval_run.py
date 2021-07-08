@@ -21,10 +21,12 @@ from components.episode_buffer import ReplayBuffer
 from components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
 
+# Config TODO: Pack into args
 MODEL_COLLECTION_BASE_PATH = "/home/pmatthaei/Projects/ma-league-results/models/"
 
 HOME_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_1"
 AWAY_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0"
+POLICY_TEAM_ID = 0
 
 
 class ReplayGenerationRun(ExperimentRun):
@@ -96,14 +98,17 @@ class ReplayGenerationRun(ExperimentRun):
         return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
 
     def _configure_environment_args(self):
+        policy_team_id = POLICY_TEAM_ID
+        ai_team_id = 1 - policy_team_id
+
         self.args.env_args["record"] = True
         self.args.env_args["debug_range"] = True
         home_team = self.checkpoint_manager.load_team(path=HOME_TEAM)
-        self.args.env_args['match_build_plan'][0] = home_team
-        self.args.env_args['match_build_plan'][1] = copy(home_team)
-        self.args.env_args['match_build_plan'][0]['tid'] = 0
-        self.args.env_args['match_build_plan'][1]['tid'] = 1
-        self.args.env_args['match_build_plan'][1]['is_scripted'] = True
+        self.args.env_args['match_build_plan'][policy_team_id] = home_team
+        self.args.env_args['match_build_plan'][ai_team_id] = copy(home_team)
+        self.args.env_args['match_build_plan'][policy_team_id]['tid'] = 0
+        self.args.env_args['match_build_plan'][ai_team_id]['tid'] = 1
+        self.args.env_args['match_build_plan'][ai_team_id]['is_scripted'] = True
 
     def _init_stepper(self):
         if not self.stepper.is_initalized:
@@ -113,7 +118,7 @@ class ReplayGenerationRun(ExperimentRun):
     def load_agents(self):
         state = self.checkpoint_manager.load_state(path=HOME_TEAM, component="agent")
         state_other = self.checkpoint_manager.load_state(path=AWAY_TEAM, component="agent")
-        self.home_mac.load_state_dict(agent=state, ensemble={2: state_other})
+        self.home_mac.load_state_dict(agent=state_other)
 
     def start(self, play_time_seconds=None):
         """
@@ -129,17 +134,17 @@ class ReplayGenerationRun(ExperimentRun):
         self._init_stepper()
 
         # start training
-        self.logger.info("Beginning inference for {} episodes.".format(200))
+        self.logger.info("Beginning inference for {} episodes.".format(self.args.test_nepisode))
         episode = 0
 
-        while episode < 200:
+        while episode < self.args.test_nepisode:
             # Run for a whole episode at a time
-            episode_batch, env_info = self.stepper.run(test_mode=True)
+            _, _ = self.stepper.run(test_mode=True)
             self.logger.log_stat("episode", episode, self.stepper.t_env)
 
             episode += 1
 
-        self.logger.log_console()
+        self.logger.log_report()
 
         # Finish and clean up
         self._finish()

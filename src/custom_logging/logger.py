@@ -4,7 +4,8 @@ from collections import defaultdict, Sized
 from typing import Any
 import numpy as np
 from custom_logging.collectibles import Collectibles
-from custom_logging.platforms import CustomSacredLogger, CustomTensorboardLogger, CustomConsoleLogger
+from custom_logging.platforms import CustomSacredLogger, CustomTensorboardLogger
+from custom_logging.platforms.console import CustomConsoleLogger
 from custom_logging.utils.enums import Originator
 
 
@@ -21,7 +22,7 @@ def dd_collectible():
 
 
 class MainLogger:
-    def __init__(self, console, args):
+    def __init__(self, console_logger: CustomConsoleLogger, args):
         """
         Logger for multiple outputs. Supports logging to TensorBoard as well as to file and console via sacred.
         All data is collected, managed, processed and distributed to its respective visualization platform.
@@ -30,7 +31,7 @@ class MainLogger:
         :param console:
         """
         self.args = args
-        self._console_logger = CustomConsoleLogger(console)
+        self._console_logger = console_logger
         self._tensorboard_logger: CustomTensorboardLogger = None
         self._sacred_logger: CustomSacredLogger = None
 
@@ -42,6 +43,8 @@ class MainLogger:
         self.test_n_episode = self.args.test_nepisode
         self.runner_log_interval = self.args.runner_log_interval
         self.log_train_stats_t = -1000000  # Log first run
+        self.collected_train_episodes = 0
+        self.collected_test_episodes = 0
 
     def _build_collectible_episodal_stats_dict(self):
         self.episodal_stats = defaultdict(dd_collectible)
@@ -54,7 +57,7 @@ class MainLogger:
                     self.episodal_stats[collectible][k] = defaultdict(dd_dict if is_dict else dd_list)
 
     def info(self, info_str: str):
-        self._console_logger.console.info(info_str)
+        self._console_logger.info(info_str)
 
     def log(self, t_env):
         """
@@ -62,11 +65,11 @@ class MainLogger:
         :param t_env:
         :return:
         """
-        test_entries = len(self.episodal_stats[Collectibles.RETURN]["test"][Originator.HOME]) # how many test results arrived
-        test_finished = test_entries == self.test_n_episode
+        test_returns = self.episodal_stats[Collectibles.RETURN]["test"][Originator.HOME]
+        test_finished = len(test_returns) == self.test_n_episode
         if self.test_mode and test_finished:  # Collect test data as long as test is running
             self._log_collectibles(t_env)  # ... then process and log collectibles
-        elif t_env - self.log_train_stats_t >= self.runner_log_interval:  # Collect train data as defined via interval
+        elif not self.test_mode and t_env - self.log_train_stats_t >= self.runner_log_interval:  # Collect train data as defined via interval
             self._log_collectibles(t_env)  # ... then process and log collectibles
             self.log_train_stats_t = t_env
 
@@ -136,14 +139,16 @@ class MainLogger:
         :param origin:
         :return:
         """
+        def filled(d):
+            return isinstance(d, Sized) and len(d) > 0
+
         mode = "test" if self.test_mode else "train"
 
         if collectible.is_global:
             data = self.episodal_stats[collectible][mode]
         else:
             data = self.episodal_stats[collectible][mode][origin]
-        processed = [func(data) if isinstance(data, Sized) and len(data) > 0 else np.nan for func in
-                     collectible.preprocessing]
+        processed = [func(data) if filled(data) else np.nan for func in collectible.preprocessing]
         return processed
 
     def setup_tensorboard(self, log_dir):
@@ -152,10 +157,9 @@ class MainLogger:
     def setup_sacred(self, sacred_run_dict):
         self._sacred_logger = CustomSacredLogger(sacred_run_dict)
 
-    def log_console(self):
-        info_str = self._console_logger._format(self.stats)
-        self._console_logger.console.info(info_str)
-        #self._console_logger.log(self.stats)
+    def log_report(self):
+        self._console_logger.info(f"Logging stats of {len(self.stats['episode'])} episodes")
+        self._console_logger.log_stats_report(self.stats)
 
     def update_shapes(self, shapes):
         # TODO: manage meta data for logging somewhere else

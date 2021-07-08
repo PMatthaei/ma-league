@@ -5,24 +5,20 @@ from typing import Dict
 import numpy as np
 
 
-class CustomConsoleLogger:
-    def __init__(self, console: Logger):
-        self.console = console
-
-    @staticmethod
-    def console_logger():
-        logger = logging.getLogger('ma-league')
-        logger.handlers = []
+class CustomConsoleLogger(Logger):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.handlers = []
         ch = logging.StreamHandler()
         formatter = logging.Formatter('[%(levelname)s %(asctime)s] %(name)s %(message)s', '%H:%M:%S')
         ch.setFormatter(formatter)
-        logger.addHandler(ch)
-        logger.setLevel(logging.INFO)
-        return logger
+        self.addHandler(ch)
+        self.setLevel(logging.INFO)
+        logging.setLoggerClass(CustomConsoleLogger)
 
-    def log(self, stats):
+    def log_stats_report(self, stats: Dict):
         output = self._format(stats)
-        self.console.info(output)
+        self.info(output)
 
     @staticmethod
     def _format(stats: Dict) -> str:
@@ -30,6 +26,7 @@ class CustomConsoleLogger:
         Format provided stats into a single string and print into console.
         :return:
         """
+
         def _skip(collectible: str):
             """
             Decide which elements of the stats dict to skip.
