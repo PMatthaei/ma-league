@@ -1,5 +1,15 @@
+from custom_logging.logger import MainLogger
+
+
 class EnvStepper:
-    def __init__(self):
+    def __init__(self, args, logger: MainLogger):
+        """
+        Steppers build the environment and issue steps. The rely on one or more multi-agent controller to infer actions.
+        :param args: args passed from main
+        :param logger: logger
+        """
+        self.args = args
+        self.logger: MainLogger = logger
         self.batch_size = None
         self.t_env = None
         self.is_initalized = False

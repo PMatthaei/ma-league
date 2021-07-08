@@ -20,9 +20,8 @@ class EpisodeStepper(EnvStepper):
         :param args: args passed from main
         :param logger: logger
         """
-        super().__init__()
-        self.args = args
-        self.logger: MainLogger = logger
+
+        super().__init__(args, logger)
         self.batch_size = self.args.batch_size_run
         assert self.batch_size == 1
 

@@ -1,3 +1,4 @@
+import json
 import pprint
 import time
 from copy import copy
@@ -6,6 +7,7 @@ from typing import Dict
 
 import torch as th
 from maenv.core import RoleTypes, UnitAttackTypes
+from maenv.utils.enums import EnumEncoder, as_enum
 
 from modules.agents import Agent
 from runs.experiment_run import ExperimentRun
@@ -20,69 +22,10 @@ from components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
 
 MODEL_COLLECTION_BASE_PATH = "/home/pmatthaei/Projects/ma-league-results/models/"
-H1_T4 = {
-    "tid": 0,
-    "is_scripted": False,
-    "units": [  # Team 1
-        {
-            "uid": 0,
-            "role": RoleTypes.TANK,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 0,
-            "role": RoleTypes.TANK,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 1,
-            "role": RoleTypes.HEALER,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 0,
-            "role": RoleTypes.TANK,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 0,
-            "role": RoleTypes.TANK,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-    ]
-}
 
-H1_A4 = {
-    "tid": 1,
-    "is_scripted": False,
-    "units": [  # Team 1
-        {
-            "uid": 2,
-            "role": RoleTypes.ADC,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 2,
-            "role": RoleTypes.ADC,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 1,
-            "role": RoleTypes.HEALER,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 2,
-            "role": RoleTypes.ADC,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 2,
-            "role": RoleTypes.ADC,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-    ]
-}
+HOME_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_1"
+AWAY_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0"
+
 
 class ReplayGenerationRun(ExperimentRun):
 
@@ -95,6 +38,8 @@ class ReplayGenerationRun(ExperimentRun):
         :param logger:
         """
         super().__init__(args, logger)
+        self.checkpoint_manager = CheckpointManager(args=self.args, logger=self.logger)
+
         self.home_mac, self.away_mac = None, None
 
         # Init stepper so we can get env info
@@ -118,8 +63,6 @@ class ReplayGenerationRun(ExperimentRun):
         # Setup multi-agent controller here
         self.home_mac = EnsembleInferenceMAC(self.home_buffer.scheme, self.groups, self.args)
         self.away_mac = EnsembleInferenceMAC(self.home_buffer.scheme, self.groups, self.args)
-
-        self.checkpoint_manager = CheckpointManager(args=self.args, logger=self.logger)
 
     def _update_shapes(self) -> Dict:
         shapes = {
@@ -148,18 +91,19 @@ class ReplayGenerationRun(ExperimentRun):
         return groups, preprocess, scheme
 
     def _build_stepper(self) -> EnvStepper:
+        self._configure_environment_args()
+
+        return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
+
+    def _configure_environment_args(self):
         self.args.env_args["record"] = True
         self.args.env_args["debug_range"] = True
-        self.args.env_args['match_build_plan'][0] = copy(H1_A4)
-        self.args.env_args['match_build_plan'][1] = copy(H1_A4)
-
-        self.args.env_args['match_build_plan'][0] = copy(H1_T4)
-        self.args.env_args['match_build_plan'][1] = copy(H1_T4)
-
+        home_team = self.checkpoint_manager.load_team(path=HOME_TEAM)
+        self.args.env_args['match_build_plan'][0] = home_team
+        self.args.env_args['match_build_plan'][1] = copy(home_team)
         self.args.env_args['match_build_plan'][0]['tid'] = 0
         self.args.env_args['match_build_plan'][1]['tid'] = 1
         self.args.env_args['match_build_plan'][1]['is_scripted'] = True
-        return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
 
     def _init_stepper(self):
         if not self.stepper.is_initalized:
@@ -167,13 +111,9 @@ class ReplayGenerationRun(ExperimentRun):
                                     home_mac=self.home_mac)
 
     def load_agents(self):
-        path1 = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_1/500040"
-        path2 = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0/500053"
-        name = "home_qlearner_"
-        state_dict1 = th.load("{}/{}agent.th".format(path1, name), map_location=lambda storage, loc: storage)
-        state_dict2 = th.load("{}/{}agent.th".format(path2, name), map_location=lambda storage, loc: storage)
-        # self.home_mac.load_state_dict(agent=state_dict2, ensemble={2: state_dict1})
-        self.home_mac.load_state_dict(agent=state_dict2)
+        state = self.checkpoint_manager.load_state(path=HOME_TEAM, component="agent")
+        state_other = self.checkpoint_manager.load_state(path=AWAY_TEAM, component="agent")
+        self.home_mac.load_state_dict(agent=state, ensemble={2: state_other})
 
     def start(self, play_time_seconds=None):
         """
@@ -184,9 +124,9 @@ class ReplayGenerationRun(ExperimentRun):
         experiment_params = pprint.pformat(self.args.__dict__, indent=4, width=1)
         self.logger.info("\n\n" + experiment_params + "\n")
 
-        self._init_stepper()
-
         self.load_agents()
+
+        self._init_stepper()
 
         # start training
         self.logger.info("Beginning inference for {} episodes.".format(200))

@@ -23,7 +23,7 @@ class ParallelStepper(EnvStepper):
         :param args:
         :param logger:
         """
-        super().__init__()
+        super().__init__(args, logger)
         self.args = args
         self.logger = logger
         self.batch_size = self.args.batch_size_run
