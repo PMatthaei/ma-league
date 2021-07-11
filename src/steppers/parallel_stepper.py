@@ -7,7 +7,7 @@ from custom_logging.collectibles import Collectibles
 from custom_logging.utils.enums import Originator
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
-from components.episode_buffer import EpisodeBatch
+from components.episode_batch import EpisodeBatch
 from steppers.env_stepper import EnvStepper
 
 from steppers.utils.env_worker_process import EnvWorker

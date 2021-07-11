@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from components.episode_buffer import EpisodeBatch
+from components.episode_batch import EpisodeBatch
 from components.action_selectors import REGISTRY as action_REGISTRY
 
 import torch as th

@@ -5,15 +5,15 @@ from typing import Dict
 
 import torch as th
 
+from components.replay_buffers.replay_buffer import ReplayBuffer
 from modules.agents import Agent
 from runs.experiment_run import ExperimentRun
 from steppers.episode_stepper import EnvStepper
-from utils.checkpoint_manager import CheckpointManager
+from utils.asset_manager import AssetManager
 from utils.timehelper import time_left, time_str
 
 from learners import REGISTRY as le_REGISTRY
 from controllers import REGISTRY as mac_REGISTRY, EnsembleInferenceMAC
-from components.episode_buffer import ReplayBuffer
 from components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
 
@@ -56,7 +56,7 @@ class NormalPlayRun(ExperimentRun):
         if self.args.use_cuda:
             [learner.cuda() for learner in self.learners]
 
-        self.checkpoint_manager = CheckpointManager(args=self.args, logger=self.logger)
+        self.asset_manager = AssetManager(args=self.args, logger=self.logger)
 
     def build_inference_mac(self, ensemble: Dict[int, Agent] = None):
         self.home_mac = EnsembleInferenceMAC(self.home_buffer.scheme, self.groups, self.args)
@@ -182,14 +182,12 @@ class NormalPlayRun(ExperimentRun):
         self._finish()
 
     def load_models(self, checkpoint_path=None):
-        timestep_to_load = self.checkpoint_manager.load(learners=self.learners, load_step=self.args.load_step)
+        timestep_to_load = self.asset_manager.load(learners=self.learners, load_step=self.args.load_step)
         self.stepper.t_env = timestep_to_load
 
     def save_models(self, identifier=None):
         self.model_save_time = self.stepper.t_env
-        out_path = self.checkpoint_manager.save(learners=self.learners, t_env=self.model_save_time,
-                                                identifier=identifier)
-        self.logger.info("Saving models to {}".format(out_path))
+        out_path = self.asset_manager.save(learners=self.learners, t_env=self.model_save_time, identifier=identifier)
         return out_path
 
     def _finish(self):
@@ -204,16 +202,16 @@ class NormalPlayRun(ExperimentRun):
         self.home_buffer.insert_episode_batch(episode_batch)
 
         if self.home_buffer.can_sample(self.args.batch_size):
-            episode_sample = self.home_buffer.sample(self.args.batch_size)
+            episode_sample_batch = self.home_buffer.sample(self.args.batch_size)
 
             # Truncate batch to only filled timesteps
-            max_ep_t = episode_sample.max_t_filled()
-            episode_sample = episode_sample[:, :max_ep_t]
+            max_ep_t = episode_sample_batch.max_t_filled()
+            episode_sample_batch = episode_sample_batch[:, :max_ep_t]
 
-            if episode_sample.device != self.args.device:
-                episode_sample.to(self.args.device)
+            if episode_sample_batch.device != self.args.device:
+                episode_sample_batch.to(self.args.device)
 
-            self.home_learner.train(episode_sample, self.stepper.t_env, episode_num)
+            self.home_learner.train(episode_sample_batch, self.stepper.t_env, episode_num)
 
             if after_train:
                 after_train(self.learners)

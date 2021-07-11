@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from components.episode_buffer import EpisodeBatch
+from components.episode_batch import EpisodeBatch
 from controllers import BasicMAC
 from modules.agents import REGISTRY as agent_REGISTRY, Agent
 from components.action_selectors import REGISTRY as action_REGISTRY

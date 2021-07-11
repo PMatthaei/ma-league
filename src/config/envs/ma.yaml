@@ -11,6 +11,7 @@ env_args:
   grid_size: 20
   match_build_plan: medium_1h_4t
   ai: basic
+  stochastic_spawns: True
 
 test_greedy: True
 test_nepisode: 32

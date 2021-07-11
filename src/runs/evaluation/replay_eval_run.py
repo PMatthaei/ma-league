@@ -1,33 +1,29 @@
-import json
 import pprint
-import time
 from copy import copy
 from types import SimpleNamespace
 from typing import Dict
 
 import torch as th
-from maenv.core import RoleTypes, UnitAttackTypes
-from maenv.utils.enums import EnumEncoder, as_enum
 
-from modules.agents import Agent
+from components.replay_buffers.replay_buffer import ReplayBuffer
 from runs.experiment_run import ExperimentRun
 from steppers.episode_stepper import EnvStepper
-from utils.checkpoint_manager import CheckpointManager
-from utils.timehelper import time_left, time_str
+from utils.asset_manager import AssetManager
 
-from learners import REGISTRY as le_REGISTRY
-from controllers import REGISTRY as mac_REGISTRY, EnsembleInferenceMAC
-from components.episode_buffer import ReplayBuffer
+from controllers import EnsembleInferenceMAC
+
 from components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
 
 # Config TODO: Pack into args
 MODEL_COLLECTION_BASE_PATH = "/home/pmatthaei/Projects/ma-league-results/models/"
 
-HOME_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_1"
-AWAY_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0"
-POLICY_TEAM_ID = 0
+#POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "4/qmix__2021-07-09_12-49-37_team_0"
+POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0"
 
+#POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "3/qmix__2021-07-08_22-23-56_team_0"
+#POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0"
+POLICY_TEAM_ID = 1
 
 class ReplayGenerationRun(ExperimentRun):
 
@@ -40,7 +36,7 @@ class ReplayGenerationRun(ExperimentRun):
         :param logger:
         """
         super().__init__(args, logger)
-        self.checkpoint_manager = CheckpointManager(args=self.args, logger=self.logger)
+        self.asset_manager = AssetManager(args=self.args, logger=self.logger)
 
         self.home_mac, self.away_mac = None, None
 
@@ -103,11 +99,12 @@ class ReplayGenerationRun(ExperimentRun):
 
         self.args.env_args["record"] = True
         self.args.env_args["debug_range"] = True
-        home_team = self.checkpoint_manager.load_team(path=HOME_TEAM)
+        self.args.env_args["stochastic_spawns"] = False
+        home_team = self.asset_manager.load_team(path=POLICY_TEAM)
         self.args.env_args['match_build_plan'][policy_team_id] = home_team
         self.args.env_args['match_build_plan'][ai_team_id] = copy(home_team)
-        self.args.env_args['match_build_plan'][policy_team_id]['tid'] = 0
-        self.args.env_args['match_build_plan'][ai_team_id]['tid'] = 1
+        self.args.env_args['match_build_plan'][policy_team_id]['tid'] = policy_team_id
+        self.args.env_args['match_build_plan'][ai_team_id]['tid'] = ai_team_id
         self.args.env_args['match_build_plan'][ai_team_id]['is_scripted'] = True
 
     def _init_stepper(self):
@@ -116,9 +113,8 @@ class ReplayGenerationRun(ExperimentRun):
                                     home_mac=self.home_mac)
 
     def load_agents(self):
-        state = self.checkpoint_manager.load_state(path=HOME_TEAM, component="agent")
-        state_other = self.checkpoint_manager.load_state(path=AWAY_TEAM, component="agent")
-        self.home_mac.load_state_dict(agent=state_other)
+        state = self.asset_manager.load_state(path=POLICY_TEAM, component="agent")
+        self.home_mac.load_state_dict(agent=state)
 
     def start(self, play_time_seconds=None):
         """
@@ -152,3 +148,9 @@ class ReplayGenerationRun(ExperimentRun):
     def _finish(self):
         self.stepper.close_env()
         self.logger.info("Finished.")
+
+    def _build_learners(self):
+        pass  # we do not need learners since...
+
+    def _train_episode(self, episode_num):
+        pass  # ... we do not train, just infer

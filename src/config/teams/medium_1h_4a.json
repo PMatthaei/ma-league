@@ -1,0 +1,92 @@
+[
+  {
+    "is_scripted": true,
+    "units": [
+      {
+        "role": {
+          "__enum__": "RoleTypes.ADC"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      },
+      {
+        "role": {
+          "__enum__": "RoleTypes.ADC"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      },
+      {
+        "role": {
+          "__enum__": "RoleTypes.HEALER"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      },
+      {
+        "role": {
+          "__enum__": "RoleTypes.ADC"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      },
+      {
+        "role": {
+          "__enum__": "RoleTypes.ADC"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      }
+    ]
+  },
+  {
+    "is_scripted": false,
+    "units": [
+            {
+        "role": {
+          "__enum__": "RoleTypes.ADC"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      },
+      {
+        "role": {
+          "__enum__": "RoleTypes.ADC"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      },
+      {
+        "role": {
+          "__enum__": "RoleTypes.HEALER"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      },
+      {
+        "role": {
+          "__enum__": "RoleTypes.ADC"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      },
+      {
+        "role": {
+          "__enum__": "RoleTypes.ADC"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      }
+    ]
+  }
+]

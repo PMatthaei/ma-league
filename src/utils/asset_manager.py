@@ -6,11 +6,18 @@ from maenv.utils.enums import EnumEncoder, as_enum
 from exceptions.checkpoint_exceptions import NoLearnersProvided
 from learners.learner import Learner
 from main import results_path
+from utils.run_utils import find_latest_model_path
 
 
-class CheckpointManager:
+class AssetManager:
 
     def __init__(self, args, logger):
+        """
+        Saves and loads various assets needed for league or normal training such as loading models or team constellations
+        from files.
+        :param args:
+        :param logger:
+        """
         self.logger = logger
         self.args = args
         self.unique_token = args.unique_token
@@ -30,6 +37,8 @@ class CheckpointManager:
         os.makedirs(save_path, exist_ok=True)
         # Save all provided learners in the same path
         [learner.save_models(save_path, learner.name) for learner in learners]
+        self.logger.info("Saving learner components to {}".format(save_path))
+
         return save_path
 
     def load(self, learners: List[Learner], load_step) -> int:
@@ -44,38 +53,31 @@ class CheckpointManager:
             self.logger.info("Checkpoint directory {} doesn't exist".format(self.checkpoint_path))
             return -1
 
-        model_path, timestep_to_load = self._find_latest_model_path(path=self.checkpoint_path, load_step=load_step)
+        model_path, timestep_to_load = find_latest_model_path(path=self.checkpoint_path, load_step=load_step)
 
-        self.logger.info("Loading model from {}".format(model_path))
+        self.logger.info("Loading learner components from {}".format(model_path))
         [learner.load_models(model_path) for learner in learners]
 
         return timestep_to_load
 
-    def _find_latest_model_path(self, path: str, load_step: int = 0):
-        timesteps = []
-
-        # Go through all files in args.checkpoint_path
-        for name in os.listdir(path):
-            full_name = os.path.join(path, name)
-            # Check if they are dirs the names of which are numbers
-            if os.path.isdir(full_name) and name.isdigit():
-                timesteps.append(int(name))
-        if load_step == 0:
-            # choose the max timestep
-            timestep_to_load = max(timesteps)
-        else:
-            # choose the timestep closest to load_step
-            timestep_to_load = min(timesteps, key=lambda x: abs(x - load_step))
-        model_path = os.path.join(path, str(timestep_to_load))
-        return model_path, timestep_to_load
-
     def load_state(self, path: str, component: str) -> OrderedDict:
+        """
+        Loads a network state dict from a .th file.
+        :param path:
+        :param component:
+        :return:
+        """
         import torch as th
-        latest, _ = self._find_latest_model_path(path)
+        latest, _ = find_latest_model_path(path)
         name = "home_qlearner_" # TODO Adapt if more learners used
         return th.load(f"{latest}/{name}{component}.th", map_location=lambda storage, loc: storage)
 
     def load_team(self, path: str):
+        """
+        Loads a team constellation from a *_team.json file
+        :param path:
+        :return:
+        """
         import glob
         import json
         for file_path in glob.glob(f'{path}/*team.json'):

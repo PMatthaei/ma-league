@@ -1,4 +1,4 @@
-from components.episode_buffer import EpisodeBatch
+from components.episode_batch import EpisodeBatch
 from controllers.multi_agent_controller import MultiAgentController
 
 

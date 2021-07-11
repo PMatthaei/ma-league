@@ -5,7 +5,7 @@ from custom_logging.logger import MainLogger, Collectibles
 from custom_logging.utils.enums import Originator
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
-from components.episode_buffer import EpisodeBatch
+from components.episode_batch import EpisodeBatch
 from exceptions.runner_exceptions import MultiAgentControllerNotInitialized
 from steppers.env_stepper import EnvStepper
 from steppers.utils.stepper_utils import get_policy_team_id
