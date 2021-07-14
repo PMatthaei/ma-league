@@ -6,12 +6,13 @@ env_args:
   record: False
   fps: 30
   draw_grid: False
-  infos: True
+  infos: False
   global_reward: True
   grid_size: 20
-  match_build_plan: medium_1h_4t
+  match_build_plan: medium_1h_4a
   ai: basic
   stochastic_spawns: True
+  attack_ranges_only: False
 
 test_greedy: True
 test_nepisode: 32
