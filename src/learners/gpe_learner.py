@@ -1,7 +1,10 @@
 from components.episode_batch import EpisodeBatch
 from controllers.gpe_controller import GPEController
 from learners.learner import Learner
-from torch.optim import RMSprop
+
+import torch as th
+
+from components.feature_functions import REGISTRY as FEATURE_FUNCTIONS
 
 
 class GPELearner(Learner):
@@ -9,17 +12,20 @@ class GPELearner(Learner):
     def __init__(self, mac: GPEController, scheme, logger, args):
         super().__init__(mac, scheme, logger, args)
         self.mac = mac
-        self.optimizers = [RMSprop(params=sf.parameters(), lr=args.lr, alpha=args.optim_alpha, eps=args.optim_eps) for
-                           sf in self.mac.sfs]
+        self.feature_func = FEATURE_FUNCTIONS["team_task"]
+        self.gpe_gamma = 0.9  # Discount rate
+        self.gpe_lr = 0.01  # Learning rate
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int) -> None:
-        for i in range(self.mac.n_features):  # For all
-            self.optimizers[i].zero_grad()
-            delta = feature[i] + gamma * successor_feature_i_of_policy_j(next_s,next_a) - successor_feature_i_of_policy_j(s, a)
+        obs, a = batch["obs"], batch["actions"]
+        next_obs = next_a = batch["next_obs"], batch["next_actions"]
+        for successor in self.mac.sfs:
+            delta = self.feature_func(obs, a, next_obs) + self.gpe_gamma * successor(next_obs, next_a) - successor(obs,a)
+            successor.zero_grad()
             delta.backward()
-            params_i = params_i + alpha * delta * gradient
-            self.optimizers[i].step()
-            pass
+            with th.no_grad():
+                for param in successor.parameters():
+                    param.copy_(param + self.gpe_lr * delta * param.grad)
 
     def cuda(self) -> None:
         pass
@@ -29,7 +35,6 @@ class GPELearner(Learner):
 
     def load_models(self, path):
         pass
-
 
     """
     pred = model(inp)

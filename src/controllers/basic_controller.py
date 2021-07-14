@@ -9,7 +9,7 @@ import torch as th
 class BasicMAC(MultiAgentController):
     def __init__(self, scheme, groups, args):
         """
-        This multi-agent controller shares parameters between agents by using a single fully connected network.
+        This multi-agent controller shares parameters between agents by using a single fully connected DQRN.
 
         Input Building:
         Select data from the batch which should be served as a input to the agent network.
@@ -28,7 +28,7 @@ class BasicMAC(MultiAgentController):
         avail_actions = ep_batch["avail_actions"][:, t_ep]
         # Run forward propagation for the batch -> Q-values
         agent_outs = self.forward(ep_batch, t_ep, test_mode=test_mode)
-        # Choose action by f.e. epsilon-greedy
+        # Choose action by f.e. epsilon-greedy (except test mode is False)
         chosen_actions, is_greedy = self.action_selector.select(agent_outs[bs], avail_actions[bs], t_env, test_mode)
         return chosen_actions, is_greedy
 

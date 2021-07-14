@@ -11,6 +11,8 @@ class MultiAgentController:
         """
         The Multi-Agent Controller defines how an Multi-Agent is built from a registry of existing agents and how its
         actions are selected. It manages the hidden state and offers a saving and loading strategy of models.
+
+        Parameters of the agents are updated via a connected Learner which is defined in the training run.
         :param scheme:
         :param groups:
         :param args:

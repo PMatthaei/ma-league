@@ -95,22 +95,14 @@ class EpisodeStepper(EnvStepper):
         env_info = {}
 
         while not terminated:
-            pre_transition_data = {
-                "state": [self.env.get_state()],
-                "avail_actions": [self.env.get_avail_actions()],
-                "obs": [self.env.get_obs()]
-            }
-
-            self.home_batch.update(pre_transition_data, ts=self.t)
-
-            # Pass the entire batch of experiences up till now to the agents
-            # Receive the actions for each agent at this timestep in a batch of size 1
-            actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
-
+            actions, is_greedy = self.perform_pre_transition_step(test_mode)
             actions_taken.append(th.stack([actions, is_greedy]))
 
             obs, reward, done_n, env_info = self.env.step(actions[0])
             terminated = any(done_n)
+
+            if self.args.next_actions: # Calculate virtual next action
+                pass
 
             self.env.render()
 
@@ -127,17 +119,7 @@ class EpisodeStepper(EnvStepper):
 
             self.t += 1
 
-        last_data = {
-            "state": [self.env.get_state()],
-            "avail_actions": [self.env.get_avail_actions()],
-            "obs": [self.env.get_obs()]
-        }
-
-        self.home_batch.update(last_data, ts=self.t)
-
-        # Select actions in the last stored state
-        actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
-
+        actions, is_greedy = self.perform_pre_transition_step(test_mode)
         actions_taken.append(th.stack([actions, is_greedy]))
 
         self.home_batch.update({"actions": actions}, ts=self.t)
@@ -160,3 +142,15 @@ class EpisodeStepper(EnvStepper):
         self.logger.log(self.t_env)
 
         return self.home_batch, env_info
+
+    def perform_pre_transition_step(self, test_mode):
+        # Build
+        pre_transition_data = {
+            "state": [self.env.get_state()],
+            "avail_actions": [self.env.get_avail_actions()],
+            "obs": [self.env.get_obs()]
+        }
+        # Add to episode batch
+        self.home_batch.update(pre_transition_data, ts=self.t)
+        # Select actions in the last stored state
+        return self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
