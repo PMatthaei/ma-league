@@ -1,22 +1,25 @@
 import random
 from typing import List
 
+from torch import Tensor
+
 from components.episode_batch import EpisodeBatch
 from controllers.multi_agent_controller import MultiAgentController
 from modules.agents import Agent
+from components.feature_functions import REGISTRY as feature_func_REGISTRY
 from modules.networks.policy_successor_features import PolicySuccessorFeatures
 
 
 class GPEController(MultiAgentController):
     def __init__(self, scheme, groups, args):
         super().__init__(scheme, groups, args)
-        self.n_features = 10
-        self.n_policies = 10
+        self.phi = feature_func_REGISTRY["team_task"]()
         self.policies: List[Agent] = []
+        self.task_ws: List[Tensor] = []
         self.sfs: List[PolicySuccessorFeatures] = [
-            PolicySuccessorFeatures(in_shape=1, out_shape=self.n_policies)
-            for _ in range(self.n_features)
-        ]
+            PolicySuccessorFeatures(in_shape=self._get_input_shape(scheme), out_shape=len(self.policies))
+            for _ in range(self.phi.n_features)
+        ] # Barreto et al. propose one MLP per Feature with d=2 and two hidden layers 64 and 128
 
     def _build_agents(self, input_shape):
         raise NotImplementedError()
@@ -31,7 +34,7 @@ class GPEController(MultiAgentController):
         return chosen_actions, is_greedy
 
     def forward(self, ep_batch: EpisodeBatch, t: int, test_mode=False):
-        self.agent = random.choice(self.policies)  # Pick random policy for each episode
+        self.agent = random.choice(self.policies)  # Pick random policy for each episode batch (!) - Change to paper
         raise NotImplementedError()
 
     def init_hidden(self, batch_size: int):

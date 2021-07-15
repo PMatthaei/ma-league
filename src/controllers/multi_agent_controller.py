@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from torch import Tensor
+
 from components.episode_batch import EpisodeBatch
 from components.action_selectors import REGISTRY as action_REGISTRY
 
@@ -61,7 +63,7 @@ class MultiAgentController:
     def update_trained_steps(self, trained_steps: int):
         raise NotImplementedError()
 
-    def _softmax(self, agent_outs, ep_batch, t, test_mode):
+    def _softmax(self, agent_outs: Tensor, ep_batch: EpisodeBatch, t: int, test_mode: bool):
         avail_actions = ep_batch["avail_actions"][:, t]
 
         if getattr(self.args, "mask_before_softmax", True):

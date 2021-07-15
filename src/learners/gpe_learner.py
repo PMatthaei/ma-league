@@ -4,28 +4,39 @@ from learners.learner import Learner
 
 import torch as th
 
-from components.feature_functions import REGISTRY as FEATURE_FUNCTIONS
-
 
 class GPELearner(Learner):
 
     def __init__(self, mac: GPEController, scheme, logger, args):
         super().__init__(mac, scheme, logger, args)
         self.mac = mac
-        self.feature_func = FEATURE_FUNCTIONS["team_task"]
         self.gpe_gamma = 0.9  # Discount rate
         self.gpe_lr = 0.01  # Learning rate
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int) -> None:
-        obs, a = batch["obs"], batch["actions"]
-        next_obs = next_a = batch["next_obs"], batch["next_actions"]
-        for successor in self.mac.sfs:
-            delta = self.feature_func(obs, a, next_obs) + self.gpe_gamma * successor(next_obs, next_a) - successor(obs,a)
-            successor.zero_grad()
-            delta.backward()
-            with th.no_grad():
-                for param in successor.parameters():
-                    param.copy_(param + self.gpe_lr * delta * param.grad)
+        # Get the relevant batch quantities
+        rewards = batch["reward"][:, :-1]
+        actions = batch["actions"][:, :-1]
+        terminated = batch["terminated"][:, :-1].float()
+        # Filled boolean indicates if steps were filled to match max. sequence length in the batch
+        mask = batch["filled"][:, :-1].float()
+
+        mask[:, 1:] = mask[:, 1:] * (1 - terminated[:, :-1])
+        avail_actions = batch["avail_actions"]
+
+        # Iterate over all timesteps defined by the max. in the batch
+        for t in range(batch.max_seq_length):
+            for successor in self.mac.sfs:
+                o, a, o_, a_ = self._build_inputs(batch)
+                delta = self.mac.phi(o, a, o_) + self.gpe_gamma * successor(o_, a_, t=t) - successor(o, a, t=t)
+                successor.zero_grad()
+                delta.backward()
+                with th.no_grad():
+                    for param in successor.parameters():
+                        param.copy_(param + self.gpe_lr * delta * param.grad)
+
+    def _build_inputs(self, batch: EpisodeBatch):
+        return 1, 1, 1, 1
 
     def cuda(self) -> None:
         pass

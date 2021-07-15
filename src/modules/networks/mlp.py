@@ -15,11 +15,11 @@ class ReLuHiddenLayer(nn.Module):
 
 
 class MLP(nn.Module):
-    def __init__(self, input_shape, out_shape, depth, hidden_shapes):
+    def __init__(self, in_shape, out_shape, depth, hidden_shapes):
         """
         Multilayer Perceptron.
 
-        :param input_shape:
+        :param in_shape:
         :param out_shape:
         :param depth: Amount of hidden layers
         :param hidden_shapes: Shapes for each hidden layer. Count of shapes must match depth
@@ -30,10 +30,10 @@ class MLP(nn.Module):
         else:
             raise Exception("")
 
-        self.hidden_shapes.insert(0, input_shape)
+        self.hidden_shapes.insert(0, in_shape)
         self.hidden_shapes.append(out_shape)
         self.layers = nn.Sequential(
-            nn.Linear(input_shape, self.hidden_shapes[1]),
+            nn.Linear(in_shape, self.hidden_shapes[1]),
             *[ReLuHiddenLayer(self.hidden_shapes[i - 1], self.hidden_shapes[i]) for i in range(len(self.hidden_shapes))
               if i - 1 > 0],
         )
@@ -43,6 +43,6 @@ class MLP(nn.Module):
 
 
 if __name__ == '__main__':
-    m = MLP(input_shape=20, out_shape=5, depth=3, hidden_shapes=[1, 2, 3])
+    m = MLP(in_shape=20, out_shape=5, depth=3, hidden_shapes=[1, 2, 3])
     y = m.forward(th.rand(20))
     print(y)

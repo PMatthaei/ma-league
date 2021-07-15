@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from components.episode_batch import EpisodeBatch
 from controllers.multi_agent_controller import MultiAgentController
 from exceptions.mac_exceptions import HiddenStateNotInitialized
 from modules.agents import REGISTRY as agent_REGISTRY
@@ -75,7 +76,7 @@ class BasicMAC(MultiAgentController):
     def _build_agents(self, input_shape):
         return agent_REGISTRY[self.args.agent](input_shape, self.args)
 
-    def _build_inputs(self, batch, t):
+    def _build_inputs(self, batch: EpisodeBatch, t: int):
         bs = batch.batch_size
         inputs = [batch["obs"][:, t]]
         if self.args.obs_last_action:
