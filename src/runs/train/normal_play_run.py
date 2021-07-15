@@ -16,6 +16,7 @@ from learners import REGISTRY as le_REGISTRY
 from controllers import REGISTRY as mac_REGISTRY, EnsembleInferenceMAC
 from components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
+from components.feature_functions import REGISTRY as feature_func_REGISTRY, FeatureFunction
 
 
 class NormalPlayRun(ExperimentRun):
@@ -95,6 +96,8 @@ class NormalPlayRun(ExperimentRun):
             "reward": {"vshape": (1,)},
             "terminated": {"vshape": (1,), "dtype": th.uint8},
         }
+        if self.args.sfs:
+            scheme.update({"features": {"vshape": (self._sfs_n_features(),)}})
         groups = {
             "agents": self.args.n_agents
         }
@@ -102,6 +105,9 @@ class NormalPlayRun(ExperimentRun):
             "actions": ("actions_onehot", [OneHot(out_dim=self.args.n_actions)])
         }
         return groups, preprocess, scheme
+
+    def _sfs_n_features(self) -> int:
+        return feature_func_REGISTRY[self.args.sfs].n_features
 
     def _build_stepper(self) -> EnvStepper:
         return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)

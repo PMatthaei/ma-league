@@ -33,7 +33,7 @@ class QLearner(Learner):
         # TODO: a little wasteful to deepcopy (e.g. duplicates action selector), but should work for any MAC
         self.target_mac = copy.deepcopy(mac)
 
-    def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
+    def train(self, batch: EpisodeBatch, t_env: int, episode_num: int): # Default batch size = 32 episodes
         # Get the relevant batch quantities
         rewards = batch["reward"][:, :-1]
         actions = batch["actions"][:, :-1]

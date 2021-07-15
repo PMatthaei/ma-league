@@ -1,6 +1,7 @@
 # --- Defaults ---
 eval: ""
 headless_controls: True
+sfs: ""
 
 # --- pymarl options ---
 runner: "episode" # Runs 1 env for an episode

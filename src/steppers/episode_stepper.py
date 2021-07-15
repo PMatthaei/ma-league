@@ -9,6 +9,7 @@ from components.episode_batch import EpisodeBatch
 from exceptions.runner_exceptions import MultiAgentControllerNotInitialized
 from steppers.env_stepper import EnvStepper
 from steppers.utils.stepper_utils import get_policy_team_id
+from components.feature_functions import REGISTRY as feature_func_REGISTRY, FeatureFunction
 
 
 class EpisodeStepper(EnvStepper):
@@ -38,7 +39,7 @@ class EpisodeStepper(EnvStepper):
         self.t = 0  # current time step within the episode
 
         self.t_env = 0  # total time steps for this runner in the provided environment across multiple episodes
-
+        self.phi: FeatureFunction = feature_func_REGISTRY[self.args.sfs] if self.args.sfs != "" else None
         self.home_batch = None
         self.home_mac = None
         self.new_batch_fn = None
@@ -95,31 +96,32 @@ class EpisodeStepper(EnvStepper):
         env_info = {}
 
         while not terminated:
-            actions, is_greedy = self.perform_pre_transition_step(test_mode)
+            pre_transition_data = self.perform_pre_transition_step()
+            actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
             actions_taken.append(th.stack([actions, is_greedy]))
 
             obs, reward, done_n, env_info = self.env.step(actions[0])
             terminated = any(done_n)
 
-            if self.args.next_actions: # Calculate virtual next action
-                pass
-
             self.env.render()
 
-            episode_return += reward[0]  # ! Only supported if one policy team is playing
-
+            episode_return += reward[0]  # WARN! Only supported if one policy team is playing
             post_transition_data = {
                 "actions": actions,
-                "reward": [(reward[0],)],  # ! Only supported if one policy team is playing
+                "reward": [(reward[0],)],  # WARN! Only supported if one policy team is playing
                 "terminated": [(terminated,)],
             }
+
+            if self.phi is not None: # Calculate features based on (s,a,s')
+                self.add_features(actions, obs, pre_transition_data)
 
             self.home_batch.update(post_transition_data, ts=self.t)
             # Termination is dependent on all team-wise terminations - AI or policy controlled teams
 
             self.t += 1
 
-        actions, is_greedy = self.perform_pre_transition_step(test_mode)
+        pre_transition_data = self.perform_pre_transition_step()
+        actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
         actions_taken.append(th.stack([actions, is_greedy]))
 
         self.home_batch.update({"actions": actions}, ts=self.t)
@@ -143,7 +145,12 @@ class EpisodeStepper(EnvStepper):
 
         return self.home_batch, env_info
 
-    def perform_pre_transition_step(self, test_mode):
+    def add_features(self, actions, obs, pre_transition_data):
+        obs_next = obs
+        obs_prev = pre_transition_data["obs"][0]
+        self.home_batch.update({"features": self.phi(obs_prev, actions, obs_next)}, ts=self.t)
+
+    def perform_pre_transition_step(self):
         # Build
         pre_transition_data = {
             "state": [self.env.get_state()],
@@ -152,5 +159,4 @@ class EpisodeStepper(EnvStepper):
         }
         # Add to episode batch
         self.home_batch.update(pre_transition_data, ts=self.t)
-        # Select actions in the last stored state
-        return self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+        return pre_transition_data
