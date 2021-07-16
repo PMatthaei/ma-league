@@ -112,7 +112,7 @@ class EpisodeStepper(EnvStepper):
                 "terminated": [(terminated,)],
             }
 
-            if self.phi is not None: # Calculate features based on (s,a,s')
+            if self.phi is not None:  # Calculate features based on (o, a, o')
                 self.add_features(actions, obs, pre_transition_data)
 
             self.home_batch.update(post_transition_data, ts=self.t)
@@ -145,10 +145,9 @@ class EpisodeStepper(EnvStepper):
 
         return self.home_batch, env_info
 
-    def add_features(self, actions, obs, pre_transition_data):
-        obs_next = obs
-        obs_prev = pre_transition_data["obs"][0]
-        self.home_batch.update({"features": self.phi(obs_prev, actions, obs_next)}, ts=self.t)
+    def add_features(self, actions, obs_next, pre_transition_data):
+        obs = pre_transition_data["obs"][0]
+        self.home_batch.update({"features": self.phi(obs, actions, obs_next)}, ts=self.t)
 
     def perform_pre_transition_step(self):
         # Build

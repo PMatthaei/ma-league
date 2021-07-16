@@ -30,5 +30,5 @@ class TeamTaskSuccessorFeatures(FeatureFunction):
 
 
 REGISTRY = {
-    "team_task": TeamTaskSuccessorFeatures(d=8)
+    "team_task": TeamTaskSuccessorFeatures(d=2)
 }
