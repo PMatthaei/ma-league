@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from modules.agents.agentnetwork import AgentNetwork
+from modules.agents.agent_network import AgentNetwork
 
 
 class DRQNAgentNetwork(AgentNetwork):

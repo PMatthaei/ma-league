@@ -1,7 +1,7 @@
 from typing import Dict
 
 from controllers import EnsembleInferenceMAC
-from modules.agents.agentnetwork import AgentNetwork
+from modules.agents.agent_network import AgentNetwork
 
 from runs.train.self_play_run import SelfPlayRun
 

@@ -6,7 +6,7 @@ from typing import Tuple, Union
 
 from league.components.payoff_role_based import RolebasedPayoff
 
-from modules.agents.agentnetwork import AgentNetwork
+from modules.agents.agent_network import AgentNetwork
 
 
 class Player(object):

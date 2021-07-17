@@ -3,7 +3,7 @@ import torch as th
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from modules.agents.agentnetwork import AgentNetwork
+from modules.agents.agent_network import AgentNetwork
 
 
 class DQNAgentNetwork(AgentNetwork):

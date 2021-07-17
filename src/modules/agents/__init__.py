@@ -1,4 +1,4 @@
-from .agentnetwork import AgentNetwork
+from .agent_network import AgentNetwork
 from .dqn_agent import DQNAgentNetwork
 from .dqrn_agent import DRQNAgentNetwork
 
