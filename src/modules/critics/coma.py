@@ -29,7 +29,7 @@ class COMACritic(nn.Module):
     def _build_inputs(self, batch, t=None):
         bs = batch.batch_size
         max_t = batch.max_seq_length if t is None else 1
-        ts = slice(None) if t is None else slice(t, t + 1)
+        ts = slice(None) if t is None else slice(t, t + 1) # timesteps to extract from batch
         inputs = []
         # state
         inputs.append(batch["state"][:, ts].unsqueeze(2).repeat(1, 1, self.n_agents, 1))
@@ -37,7 +37,7 @@ class COMACritic(nn.Module):
         # observation
         inputs.append(batch["obs"][:, ts])
 
-        # actions (masked out by agent) -> needed for counterfactual
+        # joint actions (masked out by agent) -> needed for counterfactual
         actions_onehot = batch["actions_onehot"]
         actions = actions_onehot[:, ts].view(bs, max_t, 1, -1).repeat(1, 1, self.n_agents, 1)
         agent_mask = (1 - th.eye(self.n_agents, device=batch.device))
@@ -65,9 +65,9 @@ class COMACritic(nn.Module):
         input_shape = scheme["state"]["vshape"]
         # observation
         input_shape += scheme["obs"]["vshape"]
-        actions_shape = scheme["actions_onehot"]["vshape"][0]  # actions
-        actions_shape = actions_shape * self.n_agents  # per agent
-        input_shape += actions_shape * 2  # last actions doubles
+        actions_shape = scheme["actions_onehot"]["vshape"][0]  # action shape per agent
+        actions_shape = actions_shape * self.n_agents  # joint action
+        input_shape += actions_shape * 2  # last joint actions -> duplicate
         # agent id
         input_shape += self.n_agents
         return input_shape

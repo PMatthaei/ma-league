@@ -6,7 +6,7 @@ from typing import Dict
 import torch as th
 
 from components.replay_buffers.replay_buffer import ReplayBuffer
-from modules.agents import Agent
+from modules.agents import AgentNetwork
 from runs.experiment_run import ExperimentRun
 from steppers.episode_stepper import EnvStepper
 from utils.asset_manager import AssetManager
@@ -59,7 +59,7 @@ class NormalPlayRun(ExperimentRun):
 
         self.asset_manager = AssetManager(args=self.args, logger=self.logger)
 
-    def build_inference_mac(self, ensemble: Dict[int, Agent] = None):
+    def build_inference_mac(self, ensemble: Dict[int, AgentNetwork] = None):
         self.home_mac = EnsembleInferenceMAC(self.home_buffer.scheme, self.groups, self.args)
         self.home_mac.load_state(ensemble=ensemble)
 

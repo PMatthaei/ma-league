@@ -1,10 +1,10 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from modules.agents.agent import Agent
+from modules.agents.agentnetwork import AgentNetwork
 
 
-class DRQNAgent(Agent):
+class DRQNAgentNetwork(AgentNetwork):
     def __init__(self, input_shape, args):
         """
         Deep Q-Network with Recurrent Units
@@ -15,7 +15,7 @@ class DRQNAgent(Agent):
         :param input_shape: shape of the observation(=input)
         :param args:
         """
-        super(DRQNAgent, self).__init__(input_shape, args)
+        super(DRQNAgentNetwork, self).__init__(input_shape, args)
         self.args = args
 
         self.fc1 = nn.Linear(input_shape, args.rnn_hidden_dim)  # Linear = y = x * A^T + b

@@ -4,7 +4,7 @@ from league.components.agent_pool import AgentPool
 from league.components.payoff_matchmaking import MatchmakingPayoff
 from league.components.self_play import OpponentSampling
 from league.utils.team_composer import Team
-from modules.agents import Agent
+from modules.agents import AgentNetwork
 
 
 class Matchmaking:
@@ -15,7 +15,7 @@ class Matchmaking:
         self._sampling_strategy = sampling_strategy
         pass
 
-    def get_match(self, home_team: Team) -> Tuple[Team, Agent]:
+    def get_match(self, home_team: Team) -> Tuple[Team, AgentNetwork]:
         """
         Find a opponent for the given team using various methods.
         :param home_team:
@@ -28,7 +28,7 @@ class Matchmaking:
 
         return self._agent_pool.sample()
 
-    def get_ensemble(self, home_team: Team) -> Dict[int, Agent]:
+    def get_ensemble(self, home_team: Team) -> Dict[int, AgentNetwork]:
         teams = self._agent_pool.collected_teams
         others = [team for team in teams if team.id_ != home_team.id_]
         # TODO: change fixed mapping to sensible

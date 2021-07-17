@@ -6,7 +6,7 @@ from typing import Tuple, Union
 
 from league.components.payoff_role_based import RolebasedPayoff
 
-from modules.agents.agent import Agent
+from modules.agents.agentnetwork import AgentNetwork
 
 
 class Player(object):
@@ -15,7 +15,7 @@ class Player(object):
         self.id_ = player_id
         self._payoff = payoff
         self.team = team
-        self.agent: Union[Agent, None] = None
+        self.agent: Union[AgentNetwork, None] = None
 
     def get_match(self) -> Player:
         raise NotImplementedError
@@ -43,7 +43,7 @@ class Player(object):
 
 class HistoricalPlayer(Player):
 
-    def __init__(self, player_id: int, payoff: RolebasedPayoff, agent: Agent):
+    def __init__(self, player_id: int, payoff: RolebasedPayoff, agent: AgentNetwork):
         """
 
         :param player_id:
@@ -54,7 +54,7 @@ class HistoricalPlayer(Player):
         self._parent = agent
 
     @property
-    def parent(self) -> Agent:
+    def parent(self) -> AgentNetwork:
         return self._parent
 
     def get_match(self) -> Tuple[Player, bool]:

@@ -4,7 +4,7 @@ from typing import List
 
 from components.episode_batch import EpisodeBatch
 from controllers import BasicMAC
-from modules.agents import REGISTRY as agent_REGISTRY, Agent
+from modules.agents import REGISTRY as agent_REGISTRY, AgentNetwork
 from components.action_selectors import REGISTRY as action_REGISTRY
 import torch as th
 
@@ -55,7 +55,7 @@ class DistinctMAC(BasicMAC):
         [params + list(agent.parameters()) for agent in self.agents]
         return params
 
-    def load_state(self, other_mac: DistinctMAC, agents: List[Agent] = None):
+    def load_state(self, other_mac: DistinctMAC, agents: List[AgentNetwork] = None):
         [
             agent.load_state_dict(agents[i].state_dict() if agents is not None else other_mac.agents[i].state_dict())
             for i, agent in enumerate(self.agents)

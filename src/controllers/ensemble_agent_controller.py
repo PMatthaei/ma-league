@@ -4,7 +4,7 @@ import copy
 from typing import Dict, OrderedDict
 
 from controllers.multi_agent_controller import MultiAgentController
-from modules.agents import REGISTRY as agent_REGISTRY, Agent
+from modules.agents import REGISTRY as agent_REGISTRY, AgentNetwork
 import torch as th
 
 
@@ -107,7 +107,7 @@ class EnsembleInferenceMAC(MultiAgentController):
 
         return input_shape
 
-    def load_state(self, agent: Agent = None, ensemble: Dict[int, Agent] = None):
+    def load_state(self, agent: AgentNetwork = None, ensemble: Dict[int, AgentNetwork] = None):
         self.agent.load_state_dict(agent.state_dict()) if agent is not None else None
         self.ensemble.update(ensemble)
 

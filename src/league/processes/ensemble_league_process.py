@@ -8,7 +8,7 @@ from league.components.matchmaking import Matchmaking
 from league.processes.utils import extract_result
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand
 from league.utils.team_composer import Team
-from modules.agents import Agent
+from modules.agents import AgentNetwork
 from custom_logging.logger import MainLogger
 from runs.train.normal_play_run import NormalPlayRun
 
@@ -84,7 +84,7 @@ class EnsembleLeagueProcess(Process):
     def _get_shared_agent(self, team: Team):
         return self._agent_pool[team]
 
-    def _share_agent(self, agent: Agent):
+    def _share_agent(self, agent: AgentNetwork):
         self._agent_pool[self._home_team] = agent
         # Wait until every process finished to share the agent to ensure every agent is up-to-date before next match
         self._sync_barrier.wait()

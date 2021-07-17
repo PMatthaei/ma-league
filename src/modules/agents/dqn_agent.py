@@ -3,10 +3,10 @@ import torch as th
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from modules.agents.agent import Agent
+from modules.agents.agentnetwork import AgentNetwork
 
 
-class DQNAgent(Agent):
+class DQNAgentNetwork(AgentNetwork):
     def __init__(self, input_shape, args):
         """
         Deep Q-Network
@@ -18,7 +18,7 @@ class DQNAgent(Agent):
         :param input_shape: shape of the observation(=input)
         :param args:
         """
-        super(DQNAgent, self).__init__(input_shape, args)
+        super(DQNAgentNetwork, self).__init__(input_shape, args)
         self.args = args
 
         self.fc1 = nn.Linear(input_shape, args.rnn_hidden_dim)

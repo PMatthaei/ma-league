@@ -4,18 +4,18 @@ import torch as th
 from torch import nn
 import torch.nn.functional as F
 
-from modules.agents import Agent
+from modules.agents import AgentNetwork
 
 
-class EnsembleAgent(Agent):
-    def __init__(self, input_shape, args, agents: List[Agent] = None):
+class EnsembleAgentNetwork(AgentNetwork):
+    def __init__(self, input_shape, args, agents: List[AgentNetwork] = None):
         """
         Main Idea: https://discuss.pytorch.org/t/combining-trained-models-in-pytorch/28383/14
         :param input_shape:
         :param args:
         :param agents:
         """
-        super(EnsembleAgent, self).__init__(input_shape, args)
+        super(EnsembleAgentNetwork, self).__init__(input_shape, args)
         self.args = args
 
         self.agents = agents

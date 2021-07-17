@@ -2,14 +2,14 @@ import torch.nn as nn
 import torch as th
 
 
-class Agent(nn.Module):
+class AgentNetwork(nn.Module):
     def __init__(self, input_shape, args):
         """
         Agent Interface
         :param input_shape: shape of the observation(=input)
         :param args: additional arguments for agent building
         """
-        super(Agent, self).__init__()
+        super(AgentNetwork, self).__init__()
         self.args = args
         self.input_shape = input_shape
         self.trained_steps = 0
@@ -28,12 +28,12 @@ class Agent(nn.Module):
             print(name, param)
 
 
-class DistinctMultiAgent(Agent):
+class DistinctMultiAgentNetwork(AgentNetwork):
     def __init__(self, agent_type, n_agents):
         """
         Distinct-Multi-Agent Interface
         """
-        super(Agent, self).__init__()
+        super(AgentNetwork, self).__init__()
         self.agents: nn.ModuleList = nn.ModuleList([
             agent_type(self.input_shape, self.args)
             for _ in range(n_agents)

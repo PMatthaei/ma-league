@@ -1,7 +1,7 @@
 from typing import Dict
 
 from controllers import EnsembleInferenceMAC
-from modules.agents.agent import Agent
+from modules.agents.agentnetwork import AgentNetwork
 
 from runs.train.self_play_run import SelfPlayRun
 
@@ -20,7 +20,7 @@ class LeaguePlayRun(SelfPlayRun):
         self.finish_callback = finish_callback
         self.episode_callback = on_episode_end
 
-    def build_inference_mac(self, agent: Agent=None, ensemble: Dict[int, Agent] = None, target: str = "away"):
+    def build_inference_mac(self, agent: AgentNetwork=None, ensemble: Dict[int, AgentNetwork] = None, target: str = "away"):
         """
         Create a Multi-Agent Controller only used for inference of fixed and pre-trained policies.
         The policy can either be supplied as an single agents of a ensemble of agents.
