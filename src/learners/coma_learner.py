@@ -47,9 +47,7 @@ class COMALearner(Learner):
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
         # Get the relevant quantities
-        bs = batch.batch_size
-        max_t = batch.max_seq_length
-        rewards = batch["reward"][:, :-1]
+        rs = batch["reward"][:, :-1]
         actions = batch["actions"][:, :]
         terminated = batch["terminated"][:, :-1].float()
         mask = batch["filled"][:, :-1].float()
@@ -60,7 +58,8 @@ class COMALearner(Learner):
 
         mask = mask.repeat(1, 1, self.n_agents).view(-1)
 
-        q_vals, critic_train_stats = self._train_critic(batch, rewards, terminated, actions, avail_actions, critic_mask, bs, max_t)
+        # Q with counterfactual joint action u without action a per agent
+        q_vals, critic_train_stats = self._train_critic(batch, rs, terminated, actions, avail_actions, critic_mask)
 
         actions = actions[:, :-1]
 
@@ -72,25 +71,28 @@ class COMALearner(Learner):
             mac_out.append(agent_outs)
         mac_out = th.stack(mac_out, dim=1)  # Concat over time
 
-        # Mask out unavailable actions, renormalise (as in action selection)
-        mac_out[avail_actions == 0] = 0
-        mac_out = mac_out / mac_out.sum(dim=-1, keepdim=True)
+        mac_out[avail_actions == 0] = 0  # Mask out unavailable actions
+        mac_out = mac_out / mac_out.sum(dim=-1, keepdim=True)  # Renormalize (as in action selection)
         mac_out[avail_actions == 0] = 0
 
         # Calculated baseline
-        q_vals = q_vals.reshape(-1, self.n_actions) # all q values
-        pi = mac_out.view(-1, self.n_actions) # policy
+        # !
+        # Reshape assumes one agent since network is shared and agent-specific actions are deduced by agent id in obs
+        # !
+        q_vals = q_vals.reshape(-1, self.n_actions)  # q values for each action across all agents and timesteps
+        pi = mac_out.view(-1, self.n_actions)  # pi for each action across all agents and timesteps
         baseline = (pi * q_vals).sum(dim=-1).detach()
 
         # Calculate policy grad with mask
-        q_taken = th.gather(q_vals, dim=1, index=actions.reshape(-1, 1)).squeeze(1) # q values of taken actions
-        pi_taken = th.gather(pi, dim=1, index=actions.reshape(-1, 1)).squeeze(1)
+        q_taken = th.gather(q_vals, dim=1, index=actions.reshape(-1, 1)).squeeze(1)  # q values of taken actions
+        pi_taken = th.gather(pi, dim=1, index=actions.reshape(-1, 1)).squeeze(1)  # pi of taken actions
         pi_taken[mask == 0] = 1.0
         log_pi_taken = th.log(pi_taken)
 
         advantages = (q_taken - baseline).detach()
 
-        coma_loss = - ((advantages * log_pi_taken) * mask).sum() / mask.sum()
+        # COMA gradient
+        coma_loss = - ((log_pi_taken * advantages) * mask).sum() / mask.sum()
 
         # Optimise agents
         self.agent_optimiser.zero_grad()
@@ -113,13 +115,14 @@ class COMALearner(Learner):
             self.logger.log_stat("pi_max", (pi.max(dim=1)[0] * mask).sum().item() / mask.sum().item(), t_env)
             self.log_stats_t = t_env
 
-    def _train_critic(self, batch, rewards, terminated, actions, avail_actions, mask, bs, max_t):
+    def _train_critic(self, batch: EpisodeBatch, rewards, terminated, actions, avail_actions, mask):
         # Optimise critic
-        target_q_vals = self.target_critic(batch)[:, :] # all targets
-        targets_taken = th.gather(target_q_vals, dim=3, index=actions).squeeze(3) # targets of actions taken
+        target_q_vals = self.target_critic(batch)[:, :]  # all targets
+        targets_taken = th.gather(target_q_vals, dim=3, index=actions).squeeze(3)  # targets of actions taken
 
         # Calculate td-lambda targets
-        targets = build_td_lambda_targets(rewards, terminated, mask, targets_taken, self.n_agents, self.args.gamma, self.args.td_lambda)
+        targets = build_td_lambda_targets(rewards, terminated, mask, targets_taken, self.n_agents, self.args.gamma,
+                                          self.args.td_lambda)
 
         q_vals = th.zeros_like(target_q_vals)[:, :-1]
 
@@ -130,20 +133,20 @@ class COMALearner(Learner):
             "target_mean": [],
             "q_taken_mean": [],
         }
-
-        for t in reversed(range(rewards.size(1))):
+        # Iterate over timesteps backwards but perform backward prop
+        for t in reversed(range(batch.max_seq_length - 1)):
             mask_t = mask[:, t].expand(-1, self.n_agents)
             if mask_t.sum() == 0:
-                continue
+                continue  # Every timestep would be masked -> skip
 
-            q_t = self.critic(batch, t)
-            q_vals[:, t] = q_t.view(bs, self.n_agents, self.n_actions)
-            q_taken = th.gather(q_t, dim=3, index=actions[:, t:t + 1]).squeeze(3).squeeze(1)
-            targets_t = targets[:, t]
+            q_t = self.critic(batch, t=t)
+            q_vals[:, t] = q_t.view(batch.batch_size, self.n_agents, self.n_actions)  # All qs at timestep t
+            q_taken = th.gather(q_t, dim=3, index=actions[:, t:t + 1]).squeeze(3).squeeze(1)  # Taken qs at timestep t
+            targets_t = targets[:, t]  # Target qs at timestep
 
             td_error = (q_taken - targets_t.detach())
 
-            # 0-out the targets that came from padded data -> episode which were shorter than the max episode in the batch
+            # 0-out the targets that came from padded data -> episodes which were shorter than max episode in batch
             masked_td_error = td_error * mask_t
 
             # Normal L2 loss, take mean over actual data

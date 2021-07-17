@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import torch
 from torch.multiprocessing import Queue
 

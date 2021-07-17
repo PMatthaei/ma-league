@@ -15,8 +15,12 @@ class EnvWorker(Process):
         self.args = args
         self.in_q = in_q
         self.out_q = out_q
+        assert self._is_consistent_env(), "Environments are not consistent."
         self.env = env_REGISTRY[self.args.env](**self.args.env_args)
         self.terminated_env = False
+
+    def _is_consistent_env(self):
+        return self.args.env_args["stochastic_spawns"] is False
 
     def run(self) -> None:
         # Make environment
