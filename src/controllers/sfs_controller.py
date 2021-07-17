@@ -2,6 +2,7 @@ import random
 from itertools import product
 
 import torch as th
+from torch import Tensor
 
 from components.episode_batch import EpisodeBatch
 from controllers.multi_agent_controller import MultiAgentController
@@ -12,19 +13,22 @@ class SFSController(MultiAgentController):
     def __init__(self, scheme, groups, args):
         self.args = args
         self.n_agents = args.n_agents
+        self.n_actions = args.n_actions
 
         self.n_features = self._get_feature_shape(scheme)  # (=d)
         self.input_shape = self._get_input_shape(scheme)
-        self.W = [x for x in product([-1, 0, 1], repeat=self.n_features) if sum(x) >= 0]
+        # Set of all task inducing weight vectors
+        self.W = th.tensor([x for x in product([-1, 0, 1], repeat=self.n_features) if sum(x) >= 0], dtype=th.float)
         self.n_policies = len(self.W)  # number of policies induced via d-dim weight vectors
         self.policy_idx = None  # (=j)
         super().__init__(scheme, groups, args)
 
     def _build_agents(self, input_shape):
+        # Barreto et al. propose one MLP per Feature with two hidden layers sized 64 and 128
         return [
-            PolicySuccessorFeatures(in_shape=self.input_shape, out_shape=self.n_policies)
+            PolicySuccessorFeatures(in_shape=self.input_shape, out_shape=self.n_policies * self.n_actions)
             for _ in range(self.n_features)
-        ]  # Barreto et al. propose one MLP per Feature with two hidden layers sized 64 and 128
+        ]
 
     def select_actions(self, ep_batch: EpisodeBatch, t_ep: int, t_env: int, bs=slice(None), test_mode=False):
         avail_actions = ep_batch["avail_actions"][:, t_ep]
@@ -33,23 +37,23 @@ class SFSController(MultiAgentController):
         return chosen_actions, is_greedy
 
     def forward(self, ep_batch: EpisodeBatch, t: int, test_mode=False):
-        if t == 0:  # Choose a random policy to follow the whole episode at each detected timestep reset
-            self.policy_idx = random.randint(0, self.n_policies - 1)
+        if t == 0:  # Choose a random policy at each detected timestep reset to follow the whole episode
+            self.policy_idx = th.randint(low=0, high=self.n_policies - 1, size=(1,))
 
         agent_inputs = self._build_inputs(ep_batch, t)
-        agent_outs = self._compute_agent_outputs(agent_inputs)
-        return agent_outs.view(ep_batch.batch_size, self.n_agents, -1)
+        agent_outs = self._compute_agent_outputs(agent_inputs, bs=ep_batch.batch_size)
+        return agent_outs
 
-    def _compute_agent_outputs(self, agent_inputs):
-        w = self.W[self.policy_idx]
-        outs = []
-        for sf in self.agent:
-            out = sf(agent_inputs)
-            outs.append(out)
-        outs = th.stack(outs)
-        return self.agent[self.policy_idx](agent_inputs)
+    def _compute_agent_outputs(self, agent_inputs: Tensor, bs: int) -> Tensor:
+        w_j = self.W[self.policy_idx].squeeze()
+        outs = th.stack([sf(agent_inputs) for sf in self.agent])
+        # Successor Features Tensor
+        sfs = outs.view(bs, self.n_agents, self.n_policies, self.n_features, -1)
+        sfs_T = sfs.permute(0, 1, 2, 4, 3)
+        sf_j_T = sfs_T[:, :, self.policy_idx, :].squeeze(2)
+        return sf_j_T @ w_j
 
-    def _build_inputs(self, batch: EpisodeBatch, t: int):
+    def _build_inputs(self, batch: EpisodeBatch, t: int) -> Tensor:
         bs = batch.batch_size
         inputs = [batch["obs"][:, t]]
         if self.args.obs_last_action:

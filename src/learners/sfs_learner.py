@@ -1,14 +1,13 @@
 from components.episode_batch import EpisodeBatch
 from controllers.sfs_controller import SFSController
 from learners.learner import Learner
-from torch.optim import RMSprop
 
 import torch as th
 
 
 class SFSLearner(Learner):
 
-    def __init__(self, mac: SFSController, scheme, logger, args):
+    def __init__(self, mac: SFSController, scheme, logger, args, name=None):
         """
         Learns a set of successor features
         :param mac:
@@ -16,15 +15,10 @@ class SFSLearner(Learner):
         :param logger:
         :param args:
         """
-        super().__init__(mac, scheme, logger, args)
+        super().__init__(mac, scheme, logger, args, name)
         self.mac = mac
         self.gpe_gamma = 0.9  # Discount rate
         self.gpe_lr = 0.01  # Learning rate
-
-        self.optimisers = [
-            RMSprop(params=self.params, lr=args.lr, alpha=args.optim_alpha, eps=args.optim_eps)
-            for _ in range(len(self.mac.agent))
-        ]
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int) -> None:
         # Get the relevant batch quantities
@@ -38,22 +32,19 @@ class SFSLearner(Learner):
         avail_actions = batch["avail_actions"]
 
         for feature_idx, successor_feature in enumerate(self.mac.agent):  # Iterate over successor features
-            feature_outs = []
-            for t in range(batch.max_seq_length):  # Iterate over all timesteps defined by the max. in the episode batch
-                outs = successor_feature(inputs)
-                feature_outs.append(outs)
-            feature_outs = th.stack(feature_outs, dim=1)
-            q_vals = th.gather(feature_outs[:, :-1], dim=3, index=actions).squeeze(3)  # Remove the last dim
+            mac_out = [self.mac.forward(batch, t=t) for t in range(batch.max_seq_length)]
+            q_vals = th.gather(th.stack(mac_out, dim=1)[:, :-1], dim=3, index=actions).squeeze(3)  # Remove the last dim
 
             # We don't need the first timesteps Q-Value estimate for calculating targets
-            q_next_vals = th.stack(feature_outs[1:], dim=1)
+            q_next_vals = th.stack(mac_out[1:], dim=1)
 
             # Mask out unavailable actions by setting utility very low
             q_next_vals[avail_actions[:, 1:] == 0] = -9999999
 
             q_next_vals = q_next_vals.max(dim=3)[0]
-
-            td_error = features + self.gpe_gamma * ((1 - terminated) * q_next_vals) - q_vals
+            terminated_q_next_vals = (1 - terminated) * q_next_vals  # Mask out vals where env already terminated
+            feature_i = th.unsqueeze(features[:, :, feature_idx], dim=2)
+            td_error = feature_i + self.gpe_gamma * terminated_q_next_vals - q_vals
             # Mask out previously filled time steps if the env was already terminated in the corresponding batch entry
             mask = mask.expand_as(td_error)
 

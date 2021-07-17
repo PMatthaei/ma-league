@@ -1,8 +1,6 @@
 from torch import Tensor
 import torch as th
 
-from components.episode_batch import EpisodeBatch
-
 
 class FeatureFunction:
 

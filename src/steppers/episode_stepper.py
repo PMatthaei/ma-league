@@ -98,7 +98,8 @@ class EpisodeStepper(EnvStepper):
         while not terminated:
             pre_transition_data = self.perform_pre_transition_step()
             actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
-            actions_taken.append(th.stack([actions, is_greedy]))
+            if is_greedy is not None:
+                actions_taken.append(th.stack([actions, is_greedy]))
 
             obs, reward, done_n, env_info = self.env.step(actions[0])
             terminated = any(done_n)
@@ -122,18 +123,21 @@ class EpisodeStepper(EnvStepper):
 
         pre_transition_data = self.perform_pre_transition_step()
         actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
-        actions_taken.append(th.stack([actions, is_greedy]))
+
+        if is_greedy is not None:
+            actions_taken.append(th.stack([actions, is_greedy]))
 
         self.home_batch.update({"actions": actions}, ts=self.t)
 
         if not test_mode:
             self.t_env += self.t
 
-        episodal_actions_taken = th.squeeze(th.stack(actions_taken))
+        if len(actions_taken) > 0:
+            actions_taken = th.squeeze(th.stack(actions_taken))
+            self.logger.collect(Collectibles.ACTIONS_TAKEN, actions_taken, origin=Originator.HOME)
 
         # Send data collected during the episode - this data needs further processing
         self.logger.collect(Collectibles.RETURN, episode_return, origin=Originator.HOME)
-        self.logger.collect(Collectibles.ACTIONS_TAKEN, episodal_actions_taken, origin=Originator.HOME)
         self.logger.collect(Collectibles.WON, env_info["battle_won"][0], origin=Originator.HOME)
         self.logger.collect(Collectibles.WON, env_info["battle_won"][1], origin=Originator.AWAY)
         self.logger.collect(Collectibles.DRAW, env_info["draw"])

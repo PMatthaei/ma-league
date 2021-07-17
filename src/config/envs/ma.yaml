@@ -9,7 +9,7 @@ env_args:
   infos: False
   global_reward: True
   grid_size: 20
-  match_build_plan: medium_1h_4a
+  match_build_plan: small
   ai: basic
   stochastic_spawns: True
   attack_ranges_only: False

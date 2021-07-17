@@ -1,0 +1,60 @@
+[
+  {
+    "is_scripted": true,
+    "units": [
+      {
+        "role": {
+          "__enum__": "RoleTypes.TANK"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      },
+      {
+        "role": {
+          "__enum__": "RoleTypes.TANK"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      },
+      {
+        "role": {
+          "__enum__": "RoleTypes.TANK"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      }
+    ]
+  },
+  {
+    "is_scripted": false,
+    "units": [
+      {
+        "role": {
+          "__enum__": "RoleTypes.TANK"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      },
+      {
+        "role": {
+          "__enum__": "RoleTypes.TANK"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      },
+      {
+        "role": {
+          "__enum__": "RoleTypes.TANK"
+        },
+        "attack_type": {
+          "__enum__": "UnitAttackTypes.RANGED"
+        }
+      }
+    ]
+  }
+]
