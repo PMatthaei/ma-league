@@ -17,6 +17,8 @@ from utils.main_utils import config_copy, get_config, recursive_dict_update, get
     set_agents_only
 from utils.run_utils import args_sanity_check
 
+th.multiprocessing.set_start_method('spawn', force=True)
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
@@ -35,10 +37,6 @@ def run(_run, _config, _log):
 
     if _config['play_mode'] != "normal":
         set_agents_only(_config)
-
-    if _config["runner"] == "parallel" or _config['eval'] == "jpc":
-        th.multiprocessing.set_start_method('spawn', force=True)
-        # multiprocessing.set_start_method('spawn')
 
     args = SimpleNamespace(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"

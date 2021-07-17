@@ -122,7 +122,7 @@ class MainLogger:
 
         if parallel and isinstance(data, list):
             # Collect lists in parallel via extend to keep dims uniform
-            if collectible.is_global:
+            if collectible.is_global: # Global data does not have a specific actor as origin
                 collectible_stat[mode].extend(data)
             else:
                 collectible_stat[mode][origin].extend(data)

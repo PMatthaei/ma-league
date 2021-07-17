@@ -5,7 +5,6 @@ from torch.multiprocessing import Queue
 
 from custom_logging.collectibles import Collectibles
 from custom_logging.utils.enums import Originator
-from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_batch import EpisodeBatch
 from steppers.env_stepper import EnvStepper
@@ -19,7 +18,7 @@ class ParallelStepper(EnvStepper):
         """
         Based (very) heavily on SubprocVecEnv from OpenAI Baselines
         https://github.com/openai/baselines/blob/master/baselines/common/vec_env/subproc_vec_env.py
-        Runs multiple environments in parallel to play and collects episode batches to feed into a single learner.
+        Runs multiple environments in parallel to play and collect episode batches to feed into a single learner.
         :param args:
         :param logger:
         """
@@ -33,9 +32,8 @@ class ParallelStepper(EnvStepper):
 
         # Make subprocesses for the envs
         self.in_queues, self.out_queues = zip(*[(Queue(), Queue()) for _ in range(self.batch_size)])
-        env = env_REGISTRY[self.args.env](**self.args.env_args)
         self.workers = [
-            EnvWorker(in_q=in_q, out_q=out_q, env=deepcopy(env))
+            EnvWorker(args, in_q=in_q, out_q=out_q)
             for (in_q, out_q) in zip(self.in_queues, self.out_queues)
         ]
         for worker in self.workers:
@@ -133,8 +131,9 @@ class ParallelStepper(EnvStepper):
 
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch for each un-terminated env
-            actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, bs=running_envs,
-                                                   test_mode=test_mode)
+            actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
+                                                              bs=running_envs,
+                                                              test_mode=test_mode)
 
             # Update the actions taken
             actions_chosen = {
@@ -155,22 +154,20 @@ class ParallelStepper(EnvStepper):
             # Update running envs
             running_envs = [idx for idx, terminated in enumerate(terminateds) if not terminated]
             if all(terminateds):
-                break
+                break  # all envs terminated -> end parallel episode
 
-            # Post step data we will insert for the current timestep
-            post_transition_data = {
+            post_transition_data = {  # Post step data we will insert for the current timestep
                 "reward": [],
                 "terminated": []
             }
-            # Data for the next step we will insert in order to select an action
-            pre_transition_data = {
+
+            pre_transition_data = {  # Data for the next step we will insert in order to select an action
                 "state": [],
                 "avail_actions": [],
                 "obs": []
             }
 
-            # Receive step data back for each unterminated env
-            for idx, out_q in enumerate(self.out_queues):
+            for idx, out_q in enumerate(self.out_queues):  # Receive step data back for each unterminated env
                 if not terminateds[idx]:
                     data = out_q.get()
                     # Remaining data for this current timestep
@@ -185,7 +182,7 @@ class ParallelStepper(EnvStepper):
 
                     done_n = data["terminated"]  # list of done booleans per team
                     terminated = any(done_n)
-                    if terminated:  # if any team is done -> env terminated
+                    if terminated:  # if any team is done -> env terminated -> attach additional episode infos
                         env_infos.append(data["info"])
                     terminateds[idx] = terminated
                     post_transition_data["terminated"].append((terminated,))
@@ -209,10 +206,12 @@ class ParallelStepper(EnvStepper):
 
         # Send data collected during the episode - this data needs further processing
         self.logger.collect(Collectibles.RETURN, episode_returns, origin=Originator.HOME, parallel=True)
-        self.logger.collect(Collectibles.WON, [env_info["battle_won"][0] for env_info in env_infos], origin=Originator.HOME)
-        self.logger.collect(Collectibles.WON, [env_info["battle_won"][1] for env_info in env_infos], origin=Originator.AWAY)
-        self.logger.collect(Collectibles.DRAW, [env_info["draw"] for env_info in env_infos])
-        self.logger.collect(Collectibles.STEPS, self.t)
+        self.logger.collect(Collectibles.WON, [env_info["battle_won"][0] for env_info in env_infos],
+                            origin=Originator.HOME, parallel=True)
+        self.logger.collect(Collectibles.WON, [env_info["battle_won"][1] for env_info in env_infos],
+                            origin=Originator.AWAY, parallel=True)
+        self.logger.collect(Collectibles.DRAW, [env_info["draw"] for env_info in env_infos], parallel=True)
+        self.logger.collect(Collectibles.STEPS, self.t, parallel=True)
         # Log collectibles if conditions suffice
         self.logger.log(self.t_env)
 

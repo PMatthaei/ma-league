@@ -11,7 +11,7 @@ env_args:
   grid_size: 20
   match_build_plan: small
   ai: basic
-  stochastic_spawns: True
+  stochastic_spawns: False
   attack_ranges_only: False
 
 test_greedy: True

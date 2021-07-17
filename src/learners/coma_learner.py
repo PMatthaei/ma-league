@@ -66,6 +66,7 @@ class COMALearner(Learner):
 
         mac_out = []
         self.mac.init_hidden(batch.batch_size)
+        # Infer agent outputs over all timesteps but the last
         for t in range(batch.max_seq_length - 1):
             agent_outs = self.mac.forward(batch, t=t)
             mac_out.append(agent_outs)
@@ -77,12 +78,12 @@ class COMALearner(Learner):
         mac_out[avail_actions == 0] = 0
 
         # Calculated baseline
-        q_vals = q_vals.reshape(-1, self.n_actions)
-        pi = mac_out.view(-1, self.n_actions)
-        baseline = (pi * q_vals).sum(-1).detach()
+        q_vals = q_vals.reshape(-1, self.n_actions) # all q values
+        pi = mac_out.view(-1, self.n_actions) # policy
+        baseline = (pi * q_vals).sum(dim=-1).detach()
 
         # Calculate policy grad with mask
-        q_taken = th.gather(q_vals, dim=1, index=actions.reshape(-1, 1)).squeeze(1)
+        q_taken = th.gather(q_vals, dim=1, index=actions.reshape(-1, 1)).squeeze(1) # q values of taken actions
         pi_taken = th.gather(pi, dim=1, index=actions.reshape(-1, 1)).squeeze(1)
         pi_taken[mask == 0] = 1.0
         log_pi_taken = th.log(pi_taken)
@@ -114,8 +115,8 @@ class COMALearner(Learner):
 
     def _train_critic(self, batch, rewards, terminated, actions, avail_actions, mask, bs, max_t):
         # Optimise critic
-        target_q_vals = self.target_critic(batch)[:, :]
-        targets_taken = th.gather(target_q_vals, dim=3, index=actions).squeeze(3)
+        target_q_vals = self.target_critic(batch)[:, :] # all targets
+        targets_taken = th.gather(target_q_vals, dim=3, index=actions).squeeze(3) # targets of actions taken
 
         # Calculate td-lambda targets
         targets = build_td_lambda_targets(rewards, terminated, mask, targets_taken, self.n_agents, self.args.gamma, self.args.td_lambda)

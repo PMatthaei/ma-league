@@ -6,14 +6,11 @@ epsilon_finish: .01
 epsilon_anneal_time: 100000
 mask_before_softmax: False
 
-runner: "episode"
-buffer_size: 5000
+runner: "parallel"
 
-#runner: "parallel"
-
-#buffer_size: 8
-#batch_size_run: 8
-#batch_size: 8
+buffer_size: 8
+batch_size_run: 8
+batch_size: 8
 
 env_args:
   state_last_action: False # critic adds last action internally
