@@ -15,7 +15,7 @@ The main supported MA Environment is: https://github.com/PMatthaei/ma-env
 
 # Sources and Codebase from
 
-'''
+```
 @article{samvelyan19smac,
   title = {{The} {StarCraft} {Multi}-{Agent} {Challenge}},
   author = {Mikayel Samvelyan and Tabish Rashid and Christian Schroeder de Witt and Gregory Farquhar and Nantas Nardelli and Tim G. J. Rudner and Chia-Man Hung and Philiph H. S. Torr and Jakob Foerster and Shimon Whiteson},
@@ -23,9 +23,9 @@ The main supported MA Environment is: https://github.com/PMatthaei/ma-env
   volume = {abs/1902.04043},
   year = {2019},
 }
-'''
+```
 
-'''
+```
 @InProceedings{iqbal2021refil,
   title={Randomized Entity-wise Factorization for Multi-Agent Reinforcement Learning},
   author={Iqbal, Shariq and de Witt, Christian A Schroeder and Peng, Bei and B{\"o}hmer, Wendelin and Whiteson, Shimon and Sha, Fei},
@@ -34,4 +34,4 @@ The main supported MA Environment is: https://github.com/PMatthaei/ma-env
   series =   {Proceedings of Machine Learning Research},
   publisher =    {PMLR},
 }
-'''
+```
