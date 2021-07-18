@@ -15,6 +15,7 @@ The main supported MA Environment is: https://github.com/PMatthaei/ma-env
 
 # Sources and Codebase from
 
+https://github.com/oxwhirl/pymarl/tree/master/src
 ```
 @article{samvelyan19smac,
   title = {{The} {StarCraft} {Multi}-{Agent} {Challenge}},
@@ -25,6 +26,7 @@ The main supported MA Environment is: https://github.com/PMatthaei/ma-env
 }
 ```
 
+https://github.com/shariqiqbal2810/REFIL
 ```
 @InProceedings{iqbal2021refil,
   title={Randomized Entity-wise Factorization for Multi-Agent Reinforcement Learning},
