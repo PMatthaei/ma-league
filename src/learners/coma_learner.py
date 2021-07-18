@@ -13,7 +13,8 @@ def build_td_lambda_targets(rewards, terminated, mask, target_qs, n_agents, gamm
     ret = target_qs.new_zeros(*target_qs.shape)
     ret[:, -1] = target_qs[:, -1] * (1 - th.sum(terminated, dim=1))
     # Backwards  recursive  update  of the "forward  view"
-    for t in range(ret.shape[1] - 2, -1, -1):
+    batch_size = ret.shape[1] # Calc batch size based on incoming rewards collected
+    for t in list(reversed(range(batch_size - 1))):
         ret[:, t] = td_lambda * gamma * ret[:, t + 1] + mask[:, t] \
                     * (rewards[:, t] + (1 - td_lambda) * gamma * target_qs[:, t + 1] * (1 - terminated[:, t]))
     # Returns lambda-return from t=0 to t=T-1, i.e. in B*T-1*A
@@ -116,16 +117,12 @@ class COMALearner(Learner):
             self.log_stats_t = t_env
 
     def _train_critic(self, batch: EpisodeBatch, rewards, terminated, actions, avail_actions, mask):
-        # Optimise critic
-        target_q_vals = self.target_critic(batch)[:, :]  # all targets
+        target_q_vals = self.target_critic(batch)[:, :]  # Infer targets
         targets_taken = th.gather(target_q_vals, dim=3, index=actions).squeeze(3)  # targets of actions taken
 
         # Calculate td-lambda targets
         targets = build_td_lambda_targets(rewards, terminated, mask, targets_taken, self.n_agents, self.args.gamma,
                                           self.args.td_lambda)
-
-        q_vals = th.zeros_like(target_q_vals)[:, :-1]
-
         running_log = {
             "critic_loss": [],
             "critic_grad_norm": [],
@@ -133,14 +130,17 @@ class COMALearner(Learner):
             "target_mean": [],
             "q_taken_mean": [],
         }
-        # Iterate over timesteps backwards but perform backward prop
+
+        q_vals = th.zeros_like(target_q_vals)[:, :-1]  # Construct Q values tensor to fill with upcoming loop
+
+        # Iterate over timesteps backwards but perform backward propagation of loss
         for t in reversed(range(batch.max_seq_length - 1)):
             mask_t = mask[:, t].expand(-1, self.n_agents)
             if mask_t.sum() == 0:
-                continue  # Every timestep would be masked -> skip
+                continue  # Everything would be masked in this timestep> skip
 
             q_t = self.critic(batch, t=t)
-            q_vals[:, t] = q_t.view(batch.batch_size, self.n_agents, self.n_actions)  # All qs at timestep t
+            q_vals[:, t] = q_t.view(batch.batch_size, self.n_agents, self.n_actions)  # Copy qs at t into tensor
             q_taken = th.gather(q_t, dim=3, index=actions[:, t:t + 1]).squeeze(3).squeeze(1)  # Taken qs at timestep t
             targets_t = targets[:, t]  # Target qs at timestep
 
@@ -151,10 +151,10 @@ class COMALearner(Learner):
 
             # Normal L2 loss, take mean over actual data
             loss = (masked_td_error ** 2).sum() / mask_t.sum()
-            self.critic_optimiser.zero_grad()
-            loss.backward()
+            self.critic_optimiser.zero_grad()  # Clear x.grad for every parameter x in the optimizer
+            loss.backward()  # Compute dloss/dx for every parameter x which has requires_grad=True
             grad_norm = th.nn.utils.clip_grad_norm_(self.critic_params, self.args.grad_norm_clip)
-            self.critic_optimiser.step()
+            self.critic_optimiser.step()  # Update the value of parameters using the gradient
             self.critic_training_steps += 1
 
             running_log["critic_loss"].append(loss.item())

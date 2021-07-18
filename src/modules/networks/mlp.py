@@ -2,18 +2,6 @@ import torch.nn as nn
 import torch as th
 
 
-class ReLuHiddenLayer(nn.Module):
-    def __init__(self, input_shape, output_shape):
-        super().__init__()
-        self.layers = nn.Sequential(
-            nn.ReLU(),
-            nn.Linear(input_shape, output_shape)
-        )
-
-    def forward(self, x):
-        return self.layers(x)
-
-
 class MLP(nn.Module):
     def __init__(self, in_shape, out_shape, depth, hidden_shapes):
         """
