@@ -31,7 +31,7 @@ th.multiprocessing.set_start_method('spawn', force=True)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
-logger = CustomConsoleLogger.console_logger()
+logger = CustomConsoleLogger("ma-league")
 
 ex = Experiment("ma-league")
 ex.logger = logger
@@ -64,7 +64,7 @@ def run(_run, _config, _log):
     # Build league teams
     team_size = _config["team_size"]
     team_composer = TeamComposer(RoleTypes, UnitAttackTypes)
-    teams = team_composer.compose_unique_teams(team_size)
+    teams = team_composer._compose_unique_teams(team_size)
     teams = sample(teams, 2)  # Sample 5 random teams to train
 
     # Shared objects

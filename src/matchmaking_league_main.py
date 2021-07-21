@@ -5,13 +5,11 @@ import threading
 import numpy as np
 import torch as th
 
-from random import sample
 
 from league.components.agent_pool import AgentPool
 from league.components.matchmaking import Matchmaking
 from league.components.payoff_matchmaking import MatchmakingPayoff
 from league.processes.ensemble_league_process import EnsembleLeagueProcess
-from league.processes.matchmaking_league_process import MatchmakingLeagueProcess
 from copy import deepcopy
 from torch.multiprocessing import Barrier, Queue, Manager
 from os.path import dirname, abspath
@@ -34,78 +32,13 @@ th.multiprocessing.set_start_method('spawn', force=True)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
-logger = CustomConsoleLogger.console_logger()
+logger = CustomConsoleLogger("ma-league")
 
 ex = Experiment("ma-league")
 ex.logger = logger
 ex.captured_out_filter = apply_backspaces_and_linefeeds
 
 results_path = os.path.join(dirname(dirname(abspath(__file__))), "results")
-
-H1_T4 = {
-    "tid": 0,
-    "is_scripted": False,
-    "units": [  # Team 1
-        {
-            "uid": 0,
-            "role": RoleTypes.TANK,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 0,
-            "role": RoleTypes.TANK,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 1,
-            "role": RoleTypes.HEALER,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 0,
-            "role": RoleTypes.TANK,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 0,
-            "role": RoleTypes.TANK,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-    ]
-}
-
-H1_A4 = {
-    "tid": 1,
-    "is_scripted": False,
-    "units": [  # Team 1
-        {
-            "uid": 2,
-            "role": RoleTypes.ADC,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 2,
-            "role": RoleTypes.ADC,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 1,
-            "role": RoleTypes.HEALER,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 2,
-            "role": RoleTypes.ADC,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-        {
-            "uid": 2,
-            "role": RoleTypes.ADC,
-            "attack_type": UnitAttackTypes.RANGED
-        },
-    ]
-}
-
 
 def run(_run, _config, _log):
     _config = args_sanity_check(_config, _log)
@@ -129,12 +62,9 @@ def run(_run, _config, _log):
     main_logger.setup_sacred(_run)
 
     # Build league teams
-    team_size = _config["team_size"]
-    team_composer = TeamComposer(RoleTypes, UnitAttackTypes)
-    #teams = team_composer.compose_unique_teams(team_size)
-    #teams = sample(teams, 2)  # Sample 2 random teams to train
-    teams = [H1_A4, H1_T4]
-    teams = team_composer.to_teams(teams)
+    team_composer = TeamComposer(team_size=_config["team_size"], characteristics=[RoleTypes, UnitAttackTypes])
+    uid = team_composer.get_unique_uid(role_type=RoleTypes.HEALER, attack_type=UnitAttackTypes.RANGED)
+    teams = team_composer.sample(k=5, contains=uid)  # Sample 5 random teams that contain a healer
 
     # Shared objects
     manager = Manager()
