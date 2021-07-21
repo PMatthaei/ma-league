@@ -9,19 +9,15 @@ class EntityAttentionFFAgent(nn.Module):
     def __init__(self, input_shape, args):
         super(EntityAttentionFFAgent, self).__init__()
         self.args = args
+        pooling_type = args.pooling_type
+        attn_embed_dim = args.attn_embed_dim
 
-        self.fc1 = nn.Linear(input_shape, args.attn_embed_dim)
-        if args.pooling_type is None:
-            self.attn = EntityAttentionLayer(args.attn_embed_dim,
-                                             args.attn_embed_dim,
-                                             args.attn_embed_dim, args)
+        self.fc1 = nn.Linear(input_shape, attn_embed_dim)
+        if pooling_type is None:
+            self.attn = EntityAttentionLayer(attn_embed_dim, attn_embed_dim, attn_embed_dim, args)
         else:
-            self.attn = EntityPoolingLayer(args.attn_embed_dim,
-                                           args.attn_embed_dim,
-                                           args.attn_embed_dim,
-                                           args.pooling_type,
-                                           args)
-        self.fc2 = nn.Linear(args.attn_embed_dim, args.n_actions)
+            self.attn = EntityPoolingLayer(attn_embed_dim, attn_embed_dim, attn_embed_dim, pooling_type, args)
+        self.fc2 = nn.Linear(attn_embed_dim, args.n_actions)
 
     def init_hidden(self):
         # make hidden states on same device as model
@@ -113,7 +109,6 @@ class ImagineEntityAttentionFFAgent(EntityAttentionFFAgent):
             assert not use_gt_factors, "Can only select one of use_rand_gt_factors and use_gt_factors"
             withinattnmask = self.logical_or(withinattnmask, gt_mask)
             interactattnmask = self.logical_not(withinattnmask)
-
 
         # get masks to use for mixer (no obs_mask but mask out unused entities)
         Wattnmask_noobs = self.logical_or(withinattnmask, activeattnmask)
