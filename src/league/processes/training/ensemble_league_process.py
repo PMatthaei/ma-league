@@ -5,7 +5,7 @@ from typing import Dict, Tuple
 
 from league.components.agent_pool import AgentPool
 from league.components.matchmaking import Matchmaking
-from league.processes.utils import extract_result
+from league.processes.training.utils import extract_result
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand
 from league.utils.team_composer import Team
 from modules.agents import AgentNetwork

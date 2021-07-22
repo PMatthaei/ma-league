@@ -1,9 +1,10 @@
 import os
-from typing import List, OrderedDict
+from typing import List, OrderedDict, Dict, Union
 
 from maenv.utils.enums import EnumEncoder, as_enum
 
 from exceptions.checkpoint_exceptions import NoLearnersProvided
+from league.utils.team_composer import Team
 from learners.learner import Learner
 from main import results_path
 from utils.run_utils import find_latest_model_path
@@ -23,7 +24,7 @@ class AssetManager:
         self.unique_token = args.unique_token
         self.checkpoint_path = args.checkpoint_path
 
-    def save(self, learners: List[Learner], t_env, identifier=None) -> str:
+    def save_learner(self, learners: List[Learner], t_env, identifier=None) -> str:
         """
         :param identifier:
         :param learners: list of learners to save
@@ -41,7 +42,7 @@ class AssetManager:
 
         return save_path
 
-    def load(self, learners: List[Learner], load_step) -> int:
+    def load_learner(self, learners: List[Learner], load_step) -> int:
         """
         :param learners: learners to load existing checkpoints into
         :param load_step: step at which to load
@@ -72,9 +73,10 @@ class AssetManager:
         name = "home_qlearner_" # TODO Adapt if more learners used
         return th.load(f"{latest}/{name}{component}.th", map_location=lambda storage, loc: storage)
 
-    def load_team(self, path: str):
+    def load_team(self, path: str, as_team=False) -> Union[Dict, Team]:
         """
         Loads a team constellation from a *_team.json file
+        :param as_team: convert return to Team class
         :param path:
         :return:
         """
@@ -82,6 +84,6 @@ class AssetManager:
         import json
         for file_path in glob.glob(f'{path}/*team.json'):
             with open(file_path, 'r') as f:
-                data = json.load(fp=f, object_hook=as_enum)
+                plan = json.load(fp=f, object_hook=as_enum)
                 f.close()
-                return data
+                return plan if not as_team else Team(**plan)

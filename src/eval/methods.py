@@ -1,4 +1,8 @@
+from random import shuffle
+from typing import Tuple
+
 import torch as th
+import numpy as np
 
 
 def avg_proportional_loss(jpc_matrix: th.tensor) -> float:
@@ -12,3 +16,10 @@ def avg_proportional_loss(jpc_matrix: th.tensor) -> float:
     if (d - o) < 0:
         print("Off-Diagonal-Mean greater than Diagonal-Mean")
     return (d - o) / d
+
+
+def train_test_split(data: np.ndarray, test_size=.80) -> Tuple[np.ndarray, np.ndarray]:
+    shuffle(data)
+    train = data[:int((len(data) + 1) * test_size)]  # Remaining test_size% to training set
+    test = data[int((len(data) + 1) * test_size):]  # Splits 1-test_size% data to test set
+    return train, test

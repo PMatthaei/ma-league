@@ -5,11 +5,11 @@ import threading
 import numpy as np
 import torch as th
 
-
+from eval.methods import train_test_split
 from league.components.agent_pool import AgentPool
 from league.components.matchmaking import Matchmaking
 from league.components.payoff_matchmaking import MatchmakingPayoff
-from league.processes.ensemble_league_process import EnsembleLeagueProcess
+from league.processes.training.ensemble_league_process import EnsembleLeagueProcess
 from copy import deepcopy
 from torch.multiprocessing import Barrier, Queue, Manager
 from os.path import dirname, abspath
@@ -64,7 +64,8 @@ def run(_run, _config, _log):
     # Build league teams
     team_composer = TeamComposer(team_size=_config["team_size"], characteristics=[RoleTypes, UnitAttackTypes])
     uid = team_composer.get_unique_uid(role_type=RoleTypes.HEALER, attack_type=UnitAttackTypes.RANGED)
-    teams = team_composer.sample(k=5, contains=uid)  # Sample 5 random teams that contain a healer
+    train, test = train_test_split(np.array(team_composer.teams))
+    #teams = team_composer.sample(k=5, contains=uid)  # Sample 5 random teams that contain a healer
 
     # Shared objects
     manager = Manager()

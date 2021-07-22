@@ -188,12 +188,12 @@ class NormalPlayRun(ExperimentRun):
         self._finish()
 
     def load_models(self, checkpoint_path=None):
-        timestep_to_load = self.asset_manager.load(learners=self.learners, load_step=self.args.load_step)
+        timestep_to_load = self.asset_manager.load_learner(learners=self.learners, load_step=self.args.load_step)
         self.stepper.t_env = timestep_to_load
 
     def save_models(self, identifier=None):
         self.model_save_time = self.stepper.t_env
-        out_path = self.asset_manager.save(learners=self.learners, t_env=self.model_save_time, identifier=identifier)
+        out_path = self.asset_manager.save_learner(learners=self.learners, t_env=self.model_save_time, identifier=identifier)
         return out_path
 
     def _finish(self):
