@@ -40,6 +40,7 @@ ex.captured_out_filter = apply_backspaces_and_linefeeds
 
 results_path = os.path.join(dirname(dirname(abspath(__file__))), "results")
 
+
 def run(_run, _config, _log):
     _config = args_sanity_check(_config, _log)
     _config['play_mode'] = "self"
@@ -63,9 +64,9 @@ def run(_run, _config, _log):
 
     # Build league teams
     team_composer = TeamComposer(team_size=_config["team_size"], characteristics=[RoleTypes, UnitAttackTypes])
-    uid = team_composer.get_unique_uid(role_type=RoleTypes.HEALER, attack_type=UnitAttackTypes.RANGED)
-    train, test = train_test_split(np.array(team_composer.teams))
-    #teams = team_composer.sample(k=5, contains=uid)  # Sample 5 random teams that contain a healer
+    uids = team_composer.get_unique_uid(role_type=RoleTypes.HEALER, attack_type=UnitAttackTypes.RANGED)
+    # train, test = train_test_split(np.array(team_composer.teams))
+    teams = team_composer.sample(k=5, contains=uids, unique=True)  # Sample 5 random teams that contain a healer
 
     # Shared objects
     manager = Manager()

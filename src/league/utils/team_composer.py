@@ -4,7 +4,7 @@ import itertools
 
 import enum
 from collections import Counter
-from typing import List, Dict
+from typing import List, Dict, Union
 from random import sample
 
 from maenv.core import RoleTypes, UnitAttackTypes
@@ -31,8 +31,19 @@ class Team:
         dist = sum(in_swaps) * weighting
         return dist
 
-    def contains(self, unit_id: int):
-        return unit_id in self.unit_types
+    def contains(self, unit_ids: Union[List[int], int], unique=False):
+        """
+        :param unit_ids: Unit IDs of units that should be in the team
+        :param unique: Only one unit may have one of the IDs
+        :return: True if the team contains (one or more) the units False otherwise
+        """
+        if isinstance(unit_ids, int):
+            unit_ids = [unit_ids]  # transform to list
+        is_unit = [uid in unit_ids for uid in self.unit_types]  # check which units fulfill condition
+        if unique:
+            i = iter(is_unit)
+            return any(i) and not any(i)  # make sure just one unit fulfills condition
+        return any(is_unit)  # at least one unit must be of one of the desired types
 
     @property
     def roles(self, unique=True):
@@ -82,13 +93,14 @@ class TeamComposer:
         else:
             return uid[0]
 
-    def sample(self, k, contains=None) -> List[Team]:
+    def sample(self, k, contains=None, unique=False) -> List[Team]:
         """
+        :param unique: if the contain argument should be enforced to be unique
         :param k: number of samples to pick
         :param contains: Condition for a sampled team. Has to contain the given units.
         :return: Set of teams
         """
-        return sample([team for team in self.teams if contains is None or team.contains(contains)], k=k)
+        return sample([team for team in self.teams if contains is None or team.contains(contains, unique)], k=k)
 
     def _compose_unique_teams(self, team_size):
         """
@@ -148,3 +160,4 @@ if __name__ == '__main__':
     uid = teams.get_unique_uid(role_type=RoleTypes.HEALER, attack_type=UnitAttackTypes.RANGED)
     print(uid)
     print(teams.sample(2, contains=uid))
+    print(teams.sample(2, contains=uids))

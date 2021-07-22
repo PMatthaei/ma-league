@@ -25,6 +25,9 @@ class EnsembleInferenceMAC(MultiAgentController):
         self.native_hidden_states = None
         self.specific_hidden_states = None
         self._all_ids = set(range(self.n_agents))
+        if args.freeze_native:  # Freezes the native/original agent to learn only the ensemble
+            for p in self.agent.parameters():
+                p.requires_grad = False
 
     @property
     def n_native_agents(self):
@@ -127,7 +130,10 @@ class EnsembleInferenceMAC(MultiAgentController):
         [agent.cuda() for agent in self.ensemble.values()]
 
     def parameters(self):
-        raise NotImplementedError("This functionality is not available because this MAC can only perform inference.")
+        params = []
+        params += list(self.agent.parameters())
+        [params + list(agent.parameters()) for agent in self.ensemble.values()]
+        return params
 
     def save_models(self, path, name):
         raise NotImplementedError("This functionality is not available because this MAC can only perform inference.")

@@ -3,6 +3,7 @@ eval: ""
 headless_controls: True
 sfs: ""
 
+freeze_native: False
 # --- pymarl options ---
 runner: "episode" # Runs 1 env for an episode
 mac: "basic_mac" # Basic controller
