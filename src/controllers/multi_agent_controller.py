@@ -7,6 +7,8 @@ from components.action_selectors import REGISTRY as action_REGISTRY
 
 import torch as th
 
+from modules.agents import AgentNetwork
+
 
 class MultiAgentController:
     def __init__(self, scheme, groups, args):
@@ -23,14 +25,14 @@ class MultiAgentController:
         self.n_actions = args.n_actions
         self.args = args
         input_shape = self._get_input_shape(scheme)
-        self.agent = self._build_agents(input_shape)
+        self.agent: AgentNetwork = self._build_agents(input_shape)
         self.agent_output_type = args.agent_output_type
 
         self.action_selector = action_REGISTRY[args.action_selector](args)
 
         self.hidden_states = None
 
-    def _build_agents(self, input_shape):
+    def _build_agents(self, input_shape) -> AgentNetwork:
         raise NotImplementedError()
 
     def _get_input_shape(self, scheme):

@@ -1,11 +1,12 @@
 import pprint
 import time
 from types import SimpleNamespace
-from typing import Dict
+from typing import Dict, Tuple
 
 import torch as th
 
 from components.replay_buffers.replay_buffer import ReplayBuffer
+from league.utils.team_composer import Team
 from modules.agents import AgentNetwork
 from runs.experiment_run import ExperimentRun
 from steppers.episode_stepper import EnvStepper
@@ -13,7 +14,7 @@ from utils.asset_manager import AssetManager
 from utils.timehelper import time_left, time_str
 
 from learners import REGISTRY as le_REGISTRY
-from controllers import REGISTRY as mac_REGISTRY, EnsembleInferenceMAC
+from controllers import REGISTRY as mac_REGISTRY, EnsembleMAC
 from components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
 from components.feature_functions import REGISTRY as feature_func_REGISTRY, FeatureFunction
@@ -59,9 +60,17 @@ class NormalPlayRun(ExperimentRun):
 
         self.asset_manager = AssetManager(args=self.args, logger=self.logger)
 
-    def build_inference_mac(self, ensemble: Dict[int, AgentNetwork] = None):
-        self.home_mac = EnsembleInferenceMAC(self.home_buffer.scheme, self.groups, self.args)
-        self.home_mac.load_state(ensemble=ensemble)
+    def build_ensemble_mac(self, native: Tuple[Team, AgentNetwork], foreign_agent: Tuple[Team, AgentNetwork]):
+        """
+        Build an dual ensemble where parts of the native agent infer with the foreign agent
+        :param native:
+        :param foreign_agent:
+        :return:
+        """
+        self.home_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
+        # Load the foreign agent into the first agent in the ensemble.
+        # ! WARN ! Currently it is enforced that all team have the agent to swap in the first position
+        self.home_mac.load_state(ensemble={0: foreign_agent[1]})
 
     def _build_learners(self):
         # Buffers
@@ -193,7 +202,8 @@ class NormalPlayRun(ExperimentRun):
 
     def save_models(self, identifier=None):
         self.model_save_time = self.stepper.t_env
-        out_path = self.asset_manager.save_learner(learners=self.learners, t_env=self.model_save_time, identifier=identifier)
+        out_path = self.asset_manager.save_learner(learners=self.learners, t_env=self.model_save_time,
+                                                   identifier=identifier)
         return out_path
 
     def _finish(self):

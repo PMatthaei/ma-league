@@ -1,3 +1,4 @@
+import random
 from typing import Tuple, Dict
 
 from league.components.agent_pool import AgentPool
@@ -9,11 +10,48 @@ from modules.agents import AgentNetwork
 
 class Matchmaking:
 
-    def __init__(self, agent_pool: AgentPool, payoff: MatchmakingPayoff = None, sampling_strategy: OpponentSampling = None):
+    def __init__(self, agent_pool: AgentPool, payoff: MatchmakingPayoff = None,
+                 sampling_strategy: OpponentSampling = None):
         self._agent_pool = agent_pool
         self._payoff = payoff
         self._sampling_strategy = sampling_strategy
         pass
+
+    def get_match(self, home_team: Team) -> Tuple[Team, AgentNetwork]:
+        raise NotImplementedError()
+
+    def get_ensemble(self, home_team: Team) -> Dict[int, AgentNetwork]:
+        raise NotImplementedError()
+
+
+class IteratingMatchmaking(Matchmaking):
+    def __init__(self, agent_pool: AgentPool, payoff: MatchmakingPayoff = None):
+        super().__init__(agent_pool)
+        self.index = 0
+
+    def get_match(self, home_team: Team) -> Tuple[Team, AgentNetwork]:
+        self.index += 1
+        if self.index >= len(self._agent_pool.collected_teams):
+            return None
+        team = self._agent_pool.collected_teams[self.index]
+        return team, self._agent_pool[team]
+
+    def get_ensemble(self, home_team: Team) -> Dict[int, AgentNetwork]:
+        pass
+
+
+class RandomMatchmaking(Matchmaking):
+
+    def __init__(self, agent_pool: AgentPool, round_limit: int = 5, time_limit=None):
+        """
+        Matchmaking to return a random adversary team agent bound to a round or time limit.
+        :param agent_pool:
+        :param round_limit:
+        :param time_limit:
+        """
+        super().__init__(agent_pool)
+        self.round_limit = round_limit
+        self.current_round = 0
 
     def get_match(self, home_team: Team) -> Tuple[Team, AgentNetwork]:
         """
@@ -21,17 +59,17 @@ class Matchmaking:
         :param home_team:
         :return:
         """
-        teams = self._agent_pool.collected_teams
+        if self.current_round >= self.round_limit:
+            return None
 
         if not self._agent_pool.can_sample():
             return home_team, self._agent_pool[home_team]  # Self-Play if no one available
-
+        self.current_round += 1
         return self._agent_pool.sample()
 
     def get_ensemble(self, home_team: Team) -> Dict[int, AgentNetwork]:
-        teams = self._agent_pool.collected_teams
-        others = [team for team in teams if team.id_ != home_team.id_]
-        # TODO: change fixed mapping to sensible
+        others = [team for team in self._agent_pool.collected_teams if team.id_ != home_team.id_]
+        selected = random.choice(others)
         return {
-            2: self._agent_pool[others.pop()]
+            2: self._agent_pool[selected]
         }

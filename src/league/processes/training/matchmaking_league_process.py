@@ -72,7 +72,7 @@ class MatchmakingLeagueProcess(Process):
             self._configure_play(home=self._home_team, away=self._away_team)
 
             self._play = LeaguePlayRun(args=self._args, logger=self._logger, on_episode_end=self._provide_result)
-            self._play.build_inference_mac(agent=away_agent)
+            self._play.build_ensemble_mac(agent=away_agent)
             self._play.start(play_time_seconds=self._args.league_play_time_mins * 60)
 
             end_time = time.time()

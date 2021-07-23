@@ -52,25 +52,37 @@ class EnsembleLeagueProcess(Process):
 
         self.terminated: bool = False
 
-        self._play = None
+        self._current_play = None
 
         self._ensemble = None
+
+    @property
+    def home_agent(self) -> AgentNetwork:
+        return self._current_play.home_mac.agent
+
+    @property
+    def native_agent(self) -> Tuple[Team, AgentNetwork]:
+        return self._home_team, self.home_agent
 
     def run(self) -> None:
         # Initial play to train policy of the team against AI against mirrored team -> Performed for each team
         self._configure_play(home=self._home_team, ai_opponent=True)
-        self._play = NormalPlayRun(args=self._args, logger=self._logger)
-        self._play.start(play_time_seconds=self._args.league_play_time_mins * 60)
-        self._share_agent(agent=self._play.home_mac.agent)
+        self._current_play = NormalPlayRun(args=self._args, logger=self._logger)
+        self._current_play.start(play_time_seconds=self._args.league_play_time_mins * 60)
+        self._share_agent(agent=self.home_agent)
 
+        # TODO which agent to replace? id has to stay the same. how build ensemble
         # Fetch agents from other teams trained previously and combine them into an ensemble
-        self._ensemble = self._matchmaking.get_ensemble(self._home_team)
-        self._play = NormalPlayRun(args=self._args, logger=self._logger)
-        self._play.build_inference_mac(self._ensemble)
-        self._play.evaluate_sequential(test_n_episode=200)
-        self._play.save_models()
+        foreign_agent: Tuple[Team, AgentNetwork] = self._matchmaking.get_match(self._home_team)
+        self._current_play = NormalPlayRun(args=self._args, logger=self._logger)
+        self._current_play.build_ensemble_mac(native=self.native_agent, foreign_agent=foreign_agent)
+        # Evaluate how good the mixed team performs
+        self._current_play.evaluate_sequential(test_n_episode=200)
+        # Train only new foreign agent with the team performing as before
+        # TODO training
+        self._current_play.save_models()
         # Share agent after training to make its current state accessible to other processes
-        self._share_agent(agent=self._play.home_mac.agent)
+        self._share_agent(agent=self.home_agent)
 
         self._request_close()
 
@@ -95,7 +107,7 @@ class EnsembleLeagueProcess(Process):
         :param env_info:
         :return:
         """
-        result = extract_result(env_info, self._play.stepper.policy_team_id)
+        result = extract_result(env_info, self._current_play.stepper.policy_team_id)
         data = ((self._home_team.id_, self._away_team.id_), result)
         cmd = PayoffUpdateCommand(origin=self._home_team.id_, data=data)
         self._in_queue.put(cmd)

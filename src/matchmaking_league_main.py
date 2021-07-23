@@ -7,7 +7,7 @@ import torch as th
 
 from eval.methods import train_test_split
 from league.components.agent_pool import AgentPool
-from league.components.matchmaking import Matchmaking
+from league.components.matchmaking import Matchmaking, IteratingMatchmaking
 from league.components.payoff_matchmaking import MatchmakingPayoff
 from league.processes.training.ensemble_league_process import EnsembleLeagueProcess
 from copy import deepcopy
@@ -64,9 +64,10 @@ def run(_run, _config, _log):
 
     # Build league teams
     team_composer = TeamComposer(team_size=_config["team_size"], characteristics=[RoleTypes, UnitAttackTypes])
-    uids = team_composer.get_unique_uid(role_type=RoleTypes.HEALER, attack_type=UnitAttackTypes.RANGED)
+    uid = team_composer.get_unique_uid(role_type=RoleTypes.HEALER, attack_type=UnitAttackTypes.RANGED)
     # train, test = train_test_split(np.array(team_composer.teams))
-    teams = team_composer.sample(k=5, contains=uids, unique=True)  # Sample 5 random teams that contain a healer
+    teams = team_composer.sample(k=5, contains=uid, unique=True)  # Sample 5 random teams that contain a ranged healer
+    teams = team_composer.sort_team_units(teams, uid=uid)  # Sort ranged healer first in all teams for later consistency
 
     # Shared objects
     manager = Manager()
@@ -77,7 +78,7 @@ def run(_run, _config, _log):
     procs = []  # All running processes representing an agent playing in the league
     payoff = MatchmakingPayoff(payoff_dict=payoff_dict)  # Hold results of each match
     agent_pool = AgentPool(agents_dict=agents_dict)  # Hold each trained agent
-    matchmaking = Matchmaking(agent_pool=agent_pool, payoff=payoff)  # Match agents against each other
+    matchmaking = IteratingMatchmaking(agent_pool=agent_pool, payoff=payoff)  # Match agents against each other
 
     # Communication
     in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(len(teams))])

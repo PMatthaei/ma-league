@@ -3,33 +3,34 @@ from __future__ import annotations
 import itertools
 
 import enum
+import math
+
+import numpy as np
+
 from collections import Counter
-from typing import List, Dict, Union
+from functools import reduce
+from typing import List, Dict, Union, Tuple
 from random import sample
 
 from maenv.core import RoleTypes, UnitAttackTypes
 
 
 class Team:
-    def __init__(self, tid: int, units: List, is_scripted: bool = False):
+    def __init__(self, tid: int, units: Tuple[Dict], is_scripted: bool = False):
         self.id_ = tid
         self.units: List[Dict] = list(units)
-        self.unit_types: List[int] = [unit["uid"] for unit in self.units]
+        self._uids: List[int] = [unit["uid"] for unit in self.units]  # IDs of units
+        self._rids: List[int] = [unit["role"].value["id"] for unit in self.units]  # IDs of roles
         self.is_scripted: bool = is_scripted
 
-    def difference(self, team: Team):
+    def get_team_ids(self, query_ids: List[int]):
         """
-        Calculate the swap-distance for a given team.
-        :param team:
-        :return:
+        :param query_ids: Unit IDs to search for in the team
+        :return: Team internal IDs where the corresponding unit can be found
         """
-        t1_counts = Counter(self.unit_types)
-        t2_counts = Counter(team.unit_types)
-        diff = [t1_counts[unit] - t2_counts[unit] if unit in t2_counts else t1_counts[unit] for unit in t1_counts]
-        in_swaps = [x for x in diff if x > 0]
-        weighting = len(in_swaps) / sum(t1_counts.values())
-        dist = sum(in_swaps) * weighting
-        return dist
+        uids = np.array(self._uids)
+        mask = reduce((lambda x, y: x | y), [(uids == uid) for uid in query_ids])
+        return np.where(mask)
 
     def contains(self, unit_ids: Union[List[int], int], unique=False):
         """
@@ -39,7 +40,7 @@ class Team:
         """
         if isinstance(unit_ids, int):
             unit_ids = [unit_ids]  # transform to list
-        is_unit = [uid in unit_ids for uid in self.unit_types]  # check which units fulfill condition
+        is_unit = [uid in unit_ids for uid in self._uids]  # check which units fulfill condition
         if unique:
             i = iter(is_unit)
             return any(i) and not any(i)  # make sure just one unit fulfills condition
@@ -57,6 +58,20 @@ class Team:
 
     def __eq__(self, other):
         return self.id_ == other.id_
+
+    def difference(self, team: Team):
+        """
+        Calculate the swap-distance for a given team.
+        :param team:
+        :return:
+        """
+        t1_counts = Counter(self._uids)
+        t2_counts = Counter(team._uids)
+        diff = [t1_counts[unit] - t2_counts[unit] if unit in t2_counts else t1_counts[unit] for unit in t1_counts]
+        in_swaps = [x for x in diff if x > 0]
+        weighting = len(in_swaps) / sum(t1_counts.values())
+        dist = sum(in_swaps) * weighting
+        return dist
 
 
 class TeamComposer:
@@ -129,6 +144,18 @@ class TeamComposer:
         units = list(enumerate(list(itertools.product(*self.characteristics))))
         return map(lambda unit: {'uid': unit[0], 'role': unit[1][0], 'attack_type': unit[1][1]}, units)
 
+    def sort_team_units(self, teams, uid=0):
+        """
+
+        :param teams: teams to sort units
+        :param uid: UID to sort to top, shifting the sorting origin to this number/uid.
+        Following UIDs will be sorted with distance to uid.
+        :return:
+        """
+        for team in teams:
+            team.units.sort(key=lambda x: math.fabs(x["uid"] - uid))
+        return teams
+
     @staticmethod
     def _to_teams(plans: List[dict]) -> List[Team]:
         return [Team(**plan) for plan in plans]
@@ -150,14 +177,22 @@ class TeamComposer:
 
 
 if __name__ == '__main__':
-    n = 3
-    teams = TeamComposer(team_size=2, characteristics=[RoleTypes, UnitAttackTypes])
-    roles = teams[0].roles
-    print(teams[0])
-    print(roles)
-    uids = teams.get_uids(type=RoleTypes.HEALER, capability="role")
-    print(uids)
-    uid = teams.get_unique_uid(role_type=RoleTypes.HEALER, attack_type=UnitAttackTypes.RANGED)
-    print(uid)
-    print(teams.sample(2, contains=uid))
-    print(teams.sample(2, contains=uids))
+    pass
+    # n = 3
+    # teams = TeamComposer(team_size=5, characteristics=[RoleTypes, UnitAttackTypes])
+    # roles = teams[0].roles
+    # print(teams[0])
+    # print(roles)
+    # uids = teams.get_uids(type=RoleTypes.HEALER, capability="role")
+    # print(uids)
+    # uid = teams.get_unique_uid(role_type=RoleTypes.HEALER, attack_type=UnitAttackTypes.RANGED)
+    # print(uid)
+    # ranged_healer_teams = teams.sample(5, contains=uid, unique=True)
+    # for team in ranged_healer_teams:
+    #     team.units.sort(key=lambda x: math.fabs(x["uid"] - uid))
+    #
+    # healer_teams = teams.sample(2, contains=uids)
+    # print(healer_teams)
+    # print(healer_teams[0].roles)
+    # tids = healer_teams[0].get_team_ids(uids)
+    # print(tids)

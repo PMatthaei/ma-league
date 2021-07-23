@@ -3,7 +3,7 @@ from __future__ import annotations
 from components.episode_batch import EpisodeBatch
 from controllers.multi_agent_controller import MultiAgentController
 from exceptions.mac_exceptions import HiddenStateNotInitialized
-from modules.agents import REGISTRY as agent_REGISTRY
+from modules.agents import REGISTRY as agent_REGISTRY, AgentNetwork
 import torch as th
 
 
@@ -73,7 +73,7 @@ class BasicMAC(MultiAgentController):
         self.agent.load_state_dict(
             th.load("{}/{}agent.th".format(path, name), map_location=lambda storage, loc: storage))
 
-    def _build_agents(self, input_shape):
+    def _build_agents(self, input_shape) -> AgentNetwork:
         return agent_REGISTRY[self.args.agent](input_shape, self.args)
 
     def _build_inputs(self, batch: EpisodeBatch, t: int):

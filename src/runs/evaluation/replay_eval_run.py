@@ -10,7 +10,7 @@ from runs.experiment_run import ExperimentRun
 from steppers.episode_stepper import EnvStepper
 from utils.asset_manager import AssetManager
 
-from controllers import EnsembleInferenceMAC
+from controllers import EnsembleMAC
 
 from components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
@@ -59,8 +59,8 @@ class ReplayGenerationRun(ExperimentRun):
                                         preprocess=self.preprocess,
                                         device="cpu" if self.args.buffer_cpu_only else self.args.device)
         # Setup multi-agent controller here
-        self.home_mac = EnsembleInferenceMAC(self.home_buffer.scheme, self.groups, self.args)
-        self.away_mac = EnsembleInferenceMAC(self.home_buffer.scheme, self.groups, self.args)
+        self.home_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
+        self.away_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
 
     def _update_shapes(self) -> Dict:
         shapes = {
