@@ -61,8 +61,8 @@ class EnsembleLeagueProcess(Process):
         return self._current_play.home_mac.agent
 
     @property
-    def native_agent(self) -> Tuple[Team, AgentNetwork]:
-        return self._home_team, self.home_agent
+    def shared_agent(self) -> Tuple[Team, AgentNetwork]:
+        return self._home_team, self._agent_pool[self._home_team]
 
     def run(self) -> None:
         # Initial play to train policy of the team against AI against mirrored team -> Performed for each team
@@ -71,18 +71,20 @@ class EnsembleLeagueProcess(Process):
         self._current_play.start(play_time_seconds=self._args.league_play_time_mins * 60)
         self._share_agent(agent=self.home_agent)
 
-        # TODO which agent to replace? id has to stay the same. how build ensemble
         # Fetch agents from other teams trained previously and combine them into an ensemble
         foreign_agent: Tuple[Team, AgentNetwork] = self._matchmaking.get_match(self._home_team)
         self._current_play = NormalPlayRun(args=self._args, logger=self._logger)
-        self._current_play.build_ensemble_mac(native=self.native_agent, foreign_agent=foreign_agent)
+        self._current_play.build_ensemble_mac(native=self.shared_agent, foreign_agent=foreign_agent)
         # Evaluate how good the mixed team performs
-        self._current_play.evaluate_sequential(test_n_episode=200)
+        self._current_play.evaluate_sequential(test_n_episode=self._args.n_league_evaluation_episodes)
+
         # Train only new foreign agent with the team performing as before
-        # TODO training
-        self._current_play.save_models()
+        self._current_play = NormalPlayRun(args=self._args, logger=self._logger)
+        self._current_play.build_ensemble_mac(native=self.shared_agent, foreign_agent=foreign_agent)
+        self._current_play.start(play_time_seconds=self._args.league_play_time_mins * 60)
         # Share agent after training to make its current state accessible to other processes
         self._share_agent(agent=self.home_agent)
+        self._current_play.save_models()
 
         self._request_close()
 
