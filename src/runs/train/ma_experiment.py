@@ -24,7 +24,8 @@ class MultiAgentExperiment(ExperimentRun):
 
     def __init__(self, args, logger, on_episode_end=None):
         """
-        NormalPlay performs the standard way of training a single multi-agent against a static scripted AI opponent.
+        Performs the standard way of training a single multi-agent against a static scripted AI opponent for a fixed
+        number of environment steps or a time limit.
         :param args:
         :param logger:
         """
@@ -56,6 +57,8 @@ class MultiAgentExperiment(ExperimentRun):
 
         if self.args.use_cuda:  # Activate CUDA mode if supported
             [learner.cuda() for learner in self.learners]
+
+        [learner.build_optimizer() for learner in self.learners] # Should be called after cuda()
 
         if self.args.sfs:  # Use feature function instead of reward
             self.sfs = feature_func_REGISTRY[self.args.sfs]

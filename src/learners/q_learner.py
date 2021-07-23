@@ -1,6 +1,5 @@
 import copy
 import torch as th
-from torch.optim import RMSprop
 
 from controllers.multi_agent_controller import MultiAgentController
 from learners.learner import Learner
@@ -27,8 +26,6 @@ class QLearner(Learner):
             # Add additional mixer params for later optimization
             self.params += list(self.mixer.parameters())
             self.target_mixer = copy.deepcopy(self.mixer)
-
-        self.optimiser = RMSprop(params=self.params, lr=args.lr, alpha=args.optim_alpha, eps=args.optim_eps)
 
         # TODO: a little wasteful to deepcopy (e.g. duplicates action selector), but should work for any MAC
         self.target_mac = copy.deepcopy(mac)
@@ -131,7 +128,7 @@ class QLearner(Learner):
             self.target_mixer.load_state_dict(self.mixer.state_dict())
         self.logger.info("Updated {0}target network.".format(self.name))
 
-    def cuda(self):
+    def cuda(self): # TODO: Calling cuda() first creates on CPU then GPU -> slow
         self.mac.cuda()
         self.target_mac.cuda()
         if self.mixer is not None:
