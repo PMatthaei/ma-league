@@ -16,7 +16,7 @@ def set_agents_only(config):
     config["env_args"]["match_build_plan"][1]["is_scripted"] = False
 
 
-def load_match_build_plan(path, env_args):
+def get_match_build_plan(path, env_args):
     """
     Load a match plan defined in the environment config.
     :param path:
@@ -25,8 +25,7 @@ def load_match_build_plan(path, env_args):
     """
     import json
     with open(f'{os.path.join(path)}/config/teams/{env_args["match_build_plan"]}.json') as f:
-        teams_build_plan = json.load(f, object_hook=as_enum)
-        env_args["match_build_plan"] = teams_build_plan
+        return json.load(f, object_hook=as_enum)
 
 
 def recursive_dict_update(dest_dict, source_dict):

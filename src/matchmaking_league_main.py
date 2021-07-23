@@ -1,69 +1,37 @@
+import argparse
 import os
-import datetime
 import sys
 import threading
-import numpy as np
+from copy import deepcopy
+from os.path import dirname, abspath
+
 import torch as th
 
-from eval.methods import train_test_split
 from league.components.agent_pool import AgentPool
-from league.components.matchmaking import Matchmaking, IteratingMatchmaking
+from league.components.matchmaking import IteratingMatchmaking
 from league.components.payoff_matchmaking import MatchmakingPayoff
 from league.processes.training.ensemble_league_process import EnsembleLeagueProcess
-from copy import deepcopy
 from torch.multiprocessing import Barrier, Queue, Manager
-from os.path import dirname, abspath
 from maenv.core import RoleTypes, UnitAttackTypes
-from sacred import SETTINGS, Experiment
-from sacred.observers import FileStorageObserver
-from sacred.utils import apply_backspaces_and_linefeeds
-from custom_logging.platforms import CustomConsoleLogger
+
 from league.utils.team_composer import TeamComposer
-from custom_logging.logger import MainLogger
-from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy, \
-    set_agents_only
 
-from types import SimpleNamespace
-
-from utils.run_utils import args_sanity_check
 
 th.multiprocessing.set_start_method('spawn', force=True)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 
-SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
-logger = CustomConsoleLogger("ma-league")
-
-ex = Experiment("ma-league")
-ex.logger = logger
-ex.captured_out_filter = apply_backspaces_and_linefeeds
-
-results_path = os.path.join(dirname(dirname(abspath(__file__))), "results")
-
-
-def run(_run, _config, _log):
-    _config = args_sanity_check(_config, _log)
-    _config['play_mode'] = "self"
-    set_agents_only(_config)
-
-    args = SimpleNamespace(**_config)
-    args.device = "cuda" if args.use_cuda else "cpu"
-
-    main_logger = MainLogger(_log, args)
-
-    # configure tensorboard logger
-    unique_token = "{}__{}".format(args.name, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-    args.unique_token = unique_token
-    if args.use_tensorboard:
-        tb_logs_direc = os.path.join(dirname(dirname(abspath(__file__))), "results", "tb_logs")
-        tb_exp_direc = os.path.join(tb_logs_direc, "{}").format(unique_token)
-        main_logger.setup_tensorboard(tb_exp_direc)
-
-    # sacred is on by default
-    main_logger.setup_sacred(_run)
+if __name__ == '__main__':
+    params = deepcopy(sys.argv)
+    # Handle pre experiment start arguments without sacred
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--team_size', default=3, type=int)
+    # Basics to start a experiment
+    args, _ = parser.parse_known_args(sys.argv)
+    src_dir = dirname(abspath(__file__))
 
     # Build league teams
-    team_composer = TeamComposer(team_size=_config["team_size"], characteristics=[RoleTypes, UnitAttackTypes])
+    team_composer = TeamComposer(team_size=args.team_size, characteristics=[RoleTypes, UnitAttackTypes])
     uid = team_composer.get_unique_uid(role_type=RoleTypes.HEALER, attack_type=UnitAttackTypes.RANGED)
     # train, test = train_test_split(np.array(team_composer.teams))
     teams = team_composer.sample(k=2, contains=uid, unique=True)  # Sample 5 random teams that contain a ranged healer
@@ -89,12 +57,12 @@ def run(_run, _config, _log):
     # Start league instances
     for idx, (in_q, out_q, team) in enumerate(zip(in_queues, out_queues, teams)):
         proc = EnsembleLeagueProcess(
+            params=params,
+            src_dir=src_dir,
             home_team=team,
             matchmaking=matchmaking,
             agent_pool=agent_pool,
             queue=(in_q, out_q),
-            args=args,
-            logger=main_logger,
             sync_barrier=sync_barrier
         )
         procs.append(proc)
@@ -117,55 +85,3 @@ def run(_run, _config, _log):
             print("Thread joined")
 
     print("Exiting script")
-
-    # Making sure framework really exits
-    os._exit(os.EX_OK)
-
-
-@ex.main
-def league_main(_run, _config, _log):
-    # Load config and logger
-    config = config_copy(_config)
-    np.random.seed(config["seed"])
-    th.manual_seed(config["seed"])
-    config['env_args']['seed'] = config["seed"]
-
-    # run the framework
-    run(_run, config, _log)
-
-
-if __name__ == '__main__':
-    params = deepcopy(sys.argv)
-
-    # Get the defaults from default.yaml
-    main_path = os.path.dirname(__file__)
-    config_dict = get_default_config(main_path)
-
-    # Load league base config
-    league_config = get_config(params, "--league-config", "leagues", path=main_path)
-
-    # Load env base config
-    env_config = get_config(params, "--env-config", "envs", path=main_path)
-
-    # Load build plan if configured
-    env_args = env_config['env_args']
-    if "match_build_plan" in env_args:
-        load_match_build_plan(main_path, env_args)
-
-    # Load algorithm base config
-    alg_config = get_config(params, "--config", "algs", path=main_path)
-
-    # Integrate loaded dicts into main dict
-    config_dict = recursive_dict_update(config_dict, league_config)
-    config_dict = recursive_dict_update(config_dict, env_config)
-    config_dict = recursive_dict_update(config_dict, alg_config)
-
-    # now add all the config to sacred
-    ex.add_config(config_dict)
-
-    # Save to disk by default for sacred
-    logger.info("Saving to FileStorageObserver in results/sacred.")
-    file_obs_path = os.path.join(results_path, "sacred")
-    ex.observers.append(FileStorageObserver(file_obs_path))
-
-    ex.run_commandline(params)

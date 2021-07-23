@@ -1,28 +1,28 @@
 import copy
 
-from torch.multiprocessing import Process, Barrier, Queue, current_process
+from torch.multiprocessing import Barrier, Queue, current_process
 
-from types import SimpleNamespace
 from typing import Dict, Tuple
 
 from league.components.agent_pool import AgentPool
 from league.components.matchmaking import Matchmaking
+from league.processes.experiment_process import ExperimentProcess
 from league.processes.training.utils import extract_result
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand
 from league.utils.team_composer import Team
 from modules.agents import AgentNetwork
-from custom_logging.logger import MainLogger
 from runs.train.ma_experiment import MultiAgentExperiment
 
 
-class EnsembleLeagueProcess(Process):
+class EnsembleLeagueProcess(ExperimentProcess):
+
     def __init__(self,
+                 params,
+                 src_dir,
                  agent_pool: AgentPool,
                  matchmaking: Matchmaking,
                  home_team: Team,
                  queue: Tuple[Queue, Queue],
-                 args: SimpleNamespace,
-                 logger: MainLogger,
                  sync_barrier: Barrier):
         """
         The process is running a single League-Play and handles communication with the central components.
@@ -40,9 +40,7 @@ class EnsembleLeagueProcess(Process):
         :param logger:
         :param sync_barrier:
         """
-        super().__init__()
-        self._args = args
-        self._logger = logger
+        super(EnsembleLeagueProcess, self).__init__(params, src_dir)
 
         self._home_team: Team = home_team
         self._away_team: Team = None
@@ -66,7 +64,7 @@ class EnsembleLeagueProcess(Process):
     def shared_agent(self) -> Tuple[Team, AgentNetwork]:
         return self._home_team, self._agent_pool[self._home_team]
 
-    def run(self) -> None:
+    def _run_experiment(self) -> None:
         self.proc_id = current_process()
 
         # Initial play to train policy of the team against AI against mirrored team -> Performed for each team

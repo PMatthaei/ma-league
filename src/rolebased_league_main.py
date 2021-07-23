@@ -21,7 +21,7 @@ from league.processes.training.role_based_league_process import RolebasedLeagueP
 from league.processes.league_coordinator import LeagueCoordinator
 from league.utils.team_composer import TeamComposer
 from custom_logging.logger import MainLogger
-from utils.main_utils import get_default_config, get_config, load_match_build_plan, recursive_dict_update, config_copy, \
+from utils.main_utils import get_default_config, get_config, get_match_build_plan, recursive_dict_update, config_copy, \
     set_agents_only
 
 from types import SimpleNamespace
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     # Load build plan if configured
     env_args = env_config['env_args']
     if "match_build_plan" in env_args:
-        load_match_build_plan(main_path, env_args)
+        env_args["match_build_plan"] = get_match_build_plan(main_path, env_args)
 
     # Load algorithm base config
     alg_config = get_config(params, "--config", "algs", path=main_path)

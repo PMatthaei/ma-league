@@ -13,7 +13,7 @@ from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
 from custom_logging.logger import MainLogger
 from custom_logging.platforms.console import CustomConsoleLogger
-from utils.main_utils import config_copy, get_config, recursive_dict_update, get_default_config, load_match_build_plan, \
+from utils.main_utils import config_copy, get_config, recursive_dict_update, get_default_config, get_match_build_plan, \
     set_agents_only
 from utils.run_utils import args_sanity_check
 
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     # Load build plan if configured
     env_args = env_config['env_args']
     if "match_build_plan" in env_args:
-        load_match_build_plan(main_path, env_args)
+        env_args["match_build_plan"] = get_match_build_plan(main_path, env_args)
 
     alg_config = get_config(params, "--config", "algs", path=main_path)
     config_dict = recursive_dict_update(config_dict, env_config)
