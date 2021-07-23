@@ -1,11 +1,5 @@
 
 #!/usr/bin/env bash
-
-cmd="$@"
-echo "Forcing python3."
-cmd=$(echo "$cmd" | sed "s/python/python3/")
-echo "Slurm script received command: '$cmd'"
-
 #
 #SBATCH --job-name ma-league
 #SBATCH --output=res.txt
