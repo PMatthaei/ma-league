@@ -10,7 +10,7 @@ echo "Slurm script received command: '$cmd'"
 #SBATCH --job-name ma-league
 #SBATCH --output=res.txt
 #SBATCH --ntasks=1
-#SBATCH --time=10:00
+#SBATCH --time=12:00:00
 #SBATCH --gres=gpu:1
 
 # debug info
@@ -36,5 +36,5 @@ python3 -c "import torch; print(torch.cuda.device_count())"
 
 echo "Execute command as Slurm job..."
 # train
-eval $cmd
+python3 ../src/matchmaking_league_main.py --config=qmix --env-config=ma with play_mode=league --league-config=default headless_controls=False use_cuda=True use_tensorboard=False save_model=False
 
