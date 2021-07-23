@@ -39,6 +39,10 @@ class MultiAgentExperiment(ExperimentRun):
         self.episode_callback = on_episode_end
         self.home_mac, self.home_buffer, self.home_learner = None, None, None
 
+        if self.args.sfs:  # Use feature function instead of reward
+            self.sfs = feature_func_REGISTRY[self.args.sfs]
+            self._update_args({"sfs_n_features": self.sfs.n_features})
+
         # Init stepper so we can get env info
         self.stepper = self._build_stepper()
 
@@ -46,7 +50,12 @@ class MultiAgentExperiment(ExperimentRun):
         self.env_info = self.stepper.get_env_info()
 
         # Retrieve important data from the env and set in args
-        env_scheme = self._update_args()
+        env_scheme = {
+            "n_agents": int(self.env_info["n_agents"]),
+            "n_actions": int(self.env_info["n_actions"]),
+            "state_shape": int(self.env_info["state_shape"])
+        }
+        self._update_args(env_scheme)
 
         self.logger.update_scheme(env_scheme)
 
@@ -60,9 +69,7 @@ class MultiAgentExperiment(ExperimentRun):
 
         [learner.build_optimizer() for learner in self.learners] # Should be called after cuda()
 
-        if self.args.sfs:  # Use feature function instead of reward
-            self.sfs = feature_func_REGISTRY[self.args.sfs]
-            self.sfs_n_features = self.sfs.n_features
+
 
         self.asset_manager = AssetManager(args=self.args, logger=self.logger)
 
@@ -94,18 +101,8 @@ class MultiAgentExperiment(ExperimentRun):
         # Register in list of learners
         self.learners.append(self.home_learner)
 
-    def _update_args(self) -> Dict:
-        """
-        Updates the args but returns the update delta for optional re-use
-        :return: environment scheme containing the number of learning agents, action and state space
-        """
-        env_scheme = {
-            "n_agents": int(self.env_info["n_agents"]),
-            "n_actions": int(self.env_info["n_actions"]),
-            "state_shape": int(self.env_info["state_shape"])
-        }
-        self.args = SimpleNamespace(**{**vars(self.args), **env_scheme})
-        return env_scheme
+    def _update_args(self, update: Dict):
+        self.args = SimpleNamespace(**{**vars(self.args), **update})
 
     def _build_schemes(self):
         scheme = {
@@ -118,7 +115,7 @@ class MultiAgentExperiment(ExperimentRun):
         }
 
         if self.args.sfs:
-            scheme.update({"features": {"vshape": (self.sfs_n_features,)}})
+            scheme.update({"features": {"vshape": (self.args.sfs_n_features,)}})
 
         groups = {
             "agents": self.args.n_agents
@@ -149,7 +146,7 @@ class MultiAgentExperiment(ExperimentRun):
         :param play_time_seconds: Play the run for a certain time in seconds.
         :return:
         """
-        if not self.args.skip_exp_parameter_log:
+        if self.args.show_exp_parameters:
             self.logger.info("Experiment Parameters:")
             experiment_params = pprint.pformat(self.args.__dict__, indent=4, width=1)
             self.logger.info("\n\n" + experiment_params + "\n")
@@ -204,6 +201,9 @@ class MultiAgentExperiment(ExperimentRun):
                 self.last_log_T = self.stepper.t_env
 
             self._end_time = time.time()
+
+        self.logger.log_stat("episode", episode, self.stepper.t_env)
+        self.logger.log_report() # Final log
         # Finish and clean up
         self._finish()
 

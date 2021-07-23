@@ -1,3 +1,6 @@
+from typing import Dict
+
+
 class ExperimentRun:
     def __init__(self, args, logger):
         """
@@ -31,5 +34,5 @@ class ExperimentRun:
     def _finish(self):
         raise NotImplementedError()
 
-    def _update_args(self):
+    def _update_args(self, update: Dict):
         raise NotImplementedError()

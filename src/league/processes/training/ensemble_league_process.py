@@ -70,45 +70,45 @@ class EnsembleLeagueProcess(Process):
         self.proc_id = current_process()
 
         # Initial play to train policy of the team against AI against mirrored team -> Performed for each team
-        print(f"Start training in process: {self.proc_id} with {self._home_team}")
+        self._logger.info(f"Start training in process: {self.proc_id} with {self._home_team}")
         self._configure_play(home=self._home_team, ai_opponent=True)
         self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
-        print(f"Train against AI in process: {self.proc_id}")
+        self._logger.info(f"Train against AI in process: {self.proc_id}")
         self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
-        print(f"Share agent from process: {self.proc_id}")
+        self._logger.info(f"Share agent from process: {self.proc_id}")
         self._share_agent(agent=self.home_agent)  # make agent accessible to other instances
         self._native_agent = self._home_team, copy.deepcopy(self.home_agent)  # save an instance of the original agent
 
         # Fetch agents from another teams training instance
         foreign_agent: Tuple[Team, AgentNetwork] = self._matchmaking.get_match(self._home_team)
-        print(f"Matched adversary team {foreign_agent[0].id_} in process: {self.proc_id}")
+        self._logger.info(f"Matched adversary team {foreign_agent[0].id_} in process: {self.proc_id}")
         while foreign_agent is not None:
 
-            print(f"Build adversary team play in process: {self.proc_id}")
+            self._logger.info(f"Build adversary team play in process: {self.proc_id}")
             self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
-            print(f"Build ensemble MAC in process: {self.proc_id}")
+            self._logger.info(f"Build ensemble MAC in process: {self.proc_id}")
             # Carry previously trained agent over in next training step and use foreign agent in ensemble
             self._experiment.build_ensemble_mac(native=self._native_agent, foreign_agent=foreign_agent)
             # Evaluate how good the mixed team performs
-            print(f"Evaluate ensemble in process: {self.proc_id}")
+            self._logger.info(f"Evaluate ensemble in process: {self.proc_id}")
             self._experiment.evaluate_sequential(test_n_episode=self._args.n_league_evaluation_episodes)
 
             # Train only new foreign agent with the team performing as before
             self._args.freeze_native = True  # Freeze weights of native agent
-            print(f"Train ensemble in process: {self.proc_id}")
+            self._logger.info(f"Train ensemble in process: {self.proc_id}")
             self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
             self._experiment.build_ensemble_mac(native=self._native_agent, foreign_agent=foreign_agent)
             self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
 
             # Share agent after training to make its current state accessible to other processes
-            print(f"Share trained ensemble in process: {self.proc_id}")
+            self._logger.info(f"Share trained ensemble in process: {self.proc_id}")
             self._share_agent(agent=self.home_agent)
             # Select next agent to train
             foreign_agent: Tuple[Team, AgentNetwork] = self._matchmaking.get_match(self._home_team)
             if foreign_agent is not None:
-                print(f"Selected team {foreign_agent[0].id_} for next iteration in process: {self.proc_id}")
+                self._logger.info(f"Selected team {foreign_agent[0].id_} for next iteration in process: {self.proc_id}")
 
-        print(f"Sampled all adversary teams in process: {self.proc_id}")
+        self._logger.info(f"Sampled all adversary teams in process: {self.proc_id}")
         self._experiment.save_models()
 
         self._request_close()

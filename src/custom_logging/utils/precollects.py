@@ -53,10 +53,6 @@ def precollect_stats(parallel, episodal_stats, current_stats):
             infos = [episodal_stats] + current_stats
 
         stats_dict.update({k: np.sum(_get_stat(episodal_stats, k, d) for d in infos) for k in set.union(*[set(d) for d in infos])})
-        #stats_dict["n_episodes"] = batch_size + episodal_stats.get("n_episodes", 0)
-        #stats_dict["ep_length"] = sum(ep_lens) + episodal_stats.get("ep_length", 0)
     else:
         stats_dict.update({k: _update_stats(episodal_stats, k, current_stats) for k in set(episodal_stats) | set(current_stats)})
-        #stats_dict["n_episodes"] = 1 + episodal_stats.get("n_episodes", 0)
-        #stats_dict["ep_length"] = t + episodal_stats.get("ep_length", 0)
     return stats_dict
