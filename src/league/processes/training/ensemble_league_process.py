@@ -73,18 +73,23 @@ class EnsembleLeagueProcess(Process):
 
         # Fetch agents from other teams trained previously and combine them into an ensemble
         foreign_agent: Tuple[Team, AgentNetwork] = self._matchmaking.get_match(self._home_team)
-        self._current_play = NormalPlayRun(args=self._args, logger=self._logger)
-        self._current_play.build_ensemble_mac(native=self.shared_agent, foreign_agent=foreign_agent)
-        # Evaluate how good the mixed team performs
-        self._current_play.evaluate_sequential(test_n_episode=self._args.n_league_evaluation_episodes)
+        while foreign_agent is not None:
+            self._current_play = NormalPlayRun(args=self._args, logger=self._logger)
+            self._current_play.build_ensemble_mac(native=self.shared_agent, foreign_agent=foreign_agent)
+            # Evaluate how good the mixed team performs
+            self._current_play.evaluate_sequential(test_n_episode=self._args.n_league_evaluation_episodes)
 
-        # Train only new foreign agent with the team performing as before
-        self._args.freeze_native = True  # Freeze weights of native agent
-        self._current_play = NormalPlayRun(args=self._args, logger=self._logger)
-        self._current_play.build_ensemble_mac(native=self.shared_agent, foreign_agent=foreign_agent)
-        self._current_play.start(play_time_seconds=self._args.league_play_time_mins * 60)
-        # Share agent after training to make its current state accessible to other processes
-        self._share_agent(agent=self.home_agent)
+            # Train only new foreign agent with the team performing as before
+            self._args.freeze_native = True  # Freeze weights of native agent
+            self._current_play = NormalPlayRun(args=self._args, logger=self._logger)
+            self._current_play.build_ensemble_mac(native=self.shared_agent, foreign_agent=foreign_agent)
+            self._current_play.start(play_time_seconds=self._args.league_play_time_mins * 60)
+
+            # Share agent after training to make its current state accessible to other processes
+            self._share_agent(agent=self.home_agent)
+            # Select next agent to train
+            foreign_agent: Tuple[Team, AgentNetwork] = self._matchmaking.get_match(self._home_team)
+
         self._current_play.save_models()
 
         self._request_close()
