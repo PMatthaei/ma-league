@@ -59,6 +59,9 @@ class Team:
     def __eq__(self, other):
         return self.id_ == other.id_
 
+    def __str__(self):
+        return f"Team #{self.id_}"
+
     def difference(self, team: Team):
         """
         Calculate the swap-distance for a given team.

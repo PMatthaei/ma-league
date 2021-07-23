@@ -1,4 +1,5 @@
 import random
+from collections import defaultdict
 from typing import Tuple, Dict
 
 from league.components.agent_pool import AgentPool
@@ -6,6 +7,10 @@ from league.components.payoff_matchmaking import MatchmakingPayoff
 from league.components.self_play import OpponentSampling
 from league.utils.team_composer import Team
 from modules.agents import AgentNetwork
+
+
+def dd():
+    return 0
 
 
 class Matchmaking:
@@ -28,11 +33,20 @@ class IteratingMatchmaking(Matchmaking):
     def __init__(self, agent_pool: AgentPool, payoff: MatchmakingPayoff = None):
         super().__init__(agent_pool)
 
-    def get_match(self, home_team: Team, index: int=None) -> Tuple[Team, AgentNetwork]:
-        index += 1
-        if index >= len(self._agent_pool.collected_teams):
+        self.current_match = defaultdict(dd)
+
+    def get_match(self, home_team: Team) -> Tuple[Team, AgentNetwork]:
+        if self.current_match[home_team] >= len(self._agent_pool.collected_teams):
             return None
-        team = self._agent_pool.collected_teams[index]
+
+        team = self._agent_pool.collected_teams[self.current_match[home_team]]
+        if team == home_team:  # If the selected team is the own jump to the next
+            self.current_match[home_team] += 1
+            if self.current_match[home_team] >= len(self._agent_pool.collected_teams):
+                return None
+
+        team = self._agent_pool.collected_teams[self.current_match[home_team]]
+        self.current_match[home_team] += 1
         return team, self._agent_pool[team]
 
     def get_ensemble(self, home_team: Team) -> Dict[int, AgentNetwork]:
