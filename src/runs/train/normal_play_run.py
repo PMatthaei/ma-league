@@ -69,8 +69,8 @@ class NormalPlayRun(ExperimentRun):
         """
         self.home_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
         # Load the foreign agent into the first agent in the ensemble.
-        # ! WARN ! Currently it is enforced that all team have the agent to swap in the first position
         self.home_mac.load_state(agent=native[1])
+        # ! WARN ! Currently it is enforced that all teams have the agent to swap in the first(=0) position
         self.home_mac.load_state(ensemble={0: foreign_agent[1]})
 
     def _build_learners(self):

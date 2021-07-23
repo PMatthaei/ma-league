@@ -79,6 +79,7 @@ class EnsembleLeagueProcess(Process):
         self._current_play.evaluate_sequential(test_n_episode=self._args.n_league_evaluation_episodes)
 
         # Train only new foreign agent with the team performing as before
+        self._args.freeze_native = True  # Freeze weights of native agent
         self._current_play = NormalPlayRun(args=self._args, logger=self._logger)
         self._current_play.build_ensemble_mac(native=self.shared_agent, foreign_agent=foreign_agent)
         self._current_play.start(play_time_seconds=self._args.league_play_time_mins * 60)
