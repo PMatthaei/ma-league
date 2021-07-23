@@ -140,9 +140,10 @@ class NormalPlayRun(ExperimentRun):
         :param play_time_seconds: Play the run for a certain time in seconds.
         :return:
         """
-        self.logger.info("Experiment Parameters:")
-        experiment_params = pprint.pformat(self.args.__dict__, indent=4, width=1)
-        self.logger.info("\n\n" + experiment_params + "\n")
+        if not self.args.skip_exp_parameter_log:
+            self.logger.info("Experiment Parameters:")
+            experiment_params = pprint.pformat(self.args.__dict__, indent=4, width=1)
+            self.logger.info("\n\n" + experiment_params + "\n")
 
         self._play_time = play_time_seconds
         self._init_stepper()

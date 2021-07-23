@@ -66,7 +66,7 @@ def run(_run, _config, _log):
     team_composer = TeamComposer(team_size=_config["team_size"], characteristics=[RoleTypes, UnitAttackTypes])
     uid = team_composer.get_unique_uid(role_type=RoleTypes.HEALER, attack_type=UnitAttackTypes.RANGED)
     # train, test = train_test_split(np.array(team_composer.teams))
-    teams = team_composer.sample(k=5, contains=uid, unique=True)  # Sample 5 random teams that contain a ranged healer
+    teams = team_composer.sample(k=2, contains=uid, unique=True)  # Sample 5 random teams that contain a ranged healer
     teams = team_composer.sort_team_units(teams, uid=uid)  # Sort ranged healer first in all teams for later consistency
 
     # Shared objects

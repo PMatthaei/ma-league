@@ -27,13 +27,12 @@ class Matchmaking:
 class IteratingMatchmaking(Matchmaking):
     def __init__(self, agent_pool: AgentPool, payoff: MatchmakingPayoff = None):
         super().__init__(agent_pool)
-        self.index = 0
 
-    def get_match(self, home_team: Team) -> Tuple[Team, AgentNetwork]:
-        self.index += 1
-        if self.index >= len(self._agent_pool.collected_teams):
+    def get_match(self, home_team: Team, index: int=None) -> Tuple[Team, AgentNetwork]:
+        index += 1
+        if index >= len(self._agent_pool.collected_teams):
             return None
-        team = self._agent_pool.collected_teams[self.index]
+        team = self._agent_pool.collected_teams[index]
         return team, self._agent_pool[team]
 
     def get_ensemble(self, home_team: Team) -> Dict[int, AgentNetwork]:
