@@ -6,7 +6,7 @@ import torch as th
 
 from eval.methods import avg_proportional_loss
 from learners.learner import Learner
-from runs.train.self_play_run import SelfPlayRun
+from runs.train.sp_ma_experiment import SelfPlayMultiAgentExperiment
 
 
 class JointPolicyCorrelationEvaluationRun:
@@ -54,7 +54,7 @@ class JointPolicyCorrelationEvaluationRun:
         :param instance: identifier of the train instance
         :return: the instance id and the path to the checkpointed policies
         """
-        play = SelfPlayRun(args=self.args, logger=self.logger)
+        play = SelfPlayMultiAgentExperiment(args=self.args, logger=self.logger)
         play.start()
         path = play.save_models(identifier=f"instance_{instance}")
         return path
@@ -81,7 +81,7 @@ class JointPolicyCorrelationEvaluationRun:
         i, j = instance_pair
         eval_descriptor = "Eval home player from instance {} against away player from instance {}".format(i, j)
         self.logger.info(eval_descriptor)
-        play = SelfPlayRun(args=self.args, logger=self.logger)
+        play = SelfPlayMultiAgentExperiment(args=self.args, logger=self.logger)
         play.home_learner.load_models(checkpoints[i])
         play.away_learner.load_models(checkpoints[j])
         # Calculate mean return for both policies

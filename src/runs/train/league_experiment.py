@@ -3,10 +3,10 @@ from typing import Dict
 from controllers import EnsembleMAC
 from modules.agents.agent_network import AgentNetwork
 
-from runs.train.self_play_run import SelfPlayRun
+from runs.train.sp_ma_experiment import SelfPlayMultiAgentExperiment
 
 
-class LeaguePlayRun(SelfPlayRun):
+class LeagueExperiment(SelfPlayMultiAgentExperiment):
 
     def __init__(self, args, logger, finish_callback=None, on_episode_end=None):
         """

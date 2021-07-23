@@ -9,9 +9,9 @@ from league.components.matchmaking import Matchmaking
 from league.processes.training.utils import extract_result
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand
 from league.utils.team_composer import Team
-from runs.train.league_play_run import LeaguePlayRun
+from runs.train.league_experiment import LeagueExperiment
 from custom_logging.logger import MainLogger
-from runs.train.normal_play_run import NormalPlayRun
+from runs.train.ma_experiment import MultiAgentExperiment
 
 
 class MatchmakingLeagueProcess(Process):
@@ -58,7 +58,7 @@ class MatchmakingLeagueProcess(Process):
     def run(self) -> None:
         # Initial play to train policy of the team against AI against mirrored team
         self._configure_play(home=self._home_team, ai_opponent=True)
-        self._play = NormalPlayRun(args=self._args, logger=self._logger)
+        self._play = MultiAgentExperiment(args=self._args, logger=self._logger)
         self._play.start(play_time_seconds=self._args.league_play_time_mins * 60)
         self._share_agent()
 
@@ -71,7 +71,7 @@ class MatchmakingLeagueProcess(Process):
 
             self._configure_play(home=self._home_team, away=self._away_team)
 
-            self._play = LeaguePlayRun(args=self._args, logger=self._logger, on_episode_end=self._provide_result)
+            self._play = LeagueExperiment(args=self._args, logger=self._logger, on_episode_end=self._provide_result)
             self._play.build_ensemble_mac(agent=away_agent)
             self._play.start(play_time_seconds=self._args.league_play_time_mins * 60)
 

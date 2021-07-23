@@ -9,7 +9,7 @@ from league.components.payoff_role_based import PayoffEntry
 from league.roles.alphastar.main_player import MainPlayer
 from league.roles.players import Player
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand
-from runs.train.league_play_run import LeaguePlayRun
+from runs.train.league_experiment import LeagueExperiment
 from custom_logging.logger import MainLogger
 
 
@@ -53,7 +53,7 @@ class RolebasedLeagueProcess(Process):
 
         self._register_team()  # Supply home team to match plan
 
-        self._play = LeaguePlayRun(args=self._args, logger=self._logger, on_episode_end=self._provide_episode_result)
+        self._play = LeagueExperiment(args=self._args, logger=self._logger, on_episode_end=self._provide_episode_result)
 
     def run(self) -> None:
         # Share initial agent

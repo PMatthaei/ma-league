@@ -10,7 +10,7 @@ from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand
 from league.utils.team_composer import Team
 from modules.agents import AgentNetwork
 from custom_logging.logger import MainLogger
-from runs.train.normal_play_run import NormalPlayRun
+from runs.train.ma_experiment import MultiAgentExperiment
 
 
 class EnsembleLeagueProcess(Process):
@@ -71,7 +71,7 @@ class EnsembleLeagueProcess(Process):
         # Initial play to train policy of the team against AI against mirrored team -> Performed for each team
         print(f"Build AI play in process: {self.proc_id}")
         self._configure_play(home=self._home_team, ai_opponent=True)
-        self._current_play = NormalPlayRun(args=self._args, logger=self._logger)
+        self._current_play = MultiAgentExperiment(args=self._args, logger=self._logger)
         print(f"Train against AI in process: {self.proc_id}")
         self._current_play.start(play_time_seconds=self._args.league_play_time_mins * 60)
         print(f"Share agent from process: {self.proc_id}")
@@ -83,7 +83,7 @@ class EnsembleLeagueProcess(Process):
         print(f"Matched adversary team {foreign_agent[0].id_} in process: {self.proc_id}")
         while foreign_agent is not None:
             print(f"Build adversary team play in process: {self.proc_id}")
-            self._current_play = NormalPlayRun(args=self._args, logger=self._logger)
+            self._current_play = MultiAgentExperiment(args=self._args, logger=self._logger)
             print(f"Build ensemble MAC in process: {self.proc_id}")
             self._current_play.build_ensemble_mac(native=self.shared_agent, foreign_agent=foreign_agent)
             # Evaluate how good the mixed team performs
@@ -93,7 +93,7 @@ class EnsembleLeagueProcess(Process):
             # Train only new foreign agent with the team performing as before
             self._args.freeze_native = True  # Freeze weights of native agent
             print(f"Train ensemble in process: {self.proc_id}")
-            self._current_play = NormalPlayRun(args=self._args, logger=self._logger)
+            self._current_play = MultiAgentExperiment(args=self._args, logger=self._logger)
             self._current_play.build_ensemble_mac(native=self.shared_agent, foreign_agent=foreign_agent)
             self._current_play.start(play_time_seconds=self._args.league_play_time_mins * 60)
 
@@ -122,9 +122,7 @@ class EnsembleLeagueProcess(Process):
     def _share_agent(self, agent: AgentNetwork):
         self._agent_pool[self._home_team] = agent
         # Wait until every process finished to share the agent to ensure every agent is up-to-date before next match
-        print("Before wait")
         self._sync_barrier.wait()
-        print("After wait")
 
     def _provide_result(self, env_info: Dict):
         """

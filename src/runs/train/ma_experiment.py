@@ -20,7 +20,7 @@ from steppers import REGISTRY as stepper_REGISTRY
 from components.feature_functions import REGISTRY as feature_func_REGISTRY, FeatureFunction
 
 
-class NormalPlayRun(ExperimentRun):
+class MultiAgentExperiment(ExperimentRun):
 
     def __init__(self, args, logger, on_episode_end=None):
         """

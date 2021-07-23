@@ -59,8 +59,8 @@ def run(_run, _config, _log):
     if _config['play_mode'] == "self":
         eval_method = _config['eval']
         if not eval_method:
-            from runs.train.self_play_run import SelfPlayRun
-            play = SelfPlayRun(args=args, logger=main_logger)
+            from runs.train.sp_ma_experiment import SelfPlayMultiAgentExperiment
+            play = SelfPlayMultiAgentExperiment(args=args, logger=main_logger)
         elif eval_method == "jpc":
             from runs.evaluation.jpc_eval_run import JointPolicyCorrelationEvaluationRun
             play = JointPolicyCorrelationEvaluationRun(args=args, logger=main_logger)
@@ -68,11 +68,11 @@ def run(_run, _config, _log):
             from runs.evaluation.replay_eval_run import ReplayGenerationRun
             play = ReplayGenerationRun(args=args, logger=main_logger)
         else:
-            from runs.train.self_play_run import SelfPlayRun
-            play = SelfPlayRun(args=args, logger=main_logger)
+            from runs.train.sp_ma_experiment import SelfPlayMultiAgentExperiment
+            play = SelfPlayMultiAgentExperiment(args=args, logger=main_logger)
     else:
-        from runs.train.normal_play_run import NormalPlayRun
-        play = NormalPlayRun(args=args, logger=main_logger)
+        from runs.train.ma_experiment import MultiAgentExperiment
+        play = MultiAgentExperiment(args=args, logger=main_logger)
 
     play.start()
 

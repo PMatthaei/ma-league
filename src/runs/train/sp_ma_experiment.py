@@ -1,4 +1,4 @@
-from runs.train.normal_play_run import NormalPlayRun
+from runs.train.ma_experiment import MultiAgentExperiment
 
 from controllers import REGISTRY as mac_REGISTRY
 from steppers import SELF_REGISTRY as self_steppers_REGISTRY
@@ -7,7 +7,7 @@ import torch as th
 from steppers.episode_stepper import EnvStepper
 
 
-class SelfPlayRun(NormalPlayRun):
+class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
 
     def __init__(self, args, logger, finish_callback=None, episode_callback=None):
         """
