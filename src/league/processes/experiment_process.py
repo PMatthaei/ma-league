@@ -22,15 +22,17 @@ SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr 
 
 
 class ExperimentProcess(Process):
-    def __init__(self, params, src_dir: str):
+    def __init__(self, idx: int, params, configs_dir: str, log_dir: str):
         """
         Captures main.py functionality in a process to spawn multiple experiments.
         :param params:
-        :param src_dir:
+        :param configs_dir:
         """
         super(ExperimentProcess, self).__init__()
+        self.idx = idx
         self.params = params
-        self.src_dir = src_dir
+        self.log_dir = f'{log_dir}/instance_{self.idx}'
+        self.configs_dir = configs_dir
         self._logger = None
         self._args = None
         self._proc_id = None
@@ -69,7 +71,7 @@ class ExperimentProcess(Process):
         unique_token = "{}__{}".format(args.name, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
         args.unique_token = unique_token
         if args.use_tensorboard:
-            tb_logs_direc = os.path.join(self.src_dir, "results", "tb_logs")
+            tb_logs_direc = os.path.join(self.log_dir, "tb_logs")
             tb_exp_direc = os.path.join(tb_logs_direc, "{}").format(unique_token)
             self._logger.setup_tensorboard(tb_exp_direc)
         # sacred is on by default
@@ -86,7 +88,7 @@ class ExperimentProcess(Process):
 
         # Save to disk by default for sacred
         logger.info("Saving to FileStorageObserver in results/sacred.")
-        results_path = os.path.join(self.src_dir, "results")
+        results_path = os.path.join(self.log_dir)
         file_obs_path = os.path.join(results_path, "sacred")
         ex.observers.append(FileStorageObserver(file_obs_path))
         return ex
@@ -100,21 +102,21 @@ class ExperimentProcess(Process):
 
     def _build_experiment_config(self):
         # Get the defaults from default.yaml
-        config_dict = get_default_config(self.src_dir)
+        config_dict = get_default_config(self.configs_dir)
 
         # Load league base config
-        league_config = get_config(self.params, "--league-config", "leagues", path=self.src_dir)
+        league_config = get_config(self.params, "--league-config", "leagues", path=self.configs_dir)
 
         # Load env base config
-        env_config = get_config(self.params, "--env-config", "envs", path=self.src_dir)
+        env_config = get_config(self.params, "--env-config", "envs", path=self.configs_dir)
 
         # Load build plan if configured
         env_args = env_config['env_args']
         if "match_build_plan" in env_args:
-            env_args["match_build_plan"] = get_match_build_plan(self.src_dir, env_args)
+            env_args["match_build_plan"] = get_match_build_plan(self.configs_dir, env_args)
 
         # Load algorithm base config
-        alg_config = get_config(self.params, "--config", "algs", path=self.src_dir)
+        alg_config = get_config(self.params, "--config", "algs", path=self.configs_dir)
 
         # Integrate loaded dicts into main dict
         config_dict = recursive_dict_update(config_dict, league_config)

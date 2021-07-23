@@ -17,8 +17,10 @@ from runs.train.ma_experiment import MultiAgentExperiment
 class EnsembleLeagueProcess(ExperimentProcess):
 
     def __init__(self,
+                 idx,
                  params,
-                 src_dir,
+                 configs_dir,
+                 log_dir,
                  agent_pool: AgentPool,
                  matchmaking: Matchmaking,
                  home_team: Team,
@@ -40,7 +42,7 @@ class EnsembleLeagueProcess(ExperimentProcess):
         :param logger:
         :param sync_barrier:
         """
-        super(EnsembleLeagueProcess, self).__init__(params, src_dir)
+        super(EnsembleLeagueProcess, self).__init__(idx, params, configs_dir, log_dir)
 
         self._home_team: Team = home_team
         self._away_team: Team = None

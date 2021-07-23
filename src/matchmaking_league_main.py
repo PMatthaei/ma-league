@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import os
 import sys
 import threading
@@ -23,12 +24,16 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 
 if __name__ == '__main__':
     params = deepcopy(sys.argv)
+
     # Handle pre experiment start arguments without sacred
     parser = argparse.ArgumentParser()
     parser.add_argument('--team_size', default=3, type=int)
+
     # Basics to start a experiment
     args, _ = parser.parse_known_args(sys.argv)
     src_dir = dirname(abspath(__file__))
+    unique_token = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_dir = f'{dirname(dirname(abspath(__file__)))}/results/league_{unique_token}'
 
     # Build league teams
     team_composer = TeamComposer(team_size=args.team_size, characteristics=[RoleTypes, UnitAttackTypes])
@@ -57,8 +62,10 @@ if __name__ == '__main__':
     # Start league instances
     for idx, (in_q, out_q, team) in enumerate(zip(in_queues, out_queues, teams)):
         proc = EnsembleLeagueProcess(
+            idx=idx,
             params=params,
-            src_dir=src_dir,
+            configs_dir=src_dir,
+            log_dir=log_dir,
             home_team=team,
             matchmaking=matchmaking,
             agent_pool=agent_pool,

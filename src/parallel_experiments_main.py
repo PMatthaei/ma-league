@@ -18,7 +18,7 @@ if __name__ == '__main__':
     procs = []
     # Start league instances
     for _ in range(2):
-        proc = ExperimentProcess(params=params, src_dir=src_dir)
+        proc = ExperimentProcess(params=params, configs_dir=src_dir)
         procs.append(proc)
 
     [r.start() for r in procs]
