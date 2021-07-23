@@ -31,5 +31,5 @@ class ExperimentRun:
     def _finish(self):
         raise NotImplementedError()
 
-    def _update_shapes(self):
+    def _update_args(self):
         raise NotImplementedError()

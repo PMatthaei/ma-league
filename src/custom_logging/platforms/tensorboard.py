@@ -11,7 +11,7 @@ class CustomTensorboardLogger:
     def __init__(self, log_dir):
         self.log_dir = log_dir
         self.summary_writer = SummaryWriter(log_dir=log_dir)
-        self.shapes = None
+        self.scheme = None
         # Save logged data over time to show trends and tendency in data
         self._custom_temporal_data = defaultdict(lambda: {})
 
@@ -20,7 +20,7 @@ class CustomTensorboardLogger:
             self.log_scalar(key, value, t)
         elif log_type == 'image':
             self._custom_temporal_data[key][t] = value
-            figures = plot_greedy_actions(self._custom_temporal_data[key], self.shapes)
+            figures = plot_greedy_actions(self._custom_temporal_data[key], self.scheme)
             for i, figure in enumerate(figures):
                 self.log_plot(f"{key}_agent_{i}", figure, t)
             plt.close('all')

@@ -12,7 +12,7 @@ class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
     def __init__(self, args, logger, finish_callback=None, episode_callback=None):
         """
         Self-Play replaces the opposing agent previously controlled by a static scripted AI with another static policy
-        controlled agent.
+        controlled agent. This agent is fixed during the training to prevent non-stationarity in the environment.
         :param args:
         :param logger:
         :param finish_callback:
@@ -24,13 +24,13 @@ class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
         # WARN: Assuming the away agent uses the same buffer scheme!!
         self.away_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
 
-    def _update_shapes(self):
-        shapes = super()._update_shapes()
+    def _update_args(self):
+        env_scheme = super()._update_args()
         total_n_agents = self.env_info["n_agents"]
         assert total_n_agents % 2 == 0, f"{total_n_agents} agents do not fit in the symmetric two-team scenario."
         per_team_n_agents = int(total_n_agents / 2)
         self.args.n_agents = per_team_n_agents
-        return shapes.update({"total_n_agents": per_team_n_agents})
+        return env_scheme.update({"total_n_agents": per_team_n_agents})
 
     def _build_stepper(self) -> EnvStepper:
         return self_steppers_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
@@ -66,7 +66,7 @@ class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
             device = self.args.device
             if home_sample.device != device:
                 home_sample.to(device)
-
+            # ! WARN ! Only train the learning agent not it`s sampled self-play adversary
             self.home_learner.train(home_sample, self.stepper.t_env, episode_num)
 
             if after_train:

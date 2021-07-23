@@ -18,12 +18,13 @@ from steppers import REGISTRY as stepper_REGISTRY
 # Config TODO: Pack into args
 MODEL_COLLECTION_BASE_PATH = "/home/pmatthaei/Projects/ma-league-results/models/"
 
-#POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "4/qmix__2021-07-09_12-49-37_team_0"
+# POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "4/qmix__2021-07-09_12-49-37_team_0"
 POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0"
 
-#POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "3/qmix__2021-07-08_22-23-56_team_0"
-#POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0"
+# POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "3/qmix__2021-07-08_22-23-56_team_0"
+# POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0"
 POLICY_TEAM_ID = 1
+
 
 class ReplayGenerationRun(ExperimentRun):
 
@@ -46,12 +47,12 @@ class ReplayGenerationRun(ExperimentRun):
         # Get env info from stepper
         self.env_info = self.stepper.get_env_info()
 
-        # Retrieve important data from the env and set in args
-        shapes = self._update_shapes()
+        # Retrieve important data from the env and set in args - call BEFORE scheme building
+        env_scheme = self._update_args()
 
-        self.logger.update_shapes(shapes)
+        self.logger.update_scheme(env_scheme)
 
-        # Default/Base scheme- call AFTER extracting env info
+        # Default/Base scheme - call AFTER extracting env info
         self.groups, self.preprocess, self.scheme = self._build_schemes()
 
         self.home_buffer = ReplayBuffer(self.scheme, self.groups, self.args.buffer_size,
@@ -62,14 +63,14 @@ class ReplayGenerationRun(ExperimentRun):
         self.home_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
         self.away_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
 
-    def _update_shapes(self) -> Dict:
+    def _update_args(self) -> Dict:
         shapes = {
             "n_agents": int(self.env_info["n_agents"]),
             "n_actions": int(self.env_info["n_actions"]),
             "state_shape": int(self.env_info["state_shape"])
         }
-        self.args = SimpleNamespace(**{**vars(self.args), **shapes})
-        return shapes
+        self.args = SimpleNamespace(**{**vars(self.args), **shapes})  # Update
+        return shapes  # return delta to re-use
 
     def _build_schemes(self):
         scheme = {
@@ -81,10 +82,10 @@ class ReplayGenerationRun(ExperimentRun):
             "terminated": {"vshape": (1,), "dtype": th.uint8},
         }
         groups = {
-            "agents": self.args.n_agents
+            "agents": int(self.env_info["n_agents"])
         }
         preprocess = {
-            "actions": ("actions_onehot", [OneHot(out_dim=self.args.n_actions)])
+            "actions": ("actions_onehot", [OneHot(out_dim=int(self.env_info["n_actions"]))])
         }
         return groups, preprocess, scheme
 

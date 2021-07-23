@@ -161,7 +161,7 @@ class MainLogger:
         self._console_logger.info(f"Logging stats of {len(self.stats['episode'])} episodes")
         self._console_logger.log_stats_report(self.stats)
 
-    def update_shapes(self, shapes):
+    def update_scheme(self, scheme):
         # TODO: manage meta data for logging somewhere else
         if self._tensorboard_logger:
-            self._tensorboard_logger.shapes = shapes
+            self._tensorboard_logger.scheme = scheme

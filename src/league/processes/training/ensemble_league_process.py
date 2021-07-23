@@ -83,6 +83,7 @@ class EnsembleLeagueProcess(Process):
         foreign_agent: Tuple[Team, AgentNetwork] = self._matchmaking.get_match(self._home_team)
         print(f"Matched adversary team {foreign_agent[0].id_} in process: {self.proc_id}")
         while foreign_agent is not None:
+
             print(f"Build adversary team play in process: {self.proc_id}")
             self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
             print(f"Build ensemble MAC in process: {self.proc_id}")

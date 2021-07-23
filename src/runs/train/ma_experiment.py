@@ -17,7 +17,7 @@ from learners import REGISTRY as le_REGISTRY
 from controllers import REGISTRY as mac_REGISTRY, EnsembleMAC
 from components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
-from components.feature_functions import REGISTRY as feature_func_REGISTRY, FeatureFunction
+from components.feature_functions import REGISTRY as feature_func_REGISTRY
 
 
 class MultiAgentExperiment(ExperimentRun):
@@ -45,18 +45,21 @@ class MultiAgentExperiment(ExperimentRun):
         self.env_info = self.stepper.get_env_info()
 
         # Retrieve important data from the env and set in args
-        shapes = self._update_shapes()
+        env_scheme = self._update_args()
 
-        self.logger.update_shapes(shapes)
+        self.logger.update_scheme(env_scheme)
 
         # Default/Base scheme- call AFTER extracting env info
         self.groups, self.preprocess, self.scheme = self._build_schemes()
 
         self._build_learners()
 
-        # Activate CUDA mode if supported
-        if self.args.use_cuda:
+        if self.args.use_cuda:  # Activate CUDA mode if supported
             [learner.cuda() for learner in self.learners]
+
+        if self.args.sfs:  # Use feature function instead of reward
+            self.sfs = feature_func_REGISTRY[self.args.sfs]
+            self.sfs_n_features = self.sfs.n_features
 
         self.asset_manager = AssetManager(args=self.args, logger=self.logger)
 
@@ -88,14 +91,18 @@ class MultiAgentExperiment(ExperimentRun):
         # Register in list of learners
         self.learners.append(self.home_learner)
 
-    def _update_shapes(self) -> Dict:
-        shapes = {
+    def _update_args(self) -> Dict:
+        """
+        Updates the args but returns the update delta for optional re-use
+        :return: environment scheme containing the number of learning agents, action and state space
+        """
+        env_scheme = {
             "n_agents": int(self.env_info["n_agents"]),
             "n_actions": int(self.env_info["n_actions"]),
             "state_shape": int(self.env_info["state_shape"])
         }
-        self.args = SimpleNamespace(**{**vars(self.args), **shapes})
-        return shapes
+        self.args = SimpleNamespace(**{**vars(self.args), **env_scheme})
+        return env_scheme
 
     def _build_schemes(self):
         scheme = {
@@ -106,8 +113,10 @@ class MultiAgentExperiment(ExperimentRun):
             "reward": {"vshape": (1,)},
             "terminated": {"vshape": (1,), "dtype": th.uint8},
         }
+
         if self.args.sfs:
-            scheme.update({"features": {"vshape": (self._sfs_n_features(),)}})
+            scheme.update({"features": {"vshape": (self.sfs_n_features,)}})
+
         groups = {
             "agents": self.args.n_agents
         }
@@ -115,9 +124,6 @@ class MultiAgentExperiment(ExperimentRun):
             "actions": ("actions_onehot", [OneHot(out_dim=self.args.n_actions)])
         }
         return groups, preprocess, scheme
-
-    def _sfs_n_features(self) -> int:
-        return feature_func_REGISTRY[self.args.sfs].n_features
 
     def _build_stepper(self) -> EnvStepper:
         return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
