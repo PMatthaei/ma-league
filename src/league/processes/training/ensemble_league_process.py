@@ -90,7 +90,7 @@ class EnsembleLeagueProcess(ExperimentProcess):
             self._logger.info(f"Matched foreign team {foreign_team.id_} in process: {self.proc_id}")
 
             self._logger.info(f"Build foreign team play in process: {self.proc_id}")
-            self._configure_play(home=foreign_team) # Set the foreign team constellation as home team
+            self._configure_play(home=foreign_team)  # Set the foreign team constellation as home team
             self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
             # Train the native agent in a different team setup as foreign agent
             self._experiment.build_ensemble_mac(native=foreign_agent, foreign_agent=self._native_agent)
@@ -101,7 +101,7 @@ class EnsembleLeagueProcess(ExperimentProcess):
             # Train only new foreign agent with the team performing as before
             self._args.freeze_native = True  # Freeze weights of native agent
             self._logger.info(f"Train ensemble in process: {self.proc_id}")
-            self._configure_play(home=foreign_team) # Set the foreign team constellation as home team
+            self._configure_play(home=foreign_team)  # Set the foreign team constellation as home team
             self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
             self._experiment.build_ensemble_mac(native=self._native_agent, foreign_agent=foreign_agent)
             self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
@@ -121,7 +121,6 @@ class EnsembleLeagueProcess(ExperimentProcess):
 
     def _configure_play(self, home: Team, away: Team = None, ai_opponent=True):
         # In case this process needs to save models -> modify token
-        self._args.unique_token += f"_team_{self._home_team.id_}"
         self._args.env_args['match_build_plan'][0]['units'] = home.units  # mirror if no away units passed
         self._args.env_args['match_build_plan'][1]['units'] = home.units if away is None else away.units
         self._args.env_args['match_build_plan'][0]['is_scripted'] = not ai_opponent
@@ -130,7 +129,7 @@ class EnsembleLeagueProcess(ExperimentProcess):
     def _get_shared_agent(self, team: Team):
         return self._agent_pool[team]
 
-    def _share_agent(self, agent: AgentNetwork, team: Team=None):
+    def _share_agent(self, agent: AgentNetwork, team: Team = None):
         self._agent_pool[self._home_team if team is None else team] = agent
         # Wait until every process finished to share the agent to ensure every agent is up-to-date before next match
         self._sync_barrier.wait()

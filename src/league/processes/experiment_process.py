@@ -126,7 +126,7 @@ class ExperimentProcess(Process):
         experiment_config = recursive_dict_update(config_dict, alg_config)
         experiment_config = args_sanity_check(experiment_config)
         experiment_config["device"] = "cuda" if experiment_config["use_cuda"] else "cpu"
-
+        experiment_config["log_dir"] = self.log_dir
         return experiment_config
 
     def _set_seed(self, _config):

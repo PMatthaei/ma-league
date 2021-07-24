@@ -6,7 +6,6 @@ from maenv.utils.enums import EnumEncoder, as_enum
 from exceptions.checkpoint_exceptions import NoLearnersProvided
 from league.utils.team_composer import Team
 from learners.learner import Learner
-from main import results_path
 from utils.run_utils import find_latest_model_path
 
 
@@ -21,6 +20,7 @@ class AssetManager:
         """
         self.logger = logger
         self.args = args
+        self.log_dir = args.log_dir
         self.unique_token = args.unique_token
         self.checkpoint_path = args.checkpoint_path
 
@@ -34,7 +34,7 @@ class AssetManager:
         if not learners:
             raise NoLearnersProvided()
         identifier = identifier if identifier is not None else ""
-        save_path = os.path.join(results_path, "models", self.unique_token, identifier, str(t_env))
+        save_path = os.path.join(self.log_dir, "models", self.unique_token, identifier, str(t_env))
         os.makedirs(save_path, exist_ok=True)
         # Save all provided learners in the same path
         [learner.save_models(save_path, learner.name) for learner in learners]
