@@ -1,3 +1,4 @@
+import datetime
 import os
 import sys
 import threading
@@ -15,10 +16,14 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 if __name__ == '__main__':
     params = deepcopy(sys.argv)
     src_dir = dirname(abspath(__file__))
+
+    unique_token = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_dir = f'{dirname(dirname(abspath(__file__)))}/results/league_{unique_token}'
+
     procs = []
     # Start league instances
-    for _ in range(2):
-        proc = ExperimentProcess(params=params, configs_dir=src_dir)
+    for idx in range(2):
+        proc = ExperimentProcess(idx=idx, params=params, configs_dir=src_dir, log_dir=log_dir)
         procs.append(proc)
 
     [r.start() for r in procs]

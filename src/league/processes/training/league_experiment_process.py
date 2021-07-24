@@ -13,15 +13,11 @@ from modules.agents import AgentNetwork
 class LeagueExperimentProcess(ExperimentProcess):
 
     def __init__(self,
-                 idx,
-                 params,
-                 configs_dir,
-                 log_dir,
                  agent_pool: AgentPool,
                  matchmaking: Matchmaking,
                  home_team: Team,
                  communication: Tuple[Queue, Queue],
-                 sync_barrier: Barrier):
+                 sync_barrier: Barrier, **kwargs):
         """
         The process is running a single Multi-Agent training and handles communication with the central components.
         League-Play is a form of NormalPlay where the opponent can be swapped out from a pool of agents (=league).
@@ -36,7 +32,7 @@ class LeagueExperimentProcess(ExperimentProcess):
         :param communication:
         :param sync_barrier:
         """
-        super(LeagueExperimentProcess, self).__init__(idx, params, configs_dir, log_dir)
+        super(LeagueExperimentProcess, self).__init__(**kwargs)
 
         self._home_team: Team = home_team
         self._away_team: Team = None
@@ -61,13 +57,16 @@ class LeagueExperimentProcess(ExperimentProcess):
     def shared_agent(self) -> Tuple[Team, AgentNetwork]:
         return self._home_team, self._agent_pool[self._home_team]
 
-    def _get_shared_agent(self, team: Team):
-        return self._agent_pool[team]
-
     def _share_agent(self, agent: AgentNetwork):
+        """
+        Share agent
+        and wait until every process finished to sharing to ensure every agent is up-to-date before next match.
+        This will currently require each instance to share in order to release barrier.
+        :param agent:
+        :return:
+        """
         self._agent_pool[self._home_team] = agent
-        # Wait until every process finished to share the agent to ensure every agent is up-to-date before next match
-        self._sync_barrier.wait()
+        self._sync_barrier.wait() if self._sync_barrier is not None else None
 
     def _provide_result(self, env_info: Dict):
         """
@@ -81,5 +80,9 @@ class LeagueExperimentProcess(ExperimentProcess):
         self._in_queue.put(cmd)
 
     def _request_close(self):
+        """
+        Close this instance in the parent process
+        :return:
+        """
         cmd = CloseLeagueProcessCommand(origin=self._home_team.id_)
         self._in_queue.put(cmd)
