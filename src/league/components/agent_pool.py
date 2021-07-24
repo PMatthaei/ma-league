@@ -17,8 +17,8 @@ class AgentPool:
     def __setitem__(self, team: Team, value: AgentNetwork):
         self._agents_dict[team] = value
 
-    def __getitem__(self, team: Team):
-        return self._agents_dict[team]
+    def __getitem__(self, team: Team) -> AgentNetwork:
+        return self._agents_dict[team] # ! WARN ! Does not work on CUDA and multiprocessing
 
     @property
     def collected_teams(self) -> List[Team]:

@@ -124,9 +124,9 @@ class ExperimentProcess(Process):
         config_dict = recursive_dict_update(config_dict, league_config)
         config_dict = recursive_dict_update(config_dict, env_config)
         experiment_config = recursive_dict_update(config_dict, alg_config)
-        experiment_config = args_sanity_check(experiment_config)
-        experiment_config["device"] = "cuda" if experiment_config["use_cuda"] else "cpu"
-        experiment_config["log_dir"] = self.log_dir
+        experiment_config = args_sanity_check(experiment_config)  # check args are valid
+        experiment_config["device"] = "cuda" if experiment_config["use_cuda"] else "cpu"  # set device depending on cuda
+        experiment_config["log_dir"] = self.log_dir  # set logging directory for instance metrics and model
         return experiment_config
 
     def _set_seed(self, _config):
