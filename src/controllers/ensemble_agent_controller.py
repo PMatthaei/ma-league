@@ -22,13 +22,16 @@ class EnsembleMAC(MultiAgentController):
         """
         super().__init__(scheme, groups, args)
         # Dictionary holding the specific agent network for a given agent
-        self.ensemble: Dict[int, AgentNetwork] = dict({0: copy.deepcopy(self.agent)})
+        self.ensemble: Dict[int, AgentNetwork] = dict()
         self.native_hidden_states = None
         self.ensemble_hidden_states = None
         self._all_ids = set(range(self.n_agents))
         if args.freeze_native:  # Freezes the native/original agent to prevent learning
-            for p in self.agent.parameters():
-                p.requires_grad = False
+            self.freeze_native_weights()
+
+    def freeze_native_weights(self):
+        for p in self.agent.parameters():
+            p.requires_grad = False
 
     def select_actions(self, ep_batch, t_ep, t_env, bs=slice(None), test_mode=False):
         avail_actions = ep_batch["avail_actions"][:, t_ep]
@@ -103,7 +106,8 @@ class EnsembleMAC(MultiAgentController):
             self.agent.load_state_dict(agent.state_dict())
             # Load a native agent
         if ensemble is not None:
-            [agent.load_state_dict(ensemble[idx].state_dict()) for idx, agent in self.ensemble.items()]
+            self.ensemble.update(ensemble)
+            #[agent.load_state_dict(ensemble[idx].state_dict()) for idx, agent in self.ensemble.items()]
             # Load a dict of ensembles
 
     def load_state_dict(self, agent: OrderedDict, ensemble: Dict[int, OrderedDict] = None):

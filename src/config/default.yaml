@@ -1,7 +1,7 @@
 # --- Defaults ---
-eval: ""
+eval: "None"
 headless_controls: True
-sfs: ""
+sfs: "None"
 
 freeze_native: False
 # --- pymarl options ---

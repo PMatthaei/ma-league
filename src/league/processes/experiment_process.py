@@ -12,7 +12,8 @@ from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
 from custom_logging.platforms import CustomConsoleLogger
 from custom_logging.logger import MainLogger
-from utils.main_utils import get_default_config, get_config, get_match_build_plan, recursive_dict_update, config_copy
+from utils.main_utils import get_default_config, get_config, get_match_build_plan, recursive_dict_update, config_copy, \
+    build_config_argsparser
 
 from types import SimpleNamespace
 
@@ -60,6 +61,7 @@ class ExperimentProcess(Process):
 
     def run_sacred_framework(self, _run, _config, _log):
         self._args = SimpleNamespace(**_config)
+        self._args.device = "cuda" if self._args.use_cuda else "cpu"
 
         self._setup_logger(_log, _run, self._args)
 
@@ -94,11 +96,11 @@ class ExperimentProcess(Process):
         return ex
 
     def _parse_additional_config(self, config: Dict) -> Dict:
-        parser = argparse.ArgumentParser()
-        for key, default in config.items():
-            parser.add_argument(f'--{key}', type=type(default), default=default, required=False)
+        parser = build_config_argsparser(config, self.params)
         args, _ = parser.parse_known_args(self.params)
-        return vars(args)
+        args_dict = vars(args)
+        self.experiment_config.update(args_dict)
+        return args_dict
 
     def _build_experiment_config(self):
         # Get the defaults from default.yaml

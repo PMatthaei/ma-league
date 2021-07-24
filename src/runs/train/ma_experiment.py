@@ -67,13 +67,11 @@ class MultiAgentExperiment(ExperimentRun):
         if self.args.use_cuda:  # Activate CUDA mode if supported
             [learner.cuda() for learner in self.learners]
 
-        [learner.build_optimizer() for learner in self.learners] # Should be called after cuda()
-
-
+        [learner.build_optimizer() for learner in self.learners]  # Should be called after cuda()
 
         self.asset_manager = AssetManager(args=self.args, logger=self.logger)
 
-    def build_ensemble_mac(self, native: Tuple[Team, AgentNetwork], foreign_agent: Tuple[Team, AgentNetwork]):
+    def build_ensemble_mac(self, native: AgentNetwork, foreign_agent: AgentNetwork):
         """
         Build an dual ensemble where parts of the native agent infer with the foreign agent
         :param native:
@@ -81,10 +79,10 @@ class MultiAgentExperiment(ExperimentRun):
         :return:
         """
         self.home_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
-        # Load the foreign agent into the first agent in the ensemble.
-        self.home_mac.load_state(agent=native[1])
+        self.home_mac.load_state(agent=native)  # Load the native agent and freeze its weights
+        self.home_mac.freeze_native_weights()
         # ! WARN ! Currently it is enforced that all teams have the agent to swap in the first(=0) position
-        self.home_mac.load_state(ensemble={0: foreign_agent[1]})
+        self.home_mac.load_state(ensemble={0: foreign_agent})  # Load foreign agent into first agent in the ensemble.
 
     def _build_learners(self):
         # Buffers
@@ -203,7 +201,7 @@ class MultiAgentExperiment(ExperimentRun):
             self._end_time = time.time()
 
         self.logger.log_stat("episode", episode, self.stepper.t_env)
-        self.logger.log_report() # Final log
+        self.logger.log_report()  # Final log
         # Finish and clean up
         self._finish()
 

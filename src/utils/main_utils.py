@@ -1,3 +1,4 @@
+import argparse
 import collections
 import os
 from copy import deepcopy
@@ -81,3 +82,28 @@ def get_config(params, arg_name, subfolder, path):
             except yaml.YAMLError as exc:
                 assert False, "{}.yaml error: {}".format(config_name, exc)
         return config_dict
+
+
+def build_config_argsparser(config, params):
+    parser = argparse.ArgumentParser()
+
+    def str_to_bool(value):
+        if isinstance(value, bool):
+            return value
+        if value.lower() in {'false', 'f', '0', 'no', 'n'}:
+            return False
+        elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
+            return True
+        raise ValueError(f'{value} is not a valid boolean value')
+
+    for key, value in config.items():
+        try:
+            value = eval(value) if isinstance(value, str) and value != "" else value
+        except NameError:
+            continue
+        value_type = type(value) if not isinstance(value, bool) else str_to_bool
+        parser.add_argument(f'--{key}', type=value_type, default=value, required=False)
+    for i, p in enumerate(params):
+        if "=" in p:
+            params[i] = "--" + p
+    return parser

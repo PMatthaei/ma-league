@@ -106,7 +106,6 @@ def main(_run, _config, _log):
 
 if __name__ == '__main__':
     params = deepcopy(sys.argv)
-
     # Get the defaults from default.yaml
     main_path = os.path.dirname(__file__)
     config_dict = get_default_config(main_path)
