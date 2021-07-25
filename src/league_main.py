@@ -21,6 +21,7 @@ from maenv.core import RoleTypes, UnitAttackTypes
 from pathlib import Path
 
 from league.utils.team_composer import TeamComposer
+from league.processes import REGISTRY as experiment_REGISTRY
 
 th.multiprocessing.set_start_method('spawn', force=True)
 
@@ -48,6 +49,11 @@ if __name__ == '__main__':
     parser.add_argument('--team_size', default=3, type=int,
                         help="Define the team size. (Only for symmetric, same sized teams in the league")
     parser.add_argument('--league_size', default=2, type=int, help="Define the size of the league (= how many teams)")
+
+    experiment_choices = list(experiment_REGISTRY.keys())
+    parser.add_argument('--experiment', default=experiment_choices[0], choices=experiment_choices, type=str,
+                        help="Define the type of league to run.")
+
     parser.add_argument('--desired_role', choices=list(RoleTypes), type=lambda role: RoleTypes[role],
                         help="Define the role each team has to contain")
     parser.add_argument('--desired_attack', choices=list(UnitAttackTypes), type=lambda attack: UnitAttackTypes[attack],
@@ -55,6 +61,7 @@ if __name__ == '__main__':
     parser.add_argument('--unique', dest='unique', action='store_true',
                         help="Enforce the desired unit within a team to be unique.")
     parser.set_defaults(unique=True)
+
     args, _ = parser.parse_known_args(sys.argv)
 
     # Basics to start a experiment
@@ -73,7 +80,8 @@ if __name__ == '__main__':
     team_composer = TeamComposer(team_size=args.team_size, characteristics=[RoleTypes, UnitAttackTypes])
     uid = team_composer.get_unique_uid(role_type=args.desired_role, attack_type=args.desired_attack)
     # train, test = train_test_split(np.array(team_composer.teams)) # TODO!
-    teams = team_composer.sample(k=args.league_size, contains=uid, unique=args.unique)  # Sample random teams containing uid
+    teams = team_composer.sample(k=args.league_size, contains=uid,
+                                 unique=args.unique)  # Sample random teams containing uid
     teams = team_composer.sort_team_units(teams, uid=uid)  # Sort ranged healer first in all teams for later consistency
 
     #
@@ -104,8 +112,9 @@ if __name__ == '__main__':
     #
     # Start experiment instances
     #
+    experiment_process = experiment_REGISTRY[args.experiment]
     for idx, (in_q, out_q, team) in enumerate(zip(in_queues, out_queues, teams)):
-        proc = EnsembleLeagueProcess(
+        proc = experiment_process(
             idx=idx,
             params=params,
             configs_dir=src_dir,

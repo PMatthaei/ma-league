@@ -3,7 +3,7 @@ import copy
 
 from typing import  Tuple
 
-from league.processes.training.league_experiment_process import LeagueExperimentProcess
+from league.processes.league_experiment_process import LeagueExperimentProcess
 from league.utils.team_composer import Team
 from modules.agents import AgentNetwork
 from runs.train.ma_experiment import MultiAgentExperiment
