@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import os
 import sys
@@ -12,23 +13,29 @@ from copy import deepcopy
 th.multiprocessing.set_start_method('spawn', force=True)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"  # Deactivate message from envs built pygame
 
 if __name__ == '__main__':
+    # Handle pre experiment start arguments without sacred
     params = deepcopy(sys.argv)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--n', default=3, type=int)
+    args, _ = parser.parse_known_args(sys.argv)
+
     src_dir = dirname(abspath(__file__))
 
     unique_token = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_dir = f'{dirname(dirname(abspath(__file__)))}/results/league_{unique_token}'
+    log_dir = f'{dirname(dirname(abspath(__file__)))}/results/parallel_experiments_{unique_token}'
 
     procs = []
-    # Start league instances
-    for idx in range(2):
+    # Start multiple experiments
+    for idx in range(args.n):
         proc = ExperimentProcess(idx=idx, params=params, configs_dir=src_dir, log_dir=log_dir)
         procs.append(proc)
 
     [r.start() for r in procs]
 
-    # Wait for processes to finish
+    # Wait for experiments to finish
     [r.join() for r in procs]
 
     # Clean up after finishing

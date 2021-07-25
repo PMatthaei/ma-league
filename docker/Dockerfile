@@ -28,9 +28,10 @@ RUN python3 --version
 # Install requirements
 COPY ./requirements.txt .
 
+RUN pip3 install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html
+RUN pip3 install git+https://github.com/PMatthaei/ma-env.git@master
+
 RUN pip3 install -r requirements.txt
 # Install dev requirements
-RUN pip3 uninstall maenv
-RUN pip3 install git+https://github.com/PMatthaei/ma-env.git@master
 
 WORKDIR /ma-league
