@@ -42,9 +42,10 @@ class UniformMatchmaking(Matchmaking):
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, AgentNetwork]]:
         idx = self.get_instance_id(home_team)
-        games = self._payoff[idx, :, PayoffEntry.GAMES]
-        # games = games[games != idx] # Remove play against one self
-        match_idx = th.argmin(games).item()  # Get adversary we played the least
+        matches = self._payoff[idx, :, PayoffEntry.MATCHES]
+        # matches = matches[matches != idx] # Remove play against one self
+        match_idx = th.argmin(matches).item()  # Get adversary we played the least
+        self._payoff[idx, match_idx, PayoffEntry.MATCHES] += 1
         team = self.get_team(match_idx)
         return team, self._agent_pool[team]
 
