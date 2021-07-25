@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from typing import Dict
 
 
@@ -34,5 +35,8 @@ class ExperimentRun:
     def _finish(self):
         raise NotImplementedError()
 
-    def _update_args(self, update: Dict):
+    def _integrate_env_info(self):
         raise NotImplementedError()
+
+    def _update_args(self, update: Dict):
+        self.args = SimpleNamespace(**{**vars(self.args), **update})

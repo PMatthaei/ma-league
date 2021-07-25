@@ -20,20 +20,8 @@ class LeagueExperiment(SelfPlayMultiAgentExperiment):
         self.finish_callback = finish_callback
         self.episode_callback = on_episode_end
 
-    def build_ensemble_mac(self, agent: AgentNetwork=None, ensemble: Dict[int, AgentNetwork] = None, target: str = "away"):
-        """
-        Create a Multi-Agent Controller only used for inference of fixed and pre-trained policies.
-        The policy can either be supplied as an single agents of a ensemble of agents.
-        :param agent:
-        :param ensemble: 
-        :return: 
-        """
-        if target == "away": # WARN! Assume home buffer scheme == away scheme
-            self.away_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
-            self.away_mac.load_state(agent=agent, ensemble=ensemble)
-        elif target == "home":
-            self.home_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
-            self.home_mac.load_state(agent=agent, ensemble=ensemble)
+    def load_adversary(self, agent: AgentNetwork):
+        self.away_mac.load_state(agent=agent, other_mac=None)
 
     def _test(self, n_test_runs):
         self.last_test_T = self.stepper.t_env

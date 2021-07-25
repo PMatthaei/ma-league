@@ -57,6 +57,13 @@ class LeagueExperimentProcess(ExperimentProcess):
     def shared_agent(self) -> Tuple[Team, AgentNetwork]:
         return self._home_team, self._agent_pool[self._home_team]
 
+    def _configure_experiment(self, home: Team, ai, away: Team = None):
+        # In case this process needs to save models -> modify token
+        self._args.env_args['match_build_plan'][0]['units'] = home.units  # mirror if no away units passed
+        self._args.env_args['match_build_plan'][1]['units'] = home.units if away is None else away.units
+        self._args.env_args['match_build_plan'][0]['is_scripted'] = False
+        self._args.env_args['match_build_plan'][1]['is_scripted'] = ai
+
     def _share_agent(self, agent: AgentNetwork):
         """
         Share agent
@@ -68,7 +75,7 @@ class LeagueExperimentProcess(ExperimentProcess):
         self._agent_pool[self._home_team] = agent
         self._sync_barrier.wait() if self._sync_barrier is not None else None
 
-    def _provide_result(self, env_info: Dict):
+    def _send_result(self, env_info: Dict):
         """
         Send the result of an episode the the central coordinator for processing.
         :param env_info:

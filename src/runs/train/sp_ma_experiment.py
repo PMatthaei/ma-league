@@ -1,3 +1,5 @@
+from typing import Dict
+
 from runs.train.ma_experiment import MultiAgentExperiment
 
 from controllers import REGISTRY as mac_REGISTRY
@@ -24,13 +26,21 @@ class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
         # WARN: Assuming the away agent uses the same buffer scheme!!
         self.away_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
 
-    def _update_args(self):
-        env_scheme = super()._update_args()
+    def _integrate_env_info(self):
         total_n_agents = self.env_info["n_agents"]
-        assert total_n_agents % 2 == 0, f"{total_n_agents} agents do not fit in the symmetric two-team scenario."
+        # Since the AI is replaced with fixed policy adversary agents, we need to re-calculate
+        # the amount of the learning agents for the scheme
+        assert total_n_agents % 2 == 0, f"A total of {total_n_agents} agents in the env do not fit in the symmetric two-team scenario. " \
+                                        f"Ensure the Self-Play scenario has two team set to is_scripted=False"
         per_team_n_agents = int(total_n_agents / 2)
-        self.args.n_agents = per_team_n_agents
-        return env_scheme.update({"total_n_agents": per_team_n_agents})
+        env_scheme = {
+            "n_agents": per_team_n_agents,
+            "n_actions": int(self.env_info["n_actions"]),
+            "state_shape": int(self.env_info["state_shape"]),
+            "total_n_agents": total_n_agents
+        }
+        self._update_args(env_scheme)
+        return env_scheme
 
     def _build_stepper(self) -> EnvStepper:
         return self_steppers_REGISTRY[self.args.runner](args=self.args, logger=self.logger)

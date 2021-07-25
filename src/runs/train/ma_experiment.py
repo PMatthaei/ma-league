@@ -50,12 +50,7 @@ class MultiAgentExperiment(ExperimentRun):
         self.env_info = self.stepper.get_env_info()
 
         # Retrieve important data from the env and set in args
-        env_scheme = {
-            "n_agents": int(self.env_info["n_agents"]),
-            "n_actions": int(self.env_info["n_actions"]),
-            "state_shape": int(self.env_info["state_shape"])
-        }
-        self._update_args(env_scheme)
+        env_scheme = self._integrate_env_info()
 
         self.logger.update_scheme(env_scheme)
 
@@ -70,6 +65,15 @@ class MultiAgentExperiment(ExperimentRun):
         [learner.build_optimizer() for learner in self.learners]  # Should be called after cuda()
 
         self.asset_manager = AssetManager(args=self.args, logger=self.logger)
+
+    def _integrate_env_info(self):
+        env_scheme = {
+            "n_agents": int(self.env_info["n_agents"]),
+            "n_actions": int(self.env_info["n_actions"]),
+            "state_shape": int(self.env_info["state_shape"])
+        }
+        self._update_args(env_scheme)
+        return env_scheme
 
     def build_ensemble_mac(self, native: AgentNetwork, foreign_agent: AgentNetwork):
         """
@@ -98,9 +102,6 @@ class MultiAgentExperiment(ExperimentRun):
                                                            name="home")
         # Register in list of learners
         self.learners.append(self.home_learner)
-
-    def _update_args(self, update: Dict):
-        self.args = SimpleNamespace(**{**vars(self.args), **update})
 
     def _build_schemes(self):
         scheme = {

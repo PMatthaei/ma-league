@@ -33,22 +33,14 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
         self._ensemble = None
 
     @property
-    def home_agent(self) -> AgentNetwork:
-        return self._experiment.home_mac.agent
-
-    @property
     def ensemble_agent(self) -> AgentNetwork:
         return self._experiment.home_mac.ensemble[0]
-
-    @property
-    def shared_agent(self) -> Tuple[Team, AgentNetwork]:
-        return self._home_team, self._agent_pool[self._home_team]
 
     def _run_experiment(self) -> None:
 
         # Initial play to train policy of the team against AI against mirrored team -> Performed for each team
         self._logger.info(f"Start training in process: {self._proc_id} with {self._home_team}")
-        self._configure_play(home=self._home_team)
+        self._configure_experiment(home=self._home_team, ai=True)
         self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
         self._logger.info(f"Train against AI in process: {self._proc_id}")
         self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
@@ -63,7 +55,7 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
             self._logger.info(f"Matched foreign team {foreign_team.id_} in process: {self._proc_id}")
 
             self._logger.info(f"Build foreign team play in process: {self._proc_id}")
-            self._configure_play(home=foreign_team)  # Set the foreign team constellation as home team
+            self._configure_experiment(home=foreign_team, ai=True)  # Set the foreign team constellation as home team
             self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
             # Train the native agent in a different team setup as foreign agent
             self._experiment.build_ensemble_mac(native=foreign_agent, foreign_agent=self._native_agent)
@@ -74,7 +66,7 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
             # Train only new foreign agent with the team performing as before
             self._args.freeze_native = True  # Freeze weights of native agent
             self._logger.info(f"Train ensemble in process: {self._proc_id}")
-            self._configure_play(home=foreign_team)  # Set the foreign team constellation as home team
+            self._configure_experiment(home=foreign_team, ai=True)  # Set the foreign team constellation as home team
             self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
             self._experiment.build_ensemble_mac(native=self._native_agent, foreign_agent=foreign_agent)
             self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
@@ -91,11 +83,4 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
         self._experiment.save_models()
 
         self._request_close()
-
-    def _configure_play(self, home: Team, away: Team = None, ai_opponent=True):
-        # In case this process needs to save models -> modify token
-        self._args.env_args['match_build_plan'][0]['units'] = home.units  # mirror if no away units passed
-        self._args.env_args['match_build_plan'][1]['units'] = home.units if away is None else away.units
-        self._args.env_args['match_build_plan'][0]['is_scripted'] = not ai_opponent
-        self._args.env_args['match_build_plan'][1]['is_scripted'] = ai_opponent
 
