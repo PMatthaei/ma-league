@@ -58,7 +58,7 @@ class MainPlayer(Player):
             return None, False
 
         win_rates = self._payoff[self.id_, historical]
-        chosen = self._pfsp.sample(historical, win_rates=win_rates, weighting="squared")
+        chosen = self._pfsp.sample(historical, prio_measure=win_rates, weighting="squared")
         return self._payoff.players[chosen], True
 
     def _selfplay_branch(self, opponent: Player) -> Tuple[Player, bool]:
@@ -82,7 +82,7 @@ class MainPlayer(Player):
 
         # PFSP on checkpoint of opponent
         win_rates = self._payoff[self.id_, historical]
-        chosen = self._pfsp.sample(historical, win_rates=win_rates, weighting="variance")
+        chosen = self._pfsp.sample(historical, prio_measure=win_rates, weighting="variance")
         return self._payoff.players[chosen], True
 
     def _verification_branch(self, opponent) -> Union[Tuple[None, None], Tuple[Player, bool]]:
@@ -100,7 +100,7 @@ class MainPlayer(Player):
         # If historical exploiters min. win rate is smaller threshold -> PFSP
         win_rates = self._payoff[self.id_, exp_historical]
         if len(win_rates) and win_rates.min() < 0.3:
-            chosen = self._pfsp.sample(exp_historical, win_rates=win_rates, weighting="squared")
+            chosen = self._pfsp.sample(exp_historical, prio_measure=win_rates, weighting="squared")
             return self._payoff.players[chosen], True
 
         # Check forgetting
@@ -111,7 +111,7 @@ class MainPlayer(Player):
         win_rates = self._payoff[self.id_, historical]
         win_rates, historical = remove_monotonic_suffix(win_rates, historical)
         if len(win_rates) and win_rates.min() < 0.7:
-            chosen = self._pfsp.sample(historical, win_rates=win_rates, weighting="squared")
+            chosen = self._pfsp.sample(historical, prio_measure=win_rates, weighting="squared")
             return self._payoff.players[chosen], True
 
         # TODO: when and why do we get here?

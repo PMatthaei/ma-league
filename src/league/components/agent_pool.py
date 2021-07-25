@@ -1,5 +1,5 @@
 import random
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, ItemsView
 
 from league.utils.team_composer import Team
 from modules.agents import AgentNetwork
@@ -20,12 +20,22 @@ class AgentPool:
     def __getitem__(self, team: Team) -> AgentNetwork:
         return self._agents_dict[team] # ! WARN ! Does not work on CUDA and multiprocessing
 
+    def as_list(self):
+        return self._agents_dict.items()
+
     @property
-    def collected_teams(self) -> List[Team]:
+    def teams(self) -> List[Team]:
         """
         :return: List of teams for which an agent exists in the pool
         """
         return list(self._agents_dict.keys())
+
+    @property
+    def agents(self) -> List[AgentNetwork]:
+        """
+        :return: List of teams for which an agent exists in the pool
+        """
+        return list(self._agents_dict.values())
 
     def sample(self) -> Tuple[Team, AgentNetwork]:
         """

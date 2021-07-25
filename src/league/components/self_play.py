@@ -6,7 +6,7 @@ class OpponentSampling:
         # TODO: Set and update opponent pool so that it does not have to be part of the sample method arguments
         pass
 
-    def sample(self, opponents) -> int:
+    def sample(self, opponents):
         """
         Implement how opponents should be sampled. Additional data can be supplied via optional arguments.
         :param opponents:
@@ -46,10 +46,17 @@ class PrioritizedFictitiousSelfPlay(OpponentSampling):
         :param weighting:
         """
         super().__init__()
+        # TODO causes pickle error because of lambdas. Maybe prevent pickling by constructing the object in the processes!
+        # self.weightings = {
+        #     "variance": lambda x: x * (1 - x),
+        #     "linear": lambda x: 1 - x,
+        #     "linear_capped": lambda x: np.minimum(0.5, 1 - x),
+        #     "squared": lambda x: (1 - x) ** 2,
+        # }
 
-    def sample(self, opponents, win_rates=None, weighting="linear"):
-        if win_rates is None:
-            raise Exception("Please serve up-to-date win rates.")
+    def sample(self, opponents, prio_measure=None, weighting="linear"):
+        if prio_measure is None:
+            raise Exception("Please serve up-to-date prioritization measure.")
         weightings = {
             "variance": lambda x: x * (1 - x),
             "linear": lambda x: 1 - x,
@@ -57,11 +64,11 @@ class PrioritizedFictitiousSelfPlay(OpponentSampling):
             "squared": lambda x: (1 - x) ** 2,
         }
         fn = weightings[weighting]
-        # Weight win rates
-        probabilities = fn(np.asarray(win_rates))
+        # Weight prioritization measure
+        probabilities = fn(np.asarray(prio_measure))
         norm = probabilities.sum()
         if norm < 1e-10:
-            return np.ones_like(win_rates) / len(win_rates)
+            return np.ones_like(prio_measure) / len(prio_measure)
         p = probabilities / norm
         return np.random.choice(opponents, p=p)
 

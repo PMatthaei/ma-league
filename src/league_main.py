@@ -56,7 +56,7 @@ if __name__ == '__main__':
     parser.add_argument('--experiment', default=experiment_choices[0], choices=experiment_choices, type=str,
                         help="Define the type of experiment to run.")
     matchmaking_choices = list(matchmaking_REGISTRY.keys())
-    parser.add_argument('--matchmaking', default=matchmaking_choices[0], choices=matchmaking_choices, type=str,
+    parser.add_argument('--matchmaking', default=matchmaking_choices[2], choices=matchmaking_choices, type=str,
                         help="Define the matchmaking used if the experiment is using matchmaking.")
 
     parser.add_argument('--desired_role', choices=list(RoleTypes), type=lambda role: RoleTypes[role],

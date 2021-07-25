@@ -5,7 +5,7 @@ from torch import Tensor
 
 from league.components import PayoffEntry
 from league.components.agent_pool import AgentPool
-from league.components.self_play import OpponentSampling
+from league.components.self_play import OpponentSampling, PrioritizedFictitiousSelfPlay
 from league.utils.team_composer import Team
 from modules.agents import AgentNetwork
 
@@ -16,13 +16,11 @@ def dd():
 
 class Matchmaking:
 
-    def __init__(self, agent_pool: AgentPool, teams: List[Team], payoff: Tensor, allocation: Dict[int, int],
-                 sampling_strategy: OpponentSampling = None):
+    def __init__(self, agent_pool: AgentPool, teams: List[Team], payoff: Tensor, allocation: Dict[int, int]):
         self._agent_pool = agent_pool
         self._allocation = allocation
         self._payoff = payoff
         self._teams = teams
-        self._sampling_strategy = sampling_strategy
 
     def get_instance_id(self, team: Team) -> int:
         return self._allocation[team.id_]
@@ -36,6 +34,26 @@ class Matchmaking:
         raise NotImplementedError()
 
 
+class PFSPMatchmaking(Matchmaking):
+    def __init__(self, agent_pool: AgentPool, teams: List[Team], payoff: Tensor, allocation: Dict[int, int]):
+        super().__init__(agent_pool, teams, payoff, allocation)
+        self._sampling_strategy = PrioritizedFictitiousSelfPlay()
+
+    def get_match(self, home_team: Team) -> Union[None, Tuple[Team, AgentNetwork]]:
+        idx = self.get_instance_id(home_team)
+        opponents = self._agent_pool.teams
+        games = self._payoff[idx, :, PayoffEntry.GAMES]
+        no_game_mask = games == 0.0
+        wins = self._payoff[idx, :, PayoffEntry.WIN]
+        draws = self._payoff[idx, :, PayoffEntry.DRAW]
+        win_rates = (wins + 0.5 * draws) / games
+        win_rates[no_game_mask] = .5 # If no games played we divided by 0 -> NaN -> replace with .5
+        chosen: Team = self._sampling_strategy.sample(opponents=opponents, prio_measure=win_rates)
+        chosen_idx = self.get_instance_id(chosen)
+        self._payoff[idx, chosen_idx, PayoffEntry.MATCHES] += 1
+        return chosen, self._agent_pool[chosen]
+
+
 class UniformMatchmaking(Matchmaking):
     def __init__(self, agent_pool: AgentPool, allocation: Dict[int, int], payoff: Tensor, teams: List[Team]):
         super().__init__(agent_pool, teams, payoff, allocation)
@@ -44,9 +62,9 @@ class UniformMatchmaking(Matchmaking):
         idx = self.get_instance_id(home_team)
         matches = self._payoff[idx, :, PayoffEntry.MATCHES]
         # matches = matches[matches != idx] # Remove play against one self
-        match_idx = th.argmin(matches).item()  # Get adversary we played the least
-        self._payoff[idx, match_idx, PayoffEntry.MATCHES] += 1
-        team = self.get_team(match_idx)
+        chosen_idx = th.argmin(matches).item()  # Get adversary we played the least
+        self._payoff[idx, chosen_idx, PayoffEntry.MATCHES] += 1
+        team = self.get_team(chosen_idx)
         return team, self._agent_pool[team]
 
 
@@ -81,5 +99,6 @@ class RandomMatchmaking(Matchmaking):
 
 REGISTRY = {
     "uniform": UniformMatchmaking,
-    "random": RandomMatchmaking
+    "random": RandomMatchmaking,
+    "pfsp": PFSPMatchmaking
 }

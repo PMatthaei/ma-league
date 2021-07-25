@@ -22,7 +22,7 @@ class SimplePlayer(Player):
         """
         simple_players = self.payoff.get_players_of_type(SimplePlayer)
         win_rates = self._payoff[self, simple_players]
-        chosen = self._pfsp.sample(simple_players, win_rates=win_rates, weighting="squared")
+        chosen = self._pfsp.sample(simple_players, prio_measure=win_rates, weighting="squared")
         return self._payoff.players[chosen], True
 
     def ready_to_checkpoint(self) -> bool:
