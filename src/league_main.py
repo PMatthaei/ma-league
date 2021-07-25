@@ -7,6 +7,9 @@ from copy import deepcopy
 from os.path import dirname, abspath
 
 import torch as th
+import json
+
+from maenv.utils.enums import EnumEncoder
 
 from custom_logging.platforms import CustomConsoleLogger
 from league.components.agent_pool import AgentPool
@@ -15,6 +18,7 @@ from league.components.payoff_matchmaking import MatchmakingPayoff
 from league.processes.training.ensemble_league_process import EnsembleLeagueProcess
 from torch.multiprocessing import Barrier, Queue, Manager, current_process
 from maenv.core import RoleTypes, UnitAttackTypes
+from pathlib import Path
 
 from league.utils.team_composer import TeamComposer
 
@@ -22,6 +26,13 @@ th.multiprocessing.set_start_method('spawn', force=True)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"  # Deactivate message from envs built pygame
+
+
+def _save_league_config():
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
+    with open(f'{log_dir}/league_config.json', 'w') as fp:
+        json.dump(vars(args), fp, cls=EnumEncoder)
+
 
 #
 # Central Worker Process - Parent process spawning training instances
@@ -50,6 +61,8 @@ if __name__ == '__main__':
     src_dir = dirname(abspath(__file__))
     unique_token = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log_dir = f'{dirname(dirname(abspath(__file__)))}/results/league_{unique_token}'
+
+    _save_league_config()
 
     central_logger.info(f'League Parameters: {vars(args)}')
     central_logger.info(f'Logging league instances into directory: {log_dir}')
