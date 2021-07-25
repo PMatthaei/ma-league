@@ -35,7 +35,7 @@ class MatchmakingLeagueProcess(LeagueExperimentProcess):
                                                        **kwargs)
 
     def _run_experiment(self):
-        self._logger.info(f"Start training in process: {self._proc_id} with {self._home_team}")
+        self._logger.info(f"Start pre-training with AI in process: {self._proc_id} with {self._home_team}")
 
         # Initial play to train policy of the team against AI against mirrored team
         self._configure_experiment(home=self._home_team, ai=True)
@@ -47,6 +47,7 @@ class MatchmakingLeagueProcess(LeagueExperimentProcess):
         end_time = time.time()
 
         # Run real league play in self-play against pre-trained but fixed multi-agent policies
+        self._logger.info(f"Start training in process: {self._proc_id} with {self._home_team} for {self._args.league_runtime_hours} hours")
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
             match = self._matchmaking.get_match(self._home_team)
             if match is None:

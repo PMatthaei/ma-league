@@ -15,8 +15,7 @@ from maenv.utils.enums import EnumEncoder
 from custom_logging.platforms import CustomConsoleLogger
 from league.components import PayoffEntry
 from league.components.agent_pool import AgentPool
-from league.components.matchmaking import IteratingMatchmaking
-from league.components.payoff_matchmaking import MatchmakingPayoff
+from league.components.matchmaking import PlayEvenlyMatchmaking
 from torch.multiprocessing import Barrier, Queue, Manager, current_process
 from maenv.core import RoleTypes, UnitAttackTypes
 from pathlib import Path
@@ -95,6 +94,7 @@ if __name__ == '__main__':
     payoff_dict = manager.dict()
     agents_dict = manager.dict()
     payoff = th.zeros((n_teams, n_teams, n_entries)).share_memory_()
+    team_allocation: Dict[int, int] = manager.dict()  # Mapping team -> training instance it is running on
 
     #
     # Communication Infrastructure
@@ -109,17 +109,16 @@ if __name__ == '__main__':
     #
     # Components
     #
-    agent_pool = AgentPool(agents_dict=agents_dict)  # Hold each trained agent
-    matchmaking = IteratingMatchmaking(agent_pool=agent_pool, payoff=payoff)  # Match agents against each other
+    agent_pool = AgentPool(agents_dict=agents_dict)
+    matchmaking = PlayEvenlyMatchmaking(agent_pool=agent_pool, payoff=payoff, allocation=team_allocation, teams=teams)
 
     #
     # Start experiment instances
     #
     procs = []  # All running processes representing an agent playing in the league
-    training_instance_team_allocation: Dict[int, int] = dict()
     experiment = experiment_REGISTRY[args.experiment]
     for idx, (in_q, out_q, team) in enumerate(zip(in_queues, out_queues, teams)):
-        training_instance_team_allocation[team.id_] = idx
+        team_allocation[team.id_] = idx
         proc = experiment(
             idx=idx,
             params=params,
@@ -135,7 +134,7 @@ if __name__ == '__main__':
 
     # Handle message communication within the league
     coordinator = LeagueCoordinator(
-        allocation=training_instance_team_allocation,
+        allocation=team_allocation,
         n_senders=n_teams,
         communication=(in_queues, out_queues),
         payoff=payoff,
@@ -149,13 +148,14 @@ if __name__ == '__main__':
     # Wait for experiments to finish
     #
     [r.join() for r in procs]
-
+    coordinator.join()
+    
     #
     # Print Payoff tensor
     #
     for team in teams:
         tid = team.id_
-        index = training_instance_team_allocation[tid]
+        index = team_allocation[tid]
         print(f'Stats for {team} from instance {index}')
         for entry in PayoffEntry:
             print(f"{entry.name} {payoff[index, :, entry]}")

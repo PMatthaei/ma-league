@@ -121,9 +121,9 @@ class ExperimentProcess(Process):
         alg_config = get_config(self.params, "--config", "algs", path=self.configs_dir)
 
         # Integrate loaded dicts into main dict
-        config_dict = recursive_dict_update(config_dict, league_config)
         config_dict = recursive_dict_update(config_dict, env_config)
-        experiment_config = recursive_dict_update(config_dict, alg_config)
+        config_dict = recursive_dict_update(config_dict, league_config)  # League overwrites env config
+        experiment_config = recursive_dict_update(config_dict, alg_config) # Algorithm overwrites all config
         experiment_config = args_sanity_check(experiment_config)  # check args are valid
         experiment_config["device"] = "cuda" if experiment_config["use_cuda"] else "cpu"  # set device depending on cuda
         experiment_config["log_dir"] = self.log_dir  # set logging directory for instance metrics and model

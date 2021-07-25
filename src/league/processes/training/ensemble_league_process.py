@@ -1,5 +1,5 @@
 import copy
-
+import time
 
 from typing import  Tuple
 
@@ -48,9 +48,17 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
         self._share_agent(agent=self.home_agent)  # make agent accessible to other instances
         self._native_agent: AgentNetwork = copy.deepcopy(self.home_agent)  # save an instance of the original agent
 
-        # Fetch agents from another teams training instance
-        foreign: Tuple[Team, AgentNetwork] = self._matchmaking.get_match(self._home_team)
-        while foreign is not None:
+        start_time = time.time()
+        end_time = time.time()
+
+        while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
+
+            # Fetch agents from another teams training instance
+            foreign: Tuple[Team, AgentNetwork] = self._matchmaking.get_match(self._home_team)
+            if foreign is None:
+                self._logger.info(f"No match found. Ending process: {self._proc_id} with {self._home_team}")
+                break
+
             foreign_team, foreign_agent = foreign
             self._logger.info(f"Matched foreign team {foreign_team.id_} in process: {self._proc_id}")
 
@@ -75,9 +83,9 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
             self._logger.info(f"Share trained ensemble in process: {self._proc_id}")
             self._share_agent(agent=self.ensemble_agent)
             # Select next agent to train
-            foreign: Tuple[Team, AgentNetwork] = self._matchmaking.get_match(self._home_team)
-            if foreign is not None:
-                self._logger.info(f"Selected team {foreign[0].id_} for next iteration in process: {self._proc_id}")
+            self._logger.info(f"Selected team {foreign[0].id_} for next iteration in process: {self._proc_id}")
+
+            end_time = time.time()
 
         self._logger.info(f"Sampled all adversary teams in process: {self._proc_id}")
         self._experiment.save_models()
