@@ -4,6 +4,9 @@ league_runtime_hours: 0.01 # how long is the hole league running in hours
 n_league_evaluation_episodes: 1
 show_exp_parameters: True
 
+env_args:
+  record: False
+  fps: 60
 mac: "basic"
 headless_controls: "False"
 use_cuda: "False"

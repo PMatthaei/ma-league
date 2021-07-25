@@ -23,6 +23,7 @@ SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"  # Deactivate message from envs built pygame
 
+
 class ExperimentProcess(Process):
     def __init__(self, idx: int, params, configs_dir: str, log_dir: str):
         """
@@ -32,9 +33,9 @@ class ExperimentProcess(Process):
         """
         super(ExperimentProcess, self).__init__()
         self.idx = idx
-        self.params = params
-        self.log_dir = f'{log_dir}/instance_{self.idx}'
-        self.configs_dir = configs_dir
+        self._params = params
+        self._log_dir = f'{log_dir}/instance_{self.idx}'
+        self._configs_dir = configs_dir
         self._logger: MainLogger = None
         self._args = None
         self._proc_id = None
@@ -63,6 +64,7 @@ class ExperimentProcess(Process):
     def run_sacred_framework(self, _run, _config, _log):
         self._args = SimpleNamespace(**_config)
         self._args.device = "cuda" if self._args.use_cuda else "cpu"
+        self._args.env_args["record"] = self._log_dir if self._args.env_args["record"] else ""
 
         self._setup_logger(_log, _run, self._args)
 
@@ -77,7 +79,7 @@ class ExperimentProcess(Process):
         unique_token = "{}__{}".format(args.name, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
         args.unique_token = unique_token
         if args.use_tensorboard:
-            tb_logs_direc = os.path.join(self.log_dir, "tb_logs")
+            tb_logs_direc = os.path.join(self._log_dir, "tb_logs")
             tb_exp_direc = os.path.join(tb_logs_direc, "{}").format(unique_token)
             self._logger.setup_tensorboard(tb_exp_direc)
         # sacred is on by default
@@ -94,35 +96,35 @@ class ExperimentProcess(Process):
 
         # Save to disk by default for sacred
         logger.info("Saving to FileStorageObserver in results/sacred.")
-        results_path = os.path.join(self.log_dir)
+        results_path = os.path.join(self._log_dir)
         file_obs_path = os.path.join(results_path, "sacred")
         ex.observers.append(FileStorageObserver(file_obs_path))
         return ex
 
     def _parse_additional_config(self, config: Dict) -> Dict:
-        parser = build_config_argsparser(config, self.params)
-        args, _ = parser.parse_known_args(self.params)
+        parser = build_config_argsparser(config, self._params)
+        args, _ = parser.parse_known_args(self._params)
         args_dict = vars(args)
         self.experiment_config.update(args_dict)
         return args_dict
 
     def _build_experiment_config(self):
         # Get the defaults from default.yaml
-        config_dict = get_default_config(self.configs_dir)
+        config_dict = get_default_config(self._configs_dir)
 
         # Load league base config
-        league_config = get_config(self.params, "--league-config", "leagues", path=self.configs_dir)
+        league_config = get_config(self._params, "--league-config", "leagues", path=self._configs_dir)
 
         # Load env base config
-        env_config = get_config(self.params, "--env-config", "envs", path=self.configs_dir)
+        env_config = get_config(self._params, "--env-config", "envs", path=self._configs_dir)
 
         # Load build plan if configured
         env_args = env_config['env_args']
         if "match_build_plan" in env_args:
-            env_args["match_build_plan"] = get_match_build_plan(self.configs_dir, env_args)
+            env_args["match_build_plan"] = get_match_build_plan(self._configs_dir, env_args)
 
         # Load algorithm base config
-        alg_config = get_config(self.params, "--config", "algs", path=self.configs_dir)
+        alg_config = get_config(self._params, "--config", "algs", path=self._configs_dir)
 
         # Integrate loaded dicts into main dict
         config_dict = recursive_dict_update(config_dict, env_config)
@@ -130,7 +132,7 @@ class ExperimentProcess(Process):
         experiment_config = recursive_dict_update(config_dict, alg_config)  # Algorithm overwrites all config
         experiment_config = args_sanity_check(experiment_config)  # check args are valid
         experiment_config["device"] = "cuda" if experiment_config["use_cuda"] else "cpu"  # set device depending on cuda
-        experiment_config["log_dir"] = self.log_dir  # set logging directory for instance metrics and model
+        experiment_config["log_dir"] = self._log_dir  # set logging directory for instance metrics and model
         return experiment_config
 
     def _set_seed(self, _config):
