@@ -3,12 +3,12 @@ from __future__ import annotations
 import copy
 from typing import Dict, OrderedDict
 
-from controllers.multi_agent_controller import MultiAgentController
-from modules.agents import REGISTRY as agent_REGISTRY, AgentNetwork
+from controllers import BasicMAC
+from modules.agents import AgentNetwork
 import torch as th
 
 
-class EnsembleMAC(MultiAgentController):
+class EnsembleMAC(BasicMAC):
     def __init__(self, scheme, groups, args):
         """
         This is a multi-agent controller uses a combination of networks for inference. Each agent can choose to either
@@ -26,12 +26,6 @@ class EnsembleMAC(MultiAgentController):
         self.native_hidden_states = None
         self.ensemble_hidden_states = None
         self._all_ids = set(range(self.n_agents))
-        if args.freeze_native:  # Freezes the native/original agent to prevent learning
-            self.freeze_native_weights()
-
-    def freeze_native_weights(self):
-        for p in self.agent.parameters():
-            p.requires_grad = False
 
     def select_actions(self, ep_batch, t_ep, t_env, bs=slice(None), test_mode=False):
         avail_actions = ep_batch["avail_actions"][:, t_ep]
@@ -50,7 +44,7 @@ class EnsembleMAC(MultiAgentController):
 
         return agent_outs.view(ep_batch.batch_size, self.n_agents, -1)
 
-    def _compute_agent_outputs(self, native_inputs, specific_inputs, batch_size):
+    def _compute_agent_outputs(self, native_inputs, specific_inputs=None, batch_size=None):
         # Infer with the original native network - Receives all obs
         native_agent_outs, self.native_hidden_states = self.agent(native_inputs, self.native_hidden_states)
         agent_outs = native_agent_outs.view(batch_size, self.n_agents, -1)
@@ -69,9 +63,6 @@ class EnsembleMAC(MultiAgentController):
             aid: agent.init_hidden().unsqueeze(0).expand(batch_size, 1, -1)  # bav but for a single agent
             for aid, agent in self.ensemble.items()
         }
-
-    def _build_agents(self, input_shape):
-        return agent_REGISTRY[self.args.agent](input_shape, self.args)
 
     def _build_inputs(self, batch, t):
         bs = batch.batch_size
@@ -102,14 +93,14 @@ class EnsembleMAC(MultiAgentController):
         self.agent.load_state_dict(other_mac.agent.state_dict())
         [agent.load_state_dict(other_mac.ensemble[idx].state_dict()) for idx, agent in self.ensemble.items()]
 
-    def load_state_dict(self, agent: OrderedDict=None, ensemble: Dict[int, OrderedDict] = None):
+    def load_state_dict(self, agent: OrderedDict = None, ensemble: Dict[int, OrderedDict] = None):
         self.agent.load_state_dict(agent) if agent is not None else None
         if ensemble is not None:
             for aid, state in ensemble.items():
-                if aid in self.ensemble:
+                if aid in self.ensemble:  # If the ensemble already has an agent with the given id
                     self.ensemble[aid].load_state_dict(state)
-                else:
-                    agent = copy.deepcopy(self.agent)
+                else:  # Else build it and merge into ensemble
+                    agent = self._build_agent(self.input_shape)
                     agent.load_state_dict(state)
                     self.ensemble.update({aid: agent})
 

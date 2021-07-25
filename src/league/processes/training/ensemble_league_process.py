@@ -5,7 +5,7 @@ from typing import Tuple, OrderedDict
 
 from league.processes.league_experiment_process import LeagueExperimentProcess
 from league.utils.team_composer import Team
-from modules.agents import AgentNetwork
+from runs.train.ensemble_experiment import EnsembleExperiment
 from runs.train.ma_experiment import MultiAgentExperiment
 
 
@@ -64,9 +64,9 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
 
             self._logger.info(f"Build foreign team play in process: {self._proc_id}")
             self._configure_experiment(home=foreign_team, ai=True)  # Set the foreign team constellation as home team
-            self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
+            self._experiment = EnsembleExperiment(args=self._args, logger=self._logger)
             # Train the native agent in a different team setup as foreign agent
-            self._experiment.build_ensemble_mac(native=foreign_agent, foreign_agent=self._native_agent)
+            self._experiment.load_ensemble(native=foreign_agent, foreign_agent=self._native_agent)
             # Evaluate how good the mixed team performs
             self._logger.info(f"Evaluate ensemble in process: {self._proc_id}")
             self._experiment.evaluate_sequential(test_n_episode=self._args.n_league_evaluation_episodes)
@@ -75,8 +75,8 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
             self._args.freeze_native = True  # Freeze weights of native agent
             self._logger.info(f"Train ensemble in process: {self._proc_id}")
             self._configure_experiment(home=foreign_team, ai=True)  # Set the foreign team constellation as home team
-            self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
-            self._experiment.build_ensemble_mac(native=self._native_agent, foreign_agent=foreign_agent)
+            self._experiment = EnsembleExperiment(args=self._args, logger=self._logger)
+            self._experiment.load_ensemble(native=self._native_agent, foreign_agent=foreign_agent)
             self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
 
             # Share agent after training to make its current state accessible to other processes
@@ -88,19 +88,5 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
             end_time = time.time()
 
         self._logger.info(f"Sampled all adversary teams in process: {self._proc_id}")
-        self._experiment.save_models()
 
         self._request_close()
-
-    def build_ensemble_mac(self, native: AgentNetwork, foreign_agent: AgentNetwork):
-        """
-        Build an dual ensemble where parts of the native agent infer with the foreign agent
-        :param native:
-        :param foreign_agent:
-        :return:
-        """
-        self.home_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
-        self.home_mac.load_state(agent=native)  # Load the native agent and freeze its weights
-        self.home_mac.freeze_native_weights()
-        # ! WARN ! Currently it is enforced that all teams have the agent to swap in the first(=0) position
-        self.home_mac.load_state(ensemble={0: foreign_agent})  # Load foreign agent into first agent in the ensemble.

@@ -26,15 +26,18 @@ class MultiAgentController:
         self.n_agents = args.n_agents
         self.n_actions = args.n_actions
         self.args = args
-        input_shape = self._get_input_shape(scheme)
-        self.agent: AgentNetwork = self._build_agents(input_shape)
+        self.input_shape = self._get_input_shape(scheme)
+        self.agent: AgentNetwork = self._build_agent(self.input_shape)
         self.agent_output_type = args.agent_output_type
 
         self.action_selector = action_REGISTRY[args.action_selector](args)
 
         self.hidden_states = None
 
-    def _build_agents(self, input_shape) -> AgentNetwork:
+        if args.freeze_native:  # Freezes the native/original agent to prevent learning
+            self.freeze_agent_weights()
+
+    def _build_agent(self, input_shape) -> AgentNetwork:
         raise NotImplementedError()
 
     def _get_input_shape(self, scheme):
@@ -69,6 +72,10 @@ class MultiAgentController:
 
     def update_trained_steps(self, trained_steps: int):
         raise NotImplementedError()
+
+    def freeze_agent_weights(self):
+        for p in self.agent.parameters():
+            p.requires_grad = False
 
     def _softmax(self, agent_outs: Tensor, ep_batch: EpisodeBatch, t: int, test_mode: bool):
         avail_actions = ep_batch["avail_actions"][:, t]

@@ -22,7 +22,7 @@ class SFSController(MultiAgentController):
         self.policy_idx = None  # (=j)
         super().__init__(scheme, groups, args)
 
-    def _build_agents(self, input_shape):
+    def _build_agent(self, input_shape):
         # Barreto et al. propose one MLP per Feature with two hidden layers sized 64 and 128
         return [
             PolicySuccessorFeatures(in_shape=self.input_shape, out_shape=self.n_policies * self.n_actions)

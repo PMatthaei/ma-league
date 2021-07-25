@@ -22,7 +22,7 @@ class DistinctMAC(BasicMAC):
         self.n_agents = args.n_agents
         self.args = args
         input_shape = self._get_input_shape(scheme)
-        self.agents = self._build_agents(input_shape)
+        self.agents = self._build_agent(input_shape)
         self.agent_output_type = args.agent_output_type
 
         self.action_selector = action_REGISTRY[args.action_selector](args)
@@ -76,7 +76,7 @@ class DistinctMAC(BasicMAC):
             for i, agent in enumerate(self.agents)
         ]
 
-    def _build_agents(self, input_shape):
+    def _build_agent(self, input_shape):
         return [agent_REGISTRY[self.args.agent](input_shape, self.args) for _ in range(self.n_agents)]
 
     def _build_inputs(self, batch: EpisodeBatch, t):
