@@ -2,6 +2,8 @@ import random
 from collections import defaultdict
 from typing import Tuple, Dict
 
+from torch import Tensor
+
 from league.components.agent_pool import AgentPool
 from league.components.payoff_matchmaking import MatchmakingPayoff
 from league.components.self_play import OpponentSampling
@@ -15,12 +17,10 @@ def dd():
 
 class Matchmaking:
 
-    def __init__(self, agent_pool: AgentPool, payoff: MatchmakingPayoff = None,
-                 sampling_strategy: OpponentSampling = None):
+    def __init__(self, agent_pool: AgentPool, payoff: Tensor, sampling_strategy: OpponentSampling = None):
         self._agent_pool = agent_pool
         self._payoff = payoff
         self._sampling_strategy = sampling_strategy
-        pass
 
     def get_match(self, home_team: Team) -> Tuple[Team, AgentNetwork]:
         raise NotImplementedError()
@@ -30,9 +30,8 @@ class Matchmaking:
 
 
 class IteratingMatchmaking(Matchmaking):
-    def __init__(self, agent_pool: AgentPool, payoff: MatchmakingPayoff = None):
-        super().__init__(agent_pool)
-
+    def __init__(self, agent_pool: AgentPool, payoff: Tensor = None):
+        super().__init__(agent_pool, payoff)
         self.current_match = defaultdict(dd)
 
     def get_match(self, home_team: Team) -> Tuple[Team, AgentNetwork]:
@@ -49,20 +48,17 @@ class IteratingMatchmaking(Matchmaking):
         self.current_match[home_team] += 1
         return team, self._agent_pool[team]
 
-    def get_ensemble(self, home_team: Team) -> Dict[int, AgentNetwork]:
-        pass
-
 
 class RandomMatchmaking(Matchmaking):
 
-    def __init__(self, agent_pool: AgentPool, round_limit: int = 5, time_limit=None):
+    def __init__(self, agent_pool: AgentPool, round_limit: int = 5, payoff: Tensor = None):
         """
-        Matchmaking to return a random adversary team agent bound to a round or time limit.
+        Matchmaking to return a random adversary team agent bound to a round limit.
         :param agent_pool:
         :param round_limit:
         :param time_limit:
         """
-        super().__init__(agent_pool)
+        super().__init__(agent_pool, payoff)
         self.round_limit = round_limit
         self.current_round = 0
 
@@ -79,10 +75,3 @@ class RandomMatchmaking(Matchmaking):
             return home_team, self._agent_pool[home_team]  # Self-Play if no one available
         self.current_round += 1
         return self._agent_pool.sample()
-
-    def get_ensemble(self, home_team: Team) -> Dict[int, AgentNetwork]:
-        others = [team for team in self._agent_pool.collected_teams if team.id_ != home_team.id_]
-        selected = random.choice(others)
-        return {
-            2: self._agent_pool[selected]
-        }

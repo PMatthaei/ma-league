@@ -5,12 +5,7 @@ from typing import List, Union
 
 import numpy as np
 
-
-class PayoffEntry(Enum):
-    GAMES = 0,
-    WIN = 1,
-    LOSS = 2,
-    DRAW = 3,
+from league.components import PayoffEntry
 
 
 class RolebasedPayoff:

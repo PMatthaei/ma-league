@@ -5,6 +5,7 @@ import sys
 import threading
 from copy import deepcopy
 from os.path import dirname, abspath
+from typing import Dict
 
 import torch as th
 import json
@@ -12,15 +13,16 @@ import json
 from maenv.utils.enums import EnumEncoder
 
 from custom_logging.platforms import CustomConsoleLogger
+from league.components import PayoffEntry
 from league.components.agent_pool import AgentPool
 from league.components.matchmaking import IteratingMatchmaking
 from league.components.payoff_matchmaking import MatchmakingPayoff
-from league.processes.training.ensemble_league_process import EnsembleLeagueProcess
 from torch.multiprocessing import Barrier, Queue, Manager, current_process
 from maenv.core import RoleTypes, UnitAttackTypes
 from pathlib import Path
 
-from league.utils.team_composer import TeamComposer
+from league.processes.league_coordinator import LeagueCoordinator
+from league.utils.team_composer import TeamComposer, Team
 from league.processes import REGISTRY as experiment_REGISTRY
 
 th.multiprocessing.set_start_method('spawn', force=True)
@@ -83,6 +85,7 @@ if __name__ == '__main__':
     teams = team_composer.sample(k=args.league_size, contains=uid,
                                  unique=args.unique)  # Sample random teams containing uid
     teams = team_composer.sort_team_units(teams, uid=uid)  # Sort ranged healer first in all teams for later consistency
+    n_teams = len(teams)
 
     #
     # Shared objects
@@ -92,29 +95,32 @@ if __name__ == '__main__':
     agents_dict = manager.dict()
 
     #
-    # Components
-    #
-    procs = []  # All running processes representing an agent playing in the league
-    payoff = MatchmakingPayoff(payoff_dict=payoff_dict)  # Hold results of each match
-    agent_pool = AgentPool(agents_dict=agents_dict)  # Hold each trained agent
-    matchmaking = IteratingMatchmaking(agent_pool=agent_pool, payoff=payoff)  # Match agents against each other
-
-    #
     # Communication Infrastructure
     #
-    in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(len(teams))])
+    in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(n_teams)])
 
     #
     # Synchronization
     #
-    sync_barrier = Barrier(parties=len(teams))
+    sync_barrier = Barrier(parties=n_teams)
+
+    #
+    # Components
+    #
+    # payoff = MatchmakingPayoff(payoff_dict=payoff_dict)  # Hold results of each match
+    payoff = th.zeros((n_teams, n_teams, len(PayoffEntry))).share_memory_()
+    agent_pool = AgentPool(agents_dict=agents_dict)  # Hold each trained agent
+    matchmaking = IteratingMatchmaking(agent_pool=agent_pool, payoff=payoff)  # Match agents against each other
 
     #
     # Start experiment instances
     #
-    experiment_process = experiment_REGISTRY[args.experiment]
+    procs = []  # All running processes representing an agent playing in the league
+    training_instance_team_allocation: Dict[int, int] = dict()
+    experiment = experiment_REGISTRY[args.experiment]
     for idx, (in_q, out_q, team) in enumerate(zip(in_queues, out_queues, teams)):
-        proc = experiment_process(
+        training_instance_team_allocation[team.id_] = idx
+        proc = experiment(
             idx=idx,
             params=params,
             configs_dir=src_dir,
@@ -127,6 +133,16 @@ if __name__ == '__main__':
         )
         procs.append(proc)
 
+    # Handle message communication within the league
+    coordinator = LeagueCoordinator(
+        allocation=training_instance_team_allocation,
+        n_senders=n_teams,
+        communication=(in_queues, out_queues),
+        payoff=payoff,
+        sync_barrier=sync_barrier
+    )
+    coordinator.start()
+
     [r.start() for r in procs]
 
     #
@@ -137,7 +153,12 @@ if __name__ == '__main__':
     #
     # Print Payoff tensor
     #
-    print(payoff)
+    for team in teams:
+        tid = team.id_
+        index = training_instance_team_allocation[tid]
+        print(f'Stats for {team} from instance {index}')
+        for entry in PayoffEntry:
+            print(f"{entry.name} {payoff[index, :, entry]}")
 
     # Clean up after finishing
     print("Exiting Main")

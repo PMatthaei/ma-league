@@ -1,45 +1,45 @@
+from torch import Tensor
 from torch.multiprocessing import Process, Queue, Barrier
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
-from league.components.payoff_role_based import RolebasedPayoff
-from league.roles.players import Player
+from custom_logging.platforms import CustomConsoleLogger
+from league.components import PayoffEntry
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand
 
 
 class LeagueCoordinator(Process):
-    def __init__(self, logger, players: List[Player], queues: Tuple[List, List], payoff: RolebasedPayoff, sync_barrier: Barrier):
+    def __init__(self, allocation: Dict[int, int], n_senders: int, communication: Tuple[List, List], payoff: Tensor,
+                 sync_barrier: Barrier):
         """
         Handles messages sent from league sub processes to the main league process.
         :param league:
         :param connections:
         """
         super().__init__()
-        self._in_queues, self._out_queues = queues
-        self._players = players
+
+        self._in_queues, self._out_queues = communication
+        self._allocation = allocation
         self._payoff = payoff
         self._closed = []
-        self.logger = logger
         self.sync_barrier = sync_barrier
 
-        self.updates_n = 0
-        self.senders_n = len(players)
+        self.n_updates = 0
+        self.n_senders = n_senders
         self.last_waiting = 0
         self.active = True
 
+        self.logger = None
+
     def run(self) -> None:
+        self.logger = CustomConsoleLogger("league-coordinator")
+
         # Receive messages from all processes over their connections
         while self.active:
-
             self._on_sync()
 
-            for q in self._in_queues:
-                if not q.empty():
-                    self._handle_commands(q)
+            [self._handle_commands(q) for q in self._in_queues if not q.empty()]
 
         self.logger.info("League Coordinator shut down.")
-
-    def _get_agents(self):
-        return [(p.team, p.agent) for p in self._players]
 
     def _on_sync(self):
         # All processes have arrived at barrier and passed
@@ -53,7 +53,7 @@ class LeagueCoordinator(Process):
             self.logger.info(f"Closing connection to process {cmd.origin}")
             queue.close()
             self._closed.append(cmd.origin)
-            if len(self._closed) != len(self._in_queues):
+            if len(self._closed) != len(self._in_queues):  # Shutdown
                 self.active = False
         elif isinstance(cmd, CheckpointCommand):
             self._checkpoint(cmd)
@@ -69,9 +69,7 @@ class LeagueCoordinator(Process):
         :return:
         """
         self.logger.info(f"Create historical player of player {cmd.origin}")
-        historical_player = self._players[cmd.origin].checkpoint()
-        self._players.append(historical_player)
-        # TODO: is the learner being checkpointed also up-to-date?
+        raise NotImplementedError()
 
     def _update_payoff(self, cmd: PayoffUpdateCommand):
         """
@@ -80,8 +78,8 @@ class LeagueCoordinator(Process):
         :param cmd:
         :return:
         """
-        (home, away), outcome = cmd.data
-        self._payoff.update(home, away, outcome)
-        self.updates_n += 1
-        if home.ready_to_checkpoint():  # Auto-checkpoint player
-            self._players.append(self._players[home].checkpoint())
+        (home_team, away_team), outcome = cmd.data
+        home_instance, away_instance = self._allocation[home_team], self._allocation[away_team]
+        self._payoff[home_instance, away_instance, PayoffEntry.GAMES] += 1
+        self._payoff[home_instance, away_instance, outcome.value] += 1
+        self.n_updates += 1
