@@ -36,7 +36,7 @@ class Matchmaking:
         raise NotImplementedError()
 
 
-class PlayEvenlyMatchmaking(Matchmaking):
+class UniformMatchmaking(Matchmaking):
     def __init__(self, agent_pool: AgentPool, allocation: Dict[int, int], payoff: Tensor, teams: List[Team]):
         super().__init__(agent_pool, teams, payoff, allocation)
 
@@ -76,3 +76,9 @@ class RandomMatchmaking(Matchmaking):
             return home_team, self._agent_pool[home_team]  # Self-Play if no one available
         self.current_round += 1
         return self._agent_pool.sample()
+
+
+REGISTRY = {
+    "uniform": UniformMatchmaking,
+    "random": RandomMatchmaking
+}

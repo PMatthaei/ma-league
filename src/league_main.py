@@ -15,7 +15,7 @@ from maenv.utils.enums import EnumEncoder
 from custom_logging.platforms import CustomConsoleLogger
 from league.components import PayoffEntry
 from league.components.agent_pool import AgentPool
-from league.components.matchmaking import PlayEvenlyMatchmaking
+from league.components.matchmaking import UniformMatchmaking
 from torch.multiprocessing import Barrier, Queue, Manager, current_process
 from maenv.core import RoleTypes, UnitAttackTypes
 from pathlib import Path
@@ -23,6 +23,7 @@ from pathlib import Path
 from league.processes.league_coordinator import LeagueCoordinator
 from league.utils.team_composer import TeamComposer, Team
 from league.processes import REGISTRY as experiment_REGISTRY
+from league.components.matchmaking import REGISTRY as matchmaking_REGISTRY
 
 th.multiprocessing.set_start_method('spawn', force=True)
 
@@ -53,7 +54,10 @@ if __name__ == '__main__':
 
     experiment_choices = list(experiment_REGISTRY.keys())
     parser.add_argument('--experiment', default=experiment_choices[0], choices=experiment_choices, type=str,
-                        help="Define the type of league to run.")
+                        help="Define the type of experiment to run.")
+    matchmaking_choices = list(matchmaking_REGISTRY.keys())
+    parser.add_argument('--matchmaking', default=matchmaking_choices[0], choices=matchmaking_choices, type=str,
+                        help="Define the matchmaking used if the experiment is using matchmaking.")
 
     parser.add_argument('--desired_role', choices=list(RoleTypes), type=lambda role: RoleTypes[role],
                         help="Define the role each team has to contain")
@@ -110,7 +114,12 @@ if __name__ == '__main__':
     # Components
     #
     agent_pool = AgentPool(agents_dict=agents_dict)
-    matchmaking = PlayEvenlyMatchmaking(agent_pool=agent_pool, payoff=payoff, allocation=team_allocation, teams=teams)
+    matchmaking = matchmaking_REGISTRY[args.matchmaking](
+        agent_pool=agent_pool,
+        payoff=payoff,
+        allocation=team_allocation,
+        teams=teams
+    )
 
     #
     # Start experiment instances
