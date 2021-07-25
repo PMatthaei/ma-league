@@ -149,7 +149,7 @@ if __name__ == '__main__':
     #
     [r.join() for r in procs]
     coordinator.join()
-    
+
     #
     # Print Payoff tensor
     #
