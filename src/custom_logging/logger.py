@@ -59,6 +59,9 @@ class MainLogger:
     def info(self, info_str: str):
         self._console_logger.info(info_str)
 
+    def info(self, err: str):
+        self._console_logger.error(err)
+
     def log(self, t_env):
         """
         Log if either an interval condition matches or finished.
@@ -67,9 +70,11 @@ class MainLogger:
         """
         test_returns = self.episodal_stats[Collectibles.RETURN]["test"][Originator.HOME]
         test_finished = len(test_returns) == self.test_n_episode
-        if self.test_mode and test_finished:  # Collect test data as long as test is running
+        # Collect test data as long as test is running
+        if self.test_mode and test_finished:
             self._log_collectibles(t_env)  # ... then process and log collectibles
-        elif not self.test_mode and t_env - self.log_train_stats_t >= self.runner_log_interval:  # Collect train data as defined via interval
+        # Collect train data as defined via interval
+        elif not self.test_mode and t_env - self.log_train_stats_t >= self.runner_log_interval:
             self._log_collectibles(t_env)  # ... then process and log collectibles
             self.log_train_stats_t = t_env
 
@@ -122,7 +127,7 @@ class MainLogger:
 
         if parallel and isinstance(data, list):
             # Collect lists in parallel via extend to keep dims uniform
-            if collectible.is_global: # Global data does not have a specific actor as origin
+            if collectible.is_global:  # Global data does not have a specific actor as origin
                 collectible_stat[mode].extend(data)
             else:
                 collectible_stat[mode][origin].extend(data)
@@ -139,6 +144,7 @@ class MainLogger:
         :param origin:
         :return:
         """
+
         def filled(d):
             return isinstance(d, Sized) and len(d) > 0
 

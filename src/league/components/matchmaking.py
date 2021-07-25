@@ -5,7 +5,7 @@ from torch import Tensor
 
 from league.components import PayoffEntry
 from league.components.agent_pool import AgentPool
-from league.components.self_play import OpponentSampling, PrioritizedFictitiousSelfPlay
+from league.components.self_play import OpponentSampling, PrioritizedFictitiousSelfPlay, FictitiousSelfPlay
 from league.utils.team_composer import Team
 from modules.agents import AgentNetwork
 
@@ -47,14 +47,28 @@ class PFSPMatchmaking(Matchmaking):
         wins = self._payoff[idx, :, PayoffEntry.WIN]
         draws = self._payoff[idx, :, PayoffEntry.DRAW]
         win_rates = (wins + 0.5 * draws) / games
-        win_rates[no_game_mask] = .5 # If no games played we divided by 0 -> NaN -> replace with .5
+        win_rates[no_game_mask] = .5  # If no games played we divided by 0 -> NaN -> replace with .5
         chosen: Team = self._sampling_strategy.sample(opponents=opponents, prio_measure=win_rates)
         chosen_idx = self.get_instance_id(chosen)
         self._payoff[idx, chosen_idx, PayoffEntry.MATCHES] += 1
         return chosen, self._agent_pool[chosen]
 
 
-class UniformMatchmaking(Matchmaking):
+class FSPMatchmaking(Matchmaking):
+    def __init__(self, agent_pool: AgentPool, teams: List[Team], payoff: Tensor, allocation: Dict[int, int]):
+        super().__init__(agent_pool, teams, payoff, allocation)
+        self._sampling_strategy = FictitiousSelfPlay()
+
+    def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
+        idx = self.get_instance_id(home_team)
+        opponents = self._agent_pool.teams
+        chosen: Team = self._sampling_strategy.sample(opponents=opponents)
+        chosen_idx = self.get_instance_id(chosen)
+        self._payoff[idx, chosen_idx, PayoffEntry.MATCHES] += 1
+        return chosen, self._agent_pool[chosen]
+
+
+class BalancedMatchmaking(Matchmaking):
     def __init__(self, agent_pool: AgentPool, allocation: Dict[int, int], payoff: Tensor, teams: List[Team]):
         super().__init__(agent_pool, teams, payoff, allocation)
 
@@ -98,7 +112,8 @@ class RandomMatchmaking(Matchmaking):
 
 
 REGISTRY = {
-    "uniform": UniformMatchmaking,
+    "uniform": BalancedMatchmaking,
     "random": RandomMatchmaking,
-    "pfsp": PFSPMatchmaking
+    "pfsp": PFSPMatchmaking,
+    "fsp": FSPMatchmaking
 }

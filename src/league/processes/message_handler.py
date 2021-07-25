@@ -7,7 +7,7 @@ from league.components import PayoffEntry
 from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand
 
 
-class LeagueCoordinator(Process):
+class CommandHandler(Process):
     def __init__(self, allocation: Dict[int, int], n_senders: int, communication: Tuple[List[Queue], List[Queue]],
                  payoff: Tensor,
                  sync_barrier: Barrier):

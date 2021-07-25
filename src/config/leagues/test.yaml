@@ -2,4 +2,9 @@ team_size: 5 # default size of a team within the league
 league_play_time_mins: 0.1 # how long is a play against one opponent running in minutes
 league_runtime_hours: 0.01 # how long is the hole league running in hours
 n_league_evaluation_episodes: 1
-show_exp_parameters: False
+show_exp_parameters: True
+
+mac: "basic"
+headless_controls: "False"
+use_cuda: "False"
+use_tensorboard: "True"

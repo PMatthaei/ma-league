@@ -20,7 +20,8 @@ from types import SimpleNamespace
 from utils.run_utils import args_sanity_check
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
-
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"  # Deactivate message from envs built pygame
 
 class ExperimentProcess(Process):
     def __init__(self, idx: int, params, configs_dir: str, log_dir: str):
@@ -34,7 +35,7 @@ class ExperimentProcess(Process):
         self.params = params
         self.log_dir = f'{log_dir}/instance_{self.idx}'
         self.configs_dir = configs_dir
-        self._logger = None
+        self._logger: MainLogger = None
         self._args = None
         self._proc_id = None
 
@@ -65,7 +66,10 @@ class ExperimentProcess(Process):
 
         self._setup_logger(_log, _run, self._args)
 
-        self._run_experiment()
+        try:
+            self._run_experiment()
+        except Exception as e:  # Interrupt should not be issued in _run_experiment
+            self._logger.info(f"Experiment process ended due to error: {e}")
 
     def _setup_logger(self, _log, _run, args):
         self._logger = MainLogger(_log, args)
@@ -123,7 +127,7 @@ class ExperimentProcess(Process):
         # Integrate loaded dicts into main dict
         config_dict = recursive_dict_update(config_dict, env_config)
         config_dict = recursive_dict_update(config_dict, league_config)  # League overwrites env config
-        experiment_config = recursive_dict_update(config_dict, alg_config) # Algorithm overwrites all config
+        experiment_config = recursive_dict_update(config_dict, alg_config)  # Algorithm overwrites all config
         experiment_config = args_sanity_check(experiment_config)  # check args are valid
         experiment_config["device"] = "cuda" if experiment_config["use_cuda"] else "cpu"  # set device depending on cuda
         experiment_config["log_dir"] = self.log_dir  # set logging directory for instance metrics and model

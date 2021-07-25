@@ -4,7 +4,7 @@ league_runtime_hours: 24 # how long is the hole league running in hours
 n_league_evaluation_episodes: 100
 show_exp_parameters: True
 
-mac: "ensemble"
+mac: "basic"
 headless_controls: "False"
 use_cuda: "False"
 use_tensorboard: "True"

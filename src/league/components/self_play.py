@@ -42,7 +42,7 @@ class PrioritizedFictitiousSelfPlay(OpponentSampling):
 
     def __init__(self):
         """
-        PFSP: Non-Uniform sampling from a opponent policy distribution via win rates
+        PFSP: Non-Uniform sampling from a opponent policy distribution via prioritization measure
         :param weighting:
         """
         super().__init__()
