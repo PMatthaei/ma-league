@@ -86,6 +86,7 @@ if __name__ == '__main__':
                                  unique=args.unique)  # Sample random teams containing uid
     teams = team_composer.sort_team_units(teams, uid=uid)  # Sort ranged healer first in all teams for later consistency
     n_teams = len(teams)
+    n_entries = len(PayoffEntry)
 
     #
     # Shared objects
@@ -93,6 +94,7 @@ if __name__ == '__main__':
     manager = Manager()
     payoff_dict = manager.dict()
     agents_dict = manager.dict()
+    payoff = th.zeros((n_teams, n_teams, n_entries)).share_memory_()
 
     #
     # Communication Infrastructure
@@ -107,8 +109,6 @@ if __name__ == '__main__':
     #
     # Components
     #
-    # payoff = MatchmakingPayoff(payoff_dict=payoff_dict)  # Hold results of each match
-    payoff = th.zeros((n_teams, n_teams, len(PayoffEntry))).share_memory_()
     agent_pool = AgentPool(agents_dict=agents_dict)  # Hold each trained agent
     matchmaking = IteratingMatchmaking(agent_pool=agent_pool, payoff=payoff)  # Match agents against each other
 

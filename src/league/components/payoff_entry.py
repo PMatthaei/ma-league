@@ -5,4 +5,4 @@ class PayoffEntry(IntEnum):
     GAMES = 0,
     WIN = 1,
     LOSS = 2,
-    DRAW = 3,
+    DRAW = 3

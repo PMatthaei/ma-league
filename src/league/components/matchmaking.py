@@ -48,6 +48,9 @@ class IteratingMatchmaking(Matchmaking):
         self.current_match[home_team] += 1
         return team, self._agent_pool[team]
 
+    def get_ensemble(self, home_team: Team) -> Dict[int, AgentNetwork]:
+        pass
+
 
 class RandomMatchmaking(Matchmaking):
 
@@ -75,3 +78,6 @@ class RandomMatchmaking(Matchmaking):
             return home_team, self._agent_pool[home_team]  # Self-Play if no one available
         self.current_round += 1
         return self._agent_pool.sample()
+
+    def get_ensemble(self, home_team: Team) -> Dict[int, AgentNetwork]:
+        pass
