@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import OrderedDict
+
 from components.episode_batch import EpisodeBatch
 from controllers.multi_agent_controller import MultiAgentController
 from exceptions.mac_exceptions import HiddenStateNotInitialized
@@ -60,8 +62,11 @@ class BasicMAC(MultiAgentController):
     def parameters(self):
         return self.agent.parameters()
 
-    def load_state(self, other_mac: BasicMAC, agent=None):
-        self.agent.load_state_dict(agent.state_dict() if agent is not None else other_mac.agent.state_dict())
+    def load_state(self, other_mac: BasicMAC):
+        self.agent.load_state_dict(other_mac.agent.state_dict())
+
+    def load_state_dict(self, agent: OrderedDict):
+        self.agent.load_state_dict(agent)
 
     def cuda(self):
         self.agent.cuda()

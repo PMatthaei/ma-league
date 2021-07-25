@@ -1,7 +1,7 @@
 import copy
 import time
 
-from typing import  Tuple
+from typing import Tuple, OrderedDict
 
 from league.processes.league_experiment_process import LeagueExperimentProcess
 from league.utils.team_composer import Team
@@ -33,8 +33,8 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
         self._ensemble = None
 
     @property
-    def ensemble_agent(self) -> AgentNetwork:
-        return self._experiment.home_mac.ensemble[0]
+    def ensemble_agent_state(self) -> OrderedDict:
+        return self._experiment.home_mac.ensemble[0].state_dict() # TODO: how get varius ensemble not just first
 
     def _run_experiment(self) -> None:
 
@@ -45,8 +45,8 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
         self._logger.info(f"Train against AI in process: {self._proc_id}")
         self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
         self._logger.info(f"Share agent from process: {self._proc_id}")
-        self._share_agent(agent=self.home_agent)  # make agent accessible to other instances
-        self._native_agent: AgentNetwork = copy.deepcopy(self.home_agent)  # save an instance of the original agent
+        self._share_agent_params(agent=self.home_agent_state)  # make agent accessible to other instances
+        self._native_agent: OrderedDict = copy.deepcopy(self.home_agent_state)  # save an instance of the original agent
 
         start_time = time.time()
         end_time = time.time()
@@ -54,7 +54,7 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
 
             # Fetch agents from another teams training instance
-            foreign: Tuple[Team, AgentNetwork] = self._matchmaking.get_match(self._home_team)
+            foreign: Tuple[Team, OrderedDict] = self._matchmaking.get_match(self._home_team)
             if foreign is None:
                 self._logger.info(f"No match found. Ending process: {self._proc_id} with {self._home_team}")
                 break
@@ -81,7 +81,7 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
 
             # Share agent after training to make its current state accessible to other processes
             self._logger.info(f"Share trained ensemble in process: {self._proc_id}")
-            self._share_agent(agent=self.ensemble_agent)
+            self._share_agent_params(team=foreign_team, agent=self.ensemble_agent_state)
             # Select next agent to train
             self._logger.info(f"Selected team {foreign[0].id_} for next iteration in process: {self._proc_id}")
 
@@ -92,3 +92,15 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
 
         self._request_close()
 
+    def build_ensemble_mac(self, native: AgentNetwork, foreign_agent: AgentNetwork):
+        """
+        Build an dual ensemble where parts of the native agent infer with the foreign agent
+        :param native:
+        :param foreign_agent:
+        :return:
+        """
+        self.home_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
+        self.home_mac.load_state(agent=native)  # Load the native agent and freeze its weights
+        self.home_mac.freeze_native_weights()
+        # ! WARN ! Currently it is enforced that all teams have the agent to swap in the first(=0) position
+        self.home_mac.load_state(ensemble={0: foreign_agent})  # Load foreign agent into first agent in the ensemble.

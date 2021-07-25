@@ -36,7 +36,7 @@ class RolebasedLeagueProcess(LeagueExperimentProcess):
 
     def _run_experiment(self):
         # Share initial agent
-        self._share_agent()
+        self._share_agent_params()
 
         # Wait at barrier until every league process performed the sharing step before the next step
         self._sync_barrier.wait()
@@ -64,7 +64,7 @@ class RolebasedLeagueProcess(LeagueExperimentProcess):
             self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
 
             # Share agent after training
-            self._share_agent()
+            self._share_agent_params()
 
             end_time = time.time()
 

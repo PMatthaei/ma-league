@@ -97,20 +97,12 @@ class EnsembleMAC(MultiAgentController):
 
         return input_shape
 
-    def load_state(self, other_mac: EnsembleMAC=None, agent: AgentNetwork = None, ensemble: Dict[int, AgentNetwork] = None):
-        if other_mac is not None:
-            self.agent.load_state_dict(other_mac.agent.state_dict())
-            [agent.load_state_dict(other_mac.ensemble[idx].state_dict()) for idx, agent in self.ensemble.items()]
-            # Load state from another MAC (f.e. when loading target mac)
-        if agent is not None:
-            self.agent.load_state_dict(agent.state_dict())
-            # Load a native agent
-        if ensemble is not None:
-            self.ensemble.update(ensemble)
-            #[agent.load_state_dict(ensemble[idx].state_dict()) for idx, agent in self.ensemble.items()]
-            # Load a dict of ensembles
+    def load_state(self, other_mac: EnsembleMAC):
+        # Load state from another MAC (f.e. when loading target mac)
+        self.agent.load_state_dict(other_mac.agent.state_dict())
+        [agent.load_state_dict(other_mac.ensemble[idx].state_dict()) for idx, agent in self.ensemble.items()]
 
-    def load_state_dict(self, agent: OrderedDict, ensemble: Dict[int, OrderedDict] = None):
+    def load_state_dict(self, agent: OrderedDict=None, ensemble: Dict[int, OrderedDict] = None):
         self.agent.load_state_dict(agent) if agent is not None else None
         if ensemble is not None:
             for aid, state in ensemble.items():
@@ -127,8 +119,9 @@ class EnsembleMAC(MultiAgentController):
 
     def parameters(self):
         params = []
-        params += list(self.agent.parameters()) # add native agents params
-        [params + list(agent.parameters()) for agent in self.ensemble.values()] # add params of each agent in the ensemble
+        params += list(self.agent.parameters())  # add native agents params
+        [params + list(agent.parameters()) for agent in
+         self.ensemble.values()]  # add params of each agent in the ensemble
         return params
 
     def update_trained_steps(self, trained_steps):

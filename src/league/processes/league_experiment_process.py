@@ -1,4 +1,4 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, OrderedDict
 
 from torch.multiprocessing import Queue, Barrier
 
@@ -7,7 +7,6 @@ from league.processes.experiment_process import ExperimentProcess
 from league.processes.training.utils import extract_result
 from league.utils.commands import PayoffUpdateCommand, CloseLeagueProcessCommand
 from league.utils.team_composer import Team
-from modules.agents import AgentNetwork
 
 
 class LeagueExperimentProcess(ExperimentProcess):
@@ -50,21 +49,21 @@ class LeagueExperimentProcess(ExperimentProcess):
         raise NotImplementedError("Please implement a league experiment.")
 
     @property
-    def home_agent(self) -> AgentNetwork:
-        return self._experiment.home_mac.agent
+    def home_agent_state(self) -> OrderedDict:
+        return self._experiment.home_mac.agent.state_dict()
 
     @property
-    def shared_agent(self) -> Tuple[Team, AgentNetwork]:
+    def shared_agent(self) -> Tuple[Team, OrderedDict]:
         return self._home_team, self._agent_pool[self._home_team]
 
-    def _configure_experiment(self, home: Team, ai, away: Team = None):
+    def _configure_experiment(self, home: Team, ai: bool, away: Team = None):
         # In case this process needs to save models -> modify token
         self._args.env_args['match_build_plan'][0]['units'] = home.units  # mirror if no away units passed
         self._args.env_args['match_build_plan'][1]['units'] = home.units if away is None else away.units
         self._args.env_args['match_build_plan'][0]['is_scripted'] = False
         self._args.env_args['match_build_plan'][1]['is_scripted'] = ai
 
-    def _share_agent(self, agent: AgentNetwork):
+    def _share_agent_params(self, agent: OrderedDict, team: Team = None):
         """
         Share agent
         and wait until every process finished to sharing to ensure every agent is up-to-date before next match.
@@ -72,7 +71,7 @@ class LeagueExperimentProcess(ExperimentProcess):
         :param agent:
         :return:
         """
-        self._agent_pool[self._home_team] = agent
+        self._agent_pool[self._home_team if team is None else team] = agent
         self._sync_barrier.wait() if self._sync_barrier is not None else None
 
     def _send_result(self, env_info: Dict):

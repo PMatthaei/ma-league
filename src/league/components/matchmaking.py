@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, Union, List
+from typing import Tuple, Dict, Union, List, OrderedDict
 
 import torch as th
 from torch import Tensor
@@ -30,7 +30,7 @@ class Matchmaking:
         tid = _inv_allocation[instance_id]
         return next((team for team in self._teams if team.id_ == tid), None)
 
-    def get_match(self, home_team: Team) -> Union[None, Tuple[Team, AgentNetwork]]:
+    def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         raise NotImplementedError()
 
 
@@ -39,7 +39,7 @@ class PFSPMatchmaking(Matchmaking):
         super().__init__(agent_pool, teams, payoff, allocation)
         self._sampling_strategy = PrioritizedFictitiousSelfPlay()
 
-    def get_match(self, home_team: Team) -> Union[None, Tuple[Team, AgentNetwork]]:
+    def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         idx = self.get_instance_id(home_team)
         opponents = self._agent_pool.teams
         games = self._payoff[idx, :, PayoffEntry.GAMES]
@@ -58,7 +58,7 @@ class UniformMatchmaking(Matchmaking):
     def __init__(self, agent_pool: AgentPool, allocation: Dict[int, int], payoff: Tensor, teams: List[Team]):
         super().__init__(agent_pool, teams, payoff, allocation)
 
-    def get_match(self, home_team: Team) -> Union[None, Tuple[Team, AgentNetwork]]:
+    def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         idx = self.get_instance_id(home_team)
         matches = self._payoff[idx, :, PayoffEntry.MATCHES]
         # matches = matches[matches != idx] # Remove play against one self
@@ -82,7 +82,7 @@ class RandomMatchmaking(Matchmaking):
         self.round_limit = round_limit
         self.current_round = 0
 
-    def get_match(self, home_team: Team) -> Union[None, Tuple[Team, AgentNetwork]]:
+    def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         """
         Find a opponent for the given team using various methods.
         :param home_team:

@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import OrderedDict
 
 from runs.train.ma_experiment import MultiAgentExperiment
 
@@ -25,6 +25,9 @@ class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
         self.episode_callback = episode_callback
         # WARN: Assuming the away agent uses the same buffer scheme!!
         self.away_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
+
+    def load_adversary(self, agent: OrderedDict):
+        self.away_mac.load_state_dict(agent=agent)
 
     def _integrate_env_info(self):
         total_n_agents = self.env_info["n_agents"]

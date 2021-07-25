@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import OrderedDict
+
 from torch import Tensor
 
 from components.episode_batch import EpisodeBatch
@@ -51,6 +53,9 @@ class MultiAgentController:
         raise NotImplementedError()
 
     def load_state(self, other_mac: MultiAgentController):
+        raise NotImplementedError()
+
+    def load_state_dict(self, agent: OrderedDict):
         raise NotImplementedError()
 
     def cuda(self):

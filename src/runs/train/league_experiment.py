@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, OrderedDict
 
 from controllers import EnsembleMAC
 from modules.agents.agent_network import AgentNetwork
@@ -16,12 +16,7 @@ class LeagueExperiment(SelfPlayMultiAgentExperiment):
         :param finish_callback:
         :param on_episode_end:
         """
-        super().__init__(args, logger)
-        self.finish_callback = finish_callback
-        self.episode_callback = on_episode_end
-
-    def load_adversary(self, agent: AgentNetwork):
-        self.away_mac.load_state(agent=agent, other_mac=None)
+        super().__init__(args, logger, finish_callback, on_episode_end)
 
     def _test(self, n_test_runs):
         self.last_test_T = self.stepper.t_env

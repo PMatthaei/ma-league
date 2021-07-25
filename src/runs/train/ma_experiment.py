@@ -1,20 +1,16 @@
 import pprint
 import time
-from types import SimpleNamespace
-from typing import Dict, Tuple
 
 import torch as th
 
 from components.replay_buffers.replay_buffer import ReplayBuffer
-from league.utils.team_composer import Team
-from modules.agents import AgentNetwork
 from runs.experiment_run import ExperimentRun
 from steppers.episode_stepper import EnvStepper
 from utils.asset_manager import AssetManager
 from utils.timehelper import time_left, time_str
 
 from learners import REGISTRY as le_REGISTRY
-from controllers import REGISTRY as mac_REGISTRY, EnsembleMAC
+from controllers import REGISTRY as mac_REGISTRY
 from components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
 from components.feature_functions import REGISTRY as feature_func_REGISTRY
@@ -74,19 +70,6 @@ class MultiAgentExperiment(ExperimentRun):
         }
         self._update_args(env_scheme)
         return env_scheme
-
-    def build_ensemble_mac(self, native: AgentNetwork, foreign_agent: AgentNetwork):
-        """
-        Build an dual ensemble where parts of the native agent infer with the foreign agent
-        :param native:
-        :param foreign_agent:
-        :return:
-        """
-        self.home_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
-        self.home_mac.load_state(agent=native)  # Load the native agent and freeze its weights
-        self.home_mac.freeze_native_weights()
-        # ! WARN ! Currently it is enforced that all teams have the agent to swap in the first(=0) position
-        self.home_mac.load_state(ensemble={0: foreign_agent})  # Load foreign agent into first agent in the ensemble.
 
     def _build_learners(self):
         # Buffers

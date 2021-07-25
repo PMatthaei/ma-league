@@ -4,8 +4,8 @@ from .distinct_agents_controller import DistinctMAC
 from .sfs_controller import SFSController
 
 REGISTRY = {
-    "basic_mac": BasicMAC,
-    "distinct_mac": DistinctMAC,
-    "combine_mac": EnsembleMAC,
-    "gpe_mac": SFSController
+    "basic": BasicMAC,
+    "distinct": DistinctMAC,
+    "ensemble": EnsembleMAC,
+    "gpe": SFSController
 }

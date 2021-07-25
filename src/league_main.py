@@ -34,7 +34,7 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"  # Deactivate message from env
 def _save_league_config():
     Path(log_dir).mkdir(parents=True, exist_ok=True)
     with open(f'{log_dir}/league_config.json', 'w') as fp:
-        json.dump(vars(args), fp, cls=EnumEncoder)
+        json.dump(vars(args), fp, cls=EnumEncoder, indent=4, sort_keys=True)
 
 
 #
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     #
     # Components
     #
-    agent_pool = AgentPool(agents_dict=agents_dict)
+    agent_pool = AgentPool(shared_storage=agents_dict)
     matchmaking = matchmaking_REGISTRY[args.matchmaking](
         agent_pool=agent_pool,
         payoff=payoff,
