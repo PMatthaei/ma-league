@@ -51,7 +51,7 @@ class RolebasedLeagueProcess(LeagueExperimentProcess):
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
 
             self._away, flag = self._home.get_match()
-            away_agent = self._get_shared_agent(self._away)
+            away_agent = self._get_agent_params(self._away)
             if away_agent is None:
                 warning("No Opponent was found.")
                 continue

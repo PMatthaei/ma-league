@@ -18,13 +18,13 @@ class DRQNAgentNetwork(AgentNetwork):
         super(DRQNAgentNetwork, self).__init__(input_shape, args)
         self.args = args
 
-        self.fc1 = nn.Linear(input_shape, args.rnn_hidden_dim)  # Linear = y = x * A^T + b
-        self.gru = nn.GRUCell(args.rnn_hidden_dim, args.rnn_hidden_dim)
-        self.fc2 = nn.Linear(args.rnn_hidden_dim, args.n_actions)
+        self.fc1 = nn.Linear(input_shape, args.rnn_hidden_dim, device=self.args.device)  # Linear = y = x * A^T + b
+        self.gru = nn.GRUCell(args.rnn_hidden_dim, args.rnn_hidden_dim, device=self.args.device)
+        self.fc2 = nn.Linear(args.rnn_hidden_dim, args.n_actions, device=self.args.device)
 
     def init_hidden(self):
         # make hidden states on same device as model
-        return self.fc1.weight.new(1, self.args.rnn_hidden_dim).zero_()
+        return self.fc1.weight.new(1, self.args.rnn_hidden_dim, device=self.args.device).zero_()
 
     def forward(self, inputs, hidden_state):
         x = self.fc1(inputs)  # Input with shape (batch_size, obs) in learning and (n_agents, obs) in inference

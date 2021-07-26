@@ -15,28 +15,28 @@ class QMixer(nn.Module):
         self.embed_dim = args.mixing_embed_dim
         # Build hypernet via args
         if getattr(args, "hypernet_layers", 1) == 1:
-            self.hyper_w_1 = nn.Linear(self.state_dim, self.embed_dim * self.n_agents)
-            self.hyper_w_final = nn.Linear(self.state_dim, self.embed_dim)
+            self.hyper_w_1 = nn.Linear(self.state_dim, self.embed_dim * self.n_agents, device=self.args.device)
+            self.hyper_w_final = nn.Linear(self.state_dim, self.embed_dim, device=self.args.device)
         elif getattr(args, "hypernet_layers", 1) == 2:
             hypernet_embed = self.args.hypernet_embed
-            self.hyper_w_1 = nn.Sequential(nn.Linear(self.state_dim, hypernet_embed),
+            self.hyper_w_1 = nn.Sequential(nn.Linear(self.state_dim, hypernet_embed, device=self.args.device),
                                            nn.ReLU(),
-                                           nn.Linear(hypernet_embed, self.embed_dim * self.n_agents))
-            self.hyper_w_final = nn.Sequential(nn.Linear(self.state_dim, hypernet_embed),
+                                           nn.Linear(hypernet_embed, self.embed_dim * self.n_agents, device=self.args.device))
+            self.hyper_w_final = nn.Sequential(nn.Linear(self.state_dim, hypernet_embed, device=self.args.device),
                                            nn.ReLU(),
-                                           nn.Linear(hypernet_embed, self.embed_dim))
+                                           nn.Linear(hypernet_embed, self.embed_dim, device=self.args.device))
         elif getattr(args, "hypernet_layers", 1) > 2:
             raise Exception("Sorry >2 hypernet layers is not implemented!")
         else:
             raise Exception("Error setting number of hypernet layers.")
 
         # State dependent bias for hidden layer
-        self.hyper_b_1 = nn.Linear(self.state_dim, self.embed_dim)
+        self.hyper_b_1 = nn.Linear(self.state_dim, self.embed_dim, device=self.args.device)
 
         # V(s) instead of a bias for the last layers
-        self.V = nn.Sequential(nn.Linear(self.state_dim, self.embed_dim),
+        self.V = nn.Sequential(nn.Linear(self.state_dim, self.embed_dim, device=self.args.device),
                                nn.ReLU(),
-                               nn.Linear(self.embed_dim, 1))
+                               nn.Linear(self.embed_dim, 1, device=self.args.device))
 
     def forward(self, agent_qs, states):
         bs = agent_qs.size(0)

@@ -1,3 +1,4 @@
+import random
 from typing import Tuple, Dict, Union, List, OrderedDict
 
 import torch as th
@@ -25,9 +26,10 @@ class Matchmaking:
     def get_instance_id(self, team: Team) -> int:
         return self._allocation[team.id_]
 
-    def get_team(self, instance_id: int) -> Team:
-        _inv_allocation = {v: k for k, v in self._allocation.items()}
-        tid = _inv_allocation[instance_id]
+    def get_team(self, instance_id: int=None, tid=None) -> Team:
+        if tid is None:
+            _inv_allocation = {v: k for k, v in self._allocation.items()}
+            tid = _inv_allocation[instance_id]
         return next((team for team in self._teams if team.id_ == tid), None)
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
@@ -41,7 +43,7 @@ class PFSPMatchmaking(Matchmaking):
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         idx = self.get_instance_id(home_team)
-        opponents = self._agent_pool.teams
+        opponents = self._agent_pool.agents
         games = self._payoff[idx, :, PayoffEntry.GAMES]
         no_game_mask = games == 0.0
         wins = self._payoff[idx, :, PayoffEntry.WIN]
@@ -51,7 +53,7 @@ class PFSPMatchmaking(Matchmaking):
         chosen: Team = self._sampling_strategy.sample(opponents=opponents, prio_measure=win_rates)
         chosen_idx = self.get_instance_id(chosen)
         self._payoff[idx, chosen_idx, PayoffEntry.MATCHES] += 1
-        return chosen, self._agent_pool[chosen]
+        return chosen, opponents[chosen]
 
 
 class FSPMatchmaking(Matchmaking):
@@ -61,11 +63,11 @@ class FSPMatchmaking(Matchmaking):
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         idx = self.get_instance_id(home_team)
-        opponents = self._agent_pool.teams
+        opponents = self._agent_pool.agents
         chosen: Team = self._sampling_strategy.sample(opponents=opponents)
         chosen_idx = self.get_instance_id(chosen)
         self._payoff[idx, chosen_idx, PayoffEntry.MATCHES] += 1
-        return chosen, self._agent_pool[chosen]
+        return chosen, opponents[chosen]
 
 
 class BalancedMatchmaking(Matchmaking):
@@ -74,46 +76,29 @@ class BalancedMatchmaking(Matchmaking):
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         idx = self.get_instance_id(home_team)
+        agents = self._agent_pool.agents
         matches = self._payoff[idx, :, PayoffEntry.MATCHES]
         # matches = matches[matches != idx] # Remove play against one self
         chosen_idx = th.argmin(matches).item()  # Get adversary we played the least
         self._payoff[idx, chosen_idx, PayoffEntry.MATCHES] += 1
         team = self.get_team(chosen_idx)
-        return team, self._agent_pool[team]
+        return team, agents[team]
 
 
 class RandomMatchmaking(Matchmaking):
-
-    def __init__(self, agent_pool: AgentPool, allocation: Dict[int, int], teams: List[Team], round_limit: int = 5,
-                 payoff: Tensor = None):
-        """
-        Matchmaking to return a random adversary team agent bound to a round limit.
-        :param agent_pool:
-        :param round_limit:
-        :param time_limit:
-        """
+    def __init__(self, agent_pool: AgentPool, allocation: Dict[int, int], payoff: Tensor, teams: List[Team]):
         super().__init__(agent_pool, teams, payoff, allocation)
-        self.round_limit = round_limit
-        self.current_round = 0
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
-        """
-        Find a opponent for the given team using various methods.
-        :param home_team:
-        :return:
-        """
-        if self.current_round >= self.round_limit:
-            return None
-
-        if not self._agent_pool.can_sample():
-            return home_team, self._agent_pool[home_team]  # Self-Play if no one available
-        self.current_round += 1
-        return self._agent_pool.sample()
+        agents = self._agent_pool.agents
+        ids = list(agents.keys())
+        random_id = random.choice(ids)
+        return self.get_team(tid=random_id), agents[random_id]
 
 
 REGISTRY = {
     "uniform": BalancedMatchmaking,
-    "random": RandomMatchmaking,
     "pfsp": PFSPMatchmaking,
+    "random": RandomMatchmaking,
     "fsp": FSPMatchmaking
 }

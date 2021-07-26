@@ -55,9 +55,6 @@ class MultiAgentExperiment(ExperimentRun):
 
         self._build_learners()
 
-        if self.args.use_cuda:  # Activate CUDA mode if supported
-            [learner.cuda() for learner in self.learners]
-
         [learner.build_optimizer() for learner in self.learners]  # Should be called after cuda()
 
         self.asset_manager = AssetManager(args=self.args, logger=self.logger)

@@ -128,13 +128,6 @@ class QLearner(Learner):
             self.target_mixer.load_state_dict(self.mixer.state_dict())
         self.logger.info("Updated {0}target network.".format(self.name))
 
-    def cuda(self): # TODO: Calling cuda() first creates on CPU then GPU -> slow
-        self.mac.cuda()
-        self.target_mac.cuda()
-        if self.mixer is not None:
-            self.mixer.cuda()
-            self.target_mixer.cuda()
-
     def save_models(self, path, name):
         self.mac.save_models(path, name=self.name)
         if self.mixer is not None:
