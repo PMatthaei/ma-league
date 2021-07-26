@@ -58,7 +58,7 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
             #
             # Retrieve current version of the agent from the pool
             #
-            home_team, agent_state = self._get_agent_params
+            home_team, agent_state = self._get_agent_params()
 
             #
             # Fetch agents from another teams training instance

@@ -119,7 +119,8 @@ class CommandHandler(Process):
         # Clone before send if state dict is stored on CUDA device
         if is_cuda_state_dict(agent_params):
             agent_params_clone = clone_state_dict(agent_params)
-        self._out_queues[cmd.origin].put(agent_params if agent_params_clone is None else agent_params_clone)
+        data = cmd.data, agent_params if agent_params_clone is None else agent_params_clone
+        self._out_queues[cmd.origin].put(data)
         del agent_params_clone
 
     def _get_agent_pool(self, cmd: AgentPoolGetCommand):
