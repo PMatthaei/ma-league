@@ -17,10 +17,10 @@ def dd():
 
 class Matchmaking:
 
-    def __init__(self, comm_id: int, communication: Tuple[Queue, Queue], teams: List[Team], payoff: Tensor,
+    def __init__(self,  communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor,
                  allocation: Dict[int, int]):
-        self._in_q, self._out_q = communication
-        self._comm_id = comm_id
+        self._in_q, self._out_q = communication[1]
+        self._comm_id = communication[0]
         self._allocation = allocation
         self._payoff = payoff
         self._teams = teams
@@ -98,8 +98,9 @@ class BalancedMatchmaking(Matchmaking):
 
 
 class RandomMatchmaking(Matchmaking):
-    def __init__(self, comm_id: int, communication: Tuple[Queue, Queue], teams: List[Team], payoff: Tensor, allocation: Dict[int, int]):
-        super().__init__(comm_id, communication, teams, payoff, allocation)
+    def __init__(self, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor,
+                 allocation: Dict[int, int]):
+        super().__init__(communication, teams, payoff, allocation)
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         idx = self.get_instance_id(home_team)

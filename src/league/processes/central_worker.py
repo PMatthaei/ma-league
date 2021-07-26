@@ -48,34 +48,38 @@ class CentralWorker(Process):
         # Sort ranged healer first in all teams for later consistency
         teams = composer.sort_team_units(teams, uid=uid)
         n_teams = len(teams)
-        n_entries = len(PayoffEntry)
-        comm_id = 0
-        #
-        # Shared objects
-        #
-        manager = Manager()
-        agents_dict = manager.dict()
-        payoff = th.zeros((n_teams, n_teams, n_entries)).share_memory_()
-        team_allocation: Dict[int, int] = manager.dict()  # Mapping team -> training instance it is running on
 
-        #
-        # Communication Infrastructure
-        #
-        in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(n_teams)])
-        comm_id += n_teams
         #
         # Synchronization
         #
         sync_barrier = Barrier(parties=n_teams)
 
         #
+        # Shared objects
+        #
+        manager = Manager()
+
+        n_entries = len(PayoffEntry)
+        payoff = th.zeros((n_teams, n_teams, n_entries)).share_memory_()
+
+        team_allocation: Dict[int, int] = manager.dict()  # Mapping team -> training instance it is running on
+
+        #
+        # Communication Infrastructure
+        #
+        # Handle command communication within the league
+        handler = CommandHandler(
+            allocation=team_allocation,
+            payoff=payoff,
+            sync_barrier=sync_barrier
+        )
+
+        #
         # Components
         #
-        in_q, out_q = (Queue(), Queue())
-        in_queues += (in_q,)
-        out_queues += (out_q,)  # Register new queue for later command handler
+        comm = handler.register()
         matchmaking = matchmaking_REGISTRY[self._args.matchmaking](
-            comm_id=comm_id, communication=(in_q, out_q),
+            communication=comm,
             payoff=payoff,
             allocation=team_allocation,
             teams=teams
@@ -86,7 +90,8 @@ class CentralWorker(Process):
         #
         procs = []  # All running processes representing an agent playing in the league
         experiment = experiment_REGISTRY[self._args.experiment]
-        for idx, (in_q, out_q, team) in enumerate(zip(in_queues, out_queues, teams)):
+        for idx, team in enumerate(teams):
+            comm = handler.register()
             team_allocation[team.id_] = idx
             proc = experiment(
                 idx=idx,
@@ -95,20 +100,11 @@ class CentralWorker(Process):
                 log_dir=self._log_dir,
                 home_team=team,
                 matchmaking=matchmaking,
-                # agent_pool=agent_pool,
-                communication=(in_q, out_q),
+                communication=comm,
                 sync_barrier=sync_barrier
             )
             procs.append(proc)
 
-        # Handle message communication within the league
-        handler = CommandHandler(
-            allocation=team_allocation,
-            n_senders=n_teams,
-            communication=(in_queues, out_queues),
-            payoff=payoff,
-            sync_barrier=sync_barrier
-        )
         handler.start()
 
         [r.start() for r in procs]
@@ -131,7 +127,7 @@ class CentralWorker(Process):
             index = team_allocation[tid]
             print(f'Stats for {team} from instance {index}')
             for entry in PayoffEntry:
-                print(f"{entry.name} {payoff[index, :, entry]}")
+                print(f"{entry.name.capitalize()} {payoff[index, :, entry]}")
 
     def _save_league_config(self):
         Path(self._log_dir).mkdir(parents=True, exist_ok=True)

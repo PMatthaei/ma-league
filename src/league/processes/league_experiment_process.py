@@ -2,10 +2,9 @@ from typing import Tuple, Dict, OrderedDict
 
 from torch.multiprocessing import Queue, Barrier
 
-from league.components import Matchmaking
+from league.components import Matchmaking, PayoffEntry
 from league.processes.command_handler import clone_state_dict
 from league.processes.experiment_process import ExperimentProcess
-from league.processes.training.utils import extract_result
 from league.utils.commands import PayoffUpdateCommand, CloseCommunicationCommand, AgentParamsUpdateCommand, \
     AgentParamsGetCommand
 from league.utils.team_composer import Team
@@ -16,7 +15,7 @@ class LeagueExperimentProcess(ExperimentProcess):
     def __init__(self,
                  matchmaking: Matchmaking,
                  home_team: Team,
-                 communication: Tuple[Queue, Queue],
+                 communication: Tuple[int, Tuple[Queue, Queue]],
                  sync_barrier: Barrier, **kwargs):
         """
         The process is running a single Multi-Agent training and handles communication with the central components.
@@ -39,7 +38,8 @@ class LeagueExperimentProcess(ExperimentProcess):
         # self._agent_pool: AgentPool = agent_pool  # Process private copy of the agent pool
         self._matchmaking: Matchmaking = matchmaking
 
-        self._in_queue, self._out_queue = communication  # In- and Outgoing Communication
+        self._comm_id = communication[0]
+        self._in_queue, self._out_queue = communication[1]  # In- and Outgoing Communication
         self._sync_barrier = sync_barrier  # Use to sync with other processes
 
         self.terminated: bool = False
@@ -62,7 +62,7 @@ class LeagueExperimentProcess(ExperimentProcess):
 
     def _get_agent_params(self, team: Team = None) -> Tuple[Team, OrderedDict]:
         tid = self._home_team.id_ if team is None else team.id_
-        cmd = AgentParamsGetCommand(origin=self.idx, data=tid)
+        cmd = AgentParamsGetCommand(origin=self._comm_id, data=tid)
         self._in_queue.put(cmd)
         tid, agent_params = self._out_queue.get()
         return tid, agent_params
@@ -79,11 +79,22 @@ class LeagueExperimentProcess(ExperimentProcess):
         # self._sync_barrier.wait() if self._sync_barrier is not None else None
         tid: int = self._home_team.id_ if team is None else team.id_
         agent_clone = clone_state_dict(agent)
-        cmd = AgentParamsUpdateCommand(origin=self.idx, data=(tid, agent_clone))
+        cmd = AgentParamsUpdateCommand(origin=self._comm_id, data=(tid, agent_clone))
         self._in_queue.put(cmd)
         del agent_clone
         self._ack()
         self._sync_barrier.wait() if self._sync_barrier is not None else None
+
+    def _extract_result(self, env_info: dict, policy_team_id: int):
+        draw = env_info["draw"]
+        battle_won = env_info["battle_won"]
+        if draw or all(battle_won) or not any(battle_won):
+            result = PayoffEntry.DRAW  # Draw if all won or all lost
+        elif battle_won[policy_team_id]:  # Policy team(= home team) won
+            result = PayoffEntry.WIN
+        else:
+            result = PayoffEntry.LOSS  # Policy team(= home team) lost
+        return result
 
     def _send_result(self, env_info: Dict):
         """
@@ -91,9 +102,9 @@ class LeagueExperimentProcess(ExperimentProcess):
         :param env_info:
         :return:
         """
-        result = extract_result(env_info, self._experiment.stepper.policy_team_id)
+        result = self._extract_result(env_info, self._experiment.stepper.policy_team_id)
         data = ((self._home_team.id_, self._away_team.id_), result)
-        cmd = PayoffUpdateCommand(origin=self.idx, data=data)
+        cmd = PayoffUpdateCommand(origin=self._comm_id, data=data)
         self._in_queue.put(cmd)
         self._ack()
 
@@ -102,7 +113,7 @@ class LeagueExperimentProcess(ExperimentProcess):
         Close the communication channel to the league
         :return:
         """
-        cmd = CloseCommunicationCommand(origin=self.idx)
+        cmd = CloseCommunicationCommand(origin=self._comm_id)
         self._in_queue.put(cmd)
         self._ack()
         self._in_queue.close()

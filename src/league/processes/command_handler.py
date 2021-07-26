@@ -20,7 +20,7 @@ def is_cuda_state_dict(state_dict):
 
 
 class CommandHandler(Process):
-    def __init__(self, allocation: Dict[int, int], n_senders: int, communication: Tuple[List[Queue], List[Queue]],
+    def __init__(self, allocation: Dict[int, int],
                  payoff: Tensor,
                  sync_barrier: Barrier):
         """
@@ -30,19 +30,27 @@ class CommandHandler(Process):
         """
         super().__init__()
         self._agent_pool = dict()
-        self._in_queues, self._out_queues = communication
+        self._in_queues, self._out_queues = [], []
         self._allocation = allocation
         self._payoff = payoff
         self._closed = []
         self._sync_barrier = sync_barrier
 
         self.n_updates = 0
-        self.n_senders = n_senders
+        self.n_senders = 0
         self.last_waiting = 0
         self.shutdown = False
         self.running = True
 
         self.logger = None
+
+    def register(self) -> Tuple[int, Tuple[Queue, Queue]]:
+        in_q, out_q = (Queue(), Queue())
+        self._in_queues += (in_q,)
+        self._out_queues += (out_q,)
+        idx = self.n_senders
+        self.n_senders += 1
+        return idx, (in_q, out_q)
 
     def run(self) -> None:
         self.logger = CustomConsoleLogger("league-coordinator")
