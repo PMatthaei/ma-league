@@ -17,7 +17,7 @@ from sacred.utils import apply_backspaces_and_linefeeds
 from custom_logging.platforms import CustomConsoleLogger
 from league import SimpleLeague
 from league.components.payoff_role_based import RolebasedPayoff
-from league.processes.training.role_based_league_process import RolebasedLeagueProcess
+from league.processes.training.role_based_league_instance import RolebasedLeagueProcess
 from league.processes.command_handler import CommandHandler
 from league.utils.team_composer import TeamComposer
 from custom_logging.logger import MainLogger

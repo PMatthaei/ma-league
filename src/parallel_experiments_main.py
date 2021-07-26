@@ -10,7 +10,7 @@ import torch as th
 from league.processes.experiment_process import ExperimentProcess
 from copy import deepcopy
 
-from league.processes.training.ma_experiment_process import MultiAgentExperimentProcess
+from league.processes.training.ma_experiment_instance import MultiAgentExperimentProcess
 
 th.multiprocessing.set_start_method('spawn', force=True)
 
