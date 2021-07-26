@@ -15,22 +15,6 @@ class MatchmakingLeagueProcess(LeagueExperimentProcess):
                  matchmaking: Matchmaking, home_team: Team, sync_barrier: Barrier,
                  communication: Tuple[Queue, Queue],
                  **kwargs):
-        """
-        The process is running a single League-Play and handles communication with the central components.
-        League-Play is a form of NormalPlay where the opponent can be swapped out from a pool of agents (=league).
-        The opponent is fixed and is therefore not learning to prevent non-stationary environment.
-        Opponents are sampled via Self-Play Sampling such as FSP, PFSP or SP.
-
-        Opponent sampling is decided via a matchmaking component.
-
-        :param agent_pool:
-        :param matchmaking:
-        :param home_team:
-        :param queues:
-        :param args:
-        :param logger:
-        :param sync_barrier:
-        """
         super(MatchmakingLeagueProcess, self).__init__(matchmaking, home_team, communication, sync_barrier,
                                                        **kwargs)
 

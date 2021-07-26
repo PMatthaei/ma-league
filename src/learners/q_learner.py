@@ -11,7 +11,6 @@ from components.episode_batch import EpisodeBatch
 class QLearner(Learner):
     def __init__(self, mac: MultiAgentController, scheme, logger, args, name=None):
         super().__init__(mac, scheme, logger, args, name)
-        self.name += "_qlearner_"
 
         self.last_target_update_episode = 0
 

@@ -13,7 +13,7 @@ def build_td_lambda_targets(rewards, terminated, mask, target_qs, n_agents, gamm
     ret = target_qs.new_zeros(*target_qs.shape)
     ret[:, -1] = target_qs[:, -1] * (1 - th.sum(terminated, dim=1))
     # Backwards  recursive  update  of the "forward  view"
-    batch_size = ret.shape[1] # Calc batch size based on incoming rewards collected
+    batch_size = ret.shape[1]  # Calc batch size based on incoming rewards collected
     for t in list(reversed(range(batch_size - 1))):
         ret[:, t] = td_lambda * gamma * ret[:, t + 1] + mask[:, t] \
                     * (rewards[:, t] + (1 - td_lambda) * gamma * target_qs[:, t + 1] * (1 - terminated[:, t]))
@@ -110,10 +110,12 @@ class COMALearner(Learner):
             for key in ["critic_loss", "critic_grad_norm", "td_error_abs", "q_taken_mean", "target_mean"]:
                 self.logger.log_stat(key, sum(critic_train_stats[key]) / ts_logged, t_env)
 
-            self.logger.log_stat("advantage_mean", (advantages * mask).sum().item() / mask.sum().item(), t_env)
-            self.logger.log_stat("coma_loss", coma_loss.item(), t_env)
-            self.logger.log_stat("agent_grad_norm", grad_norm, t_env)
-            self.logger.log_stat("pi_max", (pi.max(dim=1)[0] * mask).sum().item() / mask.sum().item(), t_env)
+            self.logger.log_stat(self.name + "advantage_mean", (advantages * mask).sum().item() / mask.sum().item(),
+                                 t_env)
+            self.logger.log_stat(self.name + "coma_loss", coma_loss.item(), t_env)
+            self.logger.log_stat(self.name + "agent_grad_norm", grad_norm, t_env)
+            self.logger.log_stat(self.name + "pi_max", (pi.max(dim=1)[0] * mask).sum().item() / mask.sum().item(),
+                                 t_env)
             self.log_stats_t = t_env
 
     def _train_critic(self, batch: EpisodeBatch, rewards, terminated, actions, avail_actions, mask):
@@ -170,19 +172,14 @@ class COMALearner(Learner):
         self.target_critic.load_state_dict(self.critic.state_dict())
         self.logger.info("Updated target network")
 
-    def cuda(self):
-        self.mac.cuda()
-        self.critic.cuda()
-        self.target_critic.cuda()
-
-    def save_models(self, path):
-        self.mac.save_models(path)
+    def save_models(self, path, name):
+        self.mac.save_models(path, name=self.name)
         th.save(self.critic.state_dict(), "{}/critic.th".format(path))
         th.save(self.agent_optimiser.state_dict(), "{}/agent_opt.th".format(path))
         th.save(self.critic_optimiser.state_dict(), "{}/critic_opt.th".format(path))
 
     def load_models(self, path):
-        self.mac.load_models(path)
+        self.mac.load_models(path, name=self.name)
         self.critic.load_state_dict(th.load("{}/critic.th".format(path), map_location=lambda storage, loc: storage))
         # Not quite right but I don't want to save target networks
         self.target_critic.load_state_dict(self.critic.state_dict())

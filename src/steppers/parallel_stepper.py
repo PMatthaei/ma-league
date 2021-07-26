@@ -214,3 +214,7 @@ class ParallelStepper(EnvStepper):
         self.logger.log(self.t_env)
 
         return self.home_batch, env_infos
+
+    def __del__(self):
+        # Close env workers
+        self.close_env()

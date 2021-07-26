@@ -23,7 +23,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--team_size', default=3, type=int,
                         help="Define the team size. (Only for symmetric, same sized teams in the league")
-    parser.add_argument('--league_size', default=2, type=int, help="Define the size of the league (= how many teams)")
+    parser.add_argument('--league_size', default=1, type=int, help="Define the size of the league (= how many teams)")
 
     experiment_choices = list(experiment_REGISTRY.keys())
     parser.add_argument('--experiment', default=experiment_choices[0], choices=experiment_choices, type=str,
