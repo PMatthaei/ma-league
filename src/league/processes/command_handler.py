@@ -10,9 +10,13 @@ from league.utils.commands import CloseCommunicationCommand, PayoffUpdateCommand
     AgentParamsGetCommand, AgentPoolGetCommand
 
 
-def clone_state_dict(state: OrderedDict):
-    clone = OrderedDict([(entry, state[entry].clone()) for entry in state])
+def clone_state_dict(state_dict: OrderedDict):
+    clone = OrderedDict([(entry, state_dict[entry].clone()) for entry in state_dict])
     return clone
+
+
+def is_cuda_state_dict(state_dict):
+    return all([state_dict[entry].is_cuda for entry in state_dict])
 
 
 class CommandHandler(Process):
@@ -49,6 +53,7 @@ class CommandHandler(Process):
             self._on_sync()
 
             [self._handle_commands(in_q) for in_q in self._in_queues if not in_q.empty()]
+
             if self.shutdown:
                 self.running = False
 
@@ -109,13 +114,21 @@ class CommandHandler(Process):
         self._out_queues[cmd.origin].put(None)  # ACK
 
     def _get_agent(self, cmd: AgentParamsGetCommand):
-        agent_params = clone_state_dict(self._agent_pool[cmd.data])
-        self._out_queues[cmd.origin].put(agent_params)
-        del agent_params
+        agent_params = self._agent_pool[cmd.data]
+        agent_params_clone = None
+        # Clone before send if state dict is stored on CUDA device
+        if is_cuda_state_dict(agent_params):
+            agent_params_clone = clone_state_dict(agent_params)
+        self._out_queues[cmd.origin].put(agent_params if agent_params_clone is None else agent_params_clone)
+        del agent_params_clone
 
     def _get_agent_pool(self, cmd: AgentPoolGetCommand):
-        pool_clone = {tid: clone_state_dict(agent_params) for tid, agent_params in self._agent_pool.items()}
-        self._out_queues[cmd.origin].put(pool_clone)
+        all_agent_params = self._agent_pool.items()
+        pool_clone = None
+        # Clone before send if state dict is stored on CUDA device
+        if all([is_cuda_state_dict(agent) for tid, agent in all_agent_params]):
+            pool_clone = {tid: clone_state_dict(agent_params) for tid, agent_params in all_agent_params}
+        self._out_queues[cmd.origin].put(self._agent_pool if pool_clone is None else pool_clone)
         del pool_clone
 
     def _update_agent_params(self, cmd: AgentParamsUpdateCommand):

@@ -102,9 +102,14 @@ class RandomMatchmaking(Matchmaking):
         super().__init__(comm_id, communication, teams, payoff, allocation)
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
+        idx = self.get_instance_id(home_team)
+
         agents = self.get_agents()
         ids = list(agents.keys())
         random_id = random.choice(ids)
+        chosen_idx = self._allocation[random_id]
+
+        self._payoff[idx, chosen_idx, PayoffEntry.MATCHES] += 1
         return self.get_team(tid=random_id), agents[random_id]
 
 

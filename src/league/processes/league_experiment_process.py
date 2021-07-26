@@ -82,7 +82,8 @@ class LeagueExperimentProcess(ExperimentProcess):
         cmd = AgentParamsUpdateCommand(origin=self.idx, data=(tid, agent_clone))
         self._in_queue.put(cmd)
         del agent_clone
-        self._sync_with_ack()
+        self._ack()
+        self._sync_barrier.wait() if self._sync_barrier is not None else None
 
     def _send_result(self, env_info: Dict):
         """
@@ -94,6 +95,7 @@ class LeagueExperimentProcess(ExperimentProcess):
         data = ((self._home_team.id_, self._away_team.id_), result)
         cmd = PayoffUpdateCommand(origin=self.idx, data=data)
         self._in_queue.put(cmd)
+        self._ack()
 
     def _request_close(self):
         """
@@ -102,12 +104,11 @@ class LeagueExperimentProcess(ExperimentProcess):
         """
         cmd = CloseCommunicationCommand(origin=self.idx)
         self._in_queue.put(cmd)
-        self._sync_with_ack()
+        self._ack()
         self._in_queue.close()
         self._out_queue.close()
 
-    def _sync_with_ack(self):
+    def _ack(self):
         ack = self._out_queue.get()
         if ack is not None:
             raise Exception("Illegal ACK")
-        self._sync_barrier.wait() if self._sync_barrier is not None else None
