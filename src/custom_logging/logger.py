@@ -59,7 +59,7 @@ class MainLogger:
     def info(self, info_str: str):
         self._console_logger.info(info_str)
 
-    def info(self, err: str):
+    def error(self, err: str):
         self._console_logger.error(err)
 
     def log(self, t_env):

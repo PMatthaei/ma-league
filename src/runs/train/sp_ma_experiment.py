@@ -28,6 +28,7 @@ class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
 
     def load_adversary(self, agent: OrderedDict):
         self.away_mac.load_state_dict(agent=agent)
+        del agent
 
     def _integrate_env_info(self):
         total_n_agents = self.env_info["n_agents"]

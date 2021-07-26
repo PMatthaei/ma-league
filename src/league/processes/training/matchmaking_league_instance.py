@@ -3,7 +3,6 @@ from torch.multiprocessing import Barrier, Queue
 
 from typing import Tuple
 
-from league.components.agent_pool import AgentPool
 from league.components.matchmaking import Matchmaking
 from league.processes.league_experiment_process import LeagueExperimentProcess
 from league.utils.team_composer import Team
@@ -12,26 +11,11 @@ from runs.train.ma_experiment import MultiAgentExperiment
 
 
 class MatchmakingLeagueProcess(LeagueExperimentProcess):
-    def __init__(self, agent_pool: AgentPool, matchmaking: Matchmaking, home_team: Team, sync_barrier: Barrier,
+    def __init__(self,
+                 matchmaking: Matchmaking, home_team: Team, sync_barrier: Barrier,
                  communication: Tuple[Queue, Queue],
                  **kwargs):
-        """
-        The process is running a single League-Play and handles communication with the central components.
-        League-Play is a form of NormalPlay where the opponent can be swapped out from a pool of agents (=league).
-        The opponent is fixed and is therefore not learning to prevent non-stationary environment.
-        Opponents are sampled via Self-Play Sampling such as FSP, PFSP or SP.
-
-        Opponent sampling is decided via a matchmaking component.
-
-        :param agent_pool:
-        :param matchmaking:
-        :param home_team:
-        :param queues:
-        :param args:
-        :param logger:
-        :param sync_barrier:
-        """
-        super(MatchmakingLeagueProcess, self).__init__(agent_pool, matchmaking, home_team, communication, sync_barrier,
+        super(MatchmakingLeagueProcess, self).__init__(matchmaking, home_team, communication, sync_barrier,
                                                        **kwargs)
 
     def _run_experiment(self):

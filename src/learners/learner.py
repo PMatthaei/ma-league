@@ -17,14 +17,15 @@ class Learner:
         self.scheme = scheme
         self.logger = logger
         self.args = args
-        self.name = "" if name is None else name
+        self.name = f'{"" if name is None else name}_{self.__class__.__name__.lower()}_'
         self.log_stats_t = -self.args.learner_log_interval - 1
         # Receive params from the agent from Multi-Agent Controller
         self.params = list(mac.parameters())
         self.optimiser = None
 
     def build_optimizer(self):
-        self.optimiser = RMSprop(params=self.params, lr=self.args.lr, alpha=self.args.optim_alpha, eps=self.args.optim_eps)
+        self.optimiser = RMSprop(params=self.params, lr=self.args.lr, alpha=self.args.optim_alpha,
+                                 eps=self.args.optim_eps)
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int) -> None:
         """

@@ -9,12 +9,11 @@ from maenv.utils.enums import EnumEncoder
 
 from custom_logging.platforms import CustomConsoleLogger
 from league.components import PayoffEntry
-from league.components.agent_pool import AgentPool
 from torch.multiprocessing import Barrier, Queue, Manager, current_process
 from maenv.core import RoleTypes, UnitAttackTypes
 from pathlib import Path
 
-from league.processes.message_handler import CommandHandler
+from league.processes.command_handler import CommandHandler
 from league.utils.team_composer import TeamComposer
 from league.processes import REGISTRY as experiment_REGISTRY
 from league.components.matchmaking import REGISTRY as matchmaking_REGISTRY
@@ -50,7 +49,7 @@ class CentralWorker(Process):
         teams = composer.sort_team_units(teams, uid=uid)
         n_teams = len(teams)
         n_entries = len(PayoffEntry)
-
+        comm_id = 0
         #
         # Shared objects
         #
@@ -63,7 +62,7 @@ class CentralWorker(Process):
         # Communication Infrastructure
         #
         in_queues, out_queues = zip(*[(Queue(), Queue()) for _ in range(n_teams)])
-
+        comm_id += n_teams
         #
         # Synchronization
         #
@@ -72,9 +71,11 @@ class CentralWorker(Process):
         #
         # Components
         #
-        agent_pool = AgentPool(shared_storage=agents_dict)
+        in_q, out_q = (Queue(), Queue())
+        in_queues += (in_q,)
+        out_queues += (out_q,)  # Register new queue for later command handler
         matchmaking = matchmaking_REGISTRY[self._args.matchmaking](
-            agent_pool=agent_pool,
+            comm_id=comm_id, communication=(in_q, out_q),
             payoff=payoff,
             allocation=team_allocation,
             teams=teams
@@ -94,7 +95,7 @@ class CentralWorker(Process):
                 log_dir=self._log_dir,
                 home_team=team,
                 matchmaking=matchmaking,
-                agent_pool=agent_pool,
+                # agent_pool=agent_pool,
                 communication=(in_q, out_q),
                 sync_barrier=sync_barrier
             )
@@ -116,6 +117,7 @@ class CentralWorker(Process):
         # Wait for experiments to finish
         #
         [r.join() for r in procs]
+        matchmaking.disconnect()
         handler.join()
 
         #

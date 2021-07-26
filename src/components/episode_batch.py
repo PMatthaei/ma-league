@@ -83,7 +83,6 @@ class EpisodeBatch:
         if data is not None:
             self.data = data
         else:
-
             self.data = _new_data_sn()
             self._setup_data(self.scheme, self.groups, batch_size, max_seq_length, self.preprocess)
 
@@ -179,6 +178,7 @@ class EpisodeBatch:
                 value = th.tensor(value, dtype=dtype, device=self.device)
             else:
                 value = value.to(dtype).to(device=self.device)
+
             # Check validity of following view_as
             _check_safe_view(value, target[key][_slices], key)
             # Add value via view_as

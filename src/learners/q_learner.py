@@ -11,7 +11,6 @@ from components.episode_batch import EpisodeBatch
 class QLearner(Learner):
     def __init__(self, mac: MultiAgentController, scheme, logger, args, name=None):
         super().__init__(mac, scheme, logger, args, name)
-        self.name += "_qlearner_"
 
         self.last_target_update_episode = 0
 
@@ -127,13 +126,6 @@ class QLearner(Learner):
         if self.mixer is not None:
             self.target_mixer.load_state_dict(self.mixer.state_dict())
         self.logger.info("Updated {0}target network.".format(self.name))
-
-    def cuda(self): # TODO: Calling cuda() first creates on CPU then GPU -> slow
-        self.mac.cuda()
-        self.target_mac.cuda()
-        if self.mixer is not None:
-            self.mixer.cuda()
-            self.target_mixer.cuda()
 
     def save_models(self, path, name):
         self.mac.save_models(path, name=self.name)

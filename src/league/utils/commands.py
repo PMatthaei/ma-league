@@ -1,10 +1,8 @@
 import uuid
 from enum import Enum
-from typing import Dict, Any, Tuple
+from typing import  Any, Tuple, OrderedDict
 
-from league.components.payoff_role_based import PayoffEntry
-from league.roles.players import Player
-from learners.learner import Learner
+from league.components import PayoffEntry
 
 
 class CommandTypes(Enum):
@@ -36,13 +34,19 @@ class Ack(BaseCommand):
         super().__init__(CommandTypes.ACK, None, None, data)
 
 
-class ProvideAgentCommand(BaseCommand):
+class AgentParamsUpdateCommand(BaseCommand):
 
-    def __init__(self, origin: int, data: Learner):
+    def __init__(self, origin: int, data: Tuple[int, OrderedDict]):
         super().__init__(CommandTypes.UPDATE, origin, Resources.AGENT, data)
 
 
-class RetrieveAgentCommand(BaseCommand):
+class AgentPoolGetCommand(BaseCommand):
+
+    def __init__(self, origin: int):
+        super().__init__(CommandTypes.GET, origin, Resources.AGENT, None)
+
+
+class AgentParamsGetCommand(BaseCommand):
 
     def __init__(self, origin: int, data: int):
         super().__init__(CommandTypes.GET, origin, Resources.AGENT, data)
@@ -56,11 +60,11 @@ class CheckpointCommand(BaseCommand):
 
 class PayoffUpdateCommand(BaseCommand):
 
-    def __init__(self, origin: int, data: Tuple[Tuple[Player, Player], PayoffEntry]):
+    def __init__(self, origin: int, data: Tuple[Tuple[int, int], PayoffEntry]):
         super().__init__(CommandTypes.UPDATE, origin, Resources.PAYOFF, data)
 
 
-class CloseLeagueProcessCommand(BaseCommand):
+class CloseCommunicationCommand(BaseCommand):
 
     def __init__(self, origin: int):
         super().__init__(CommandTypes.CLOSE, origin, Resources.PROCESS, None)

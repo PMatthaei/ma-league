@@ -15,7 +15,7 @@ class EnvWorker(Process):
         self.args = args
         self.in_q = in_q
         self.out_q = out_q
-        assert self._is_consistent_env(), "Environments are not consistent."
+        #assert self._is_consistent_env(), "Environments are not consistent."
         self.env = env_REGISTRY[self.args.env](**self.args.env_args)
         self.terminated_env = False
 

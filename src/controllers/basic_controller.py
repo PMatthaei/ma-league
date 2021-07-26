@@ -68,9 +68,6 @@ class BasicMAC(MultiAgentController):
     def load_state_dict(self, agent: OrderedDict):
         self.agent.load_state_dict(agent)
 
-    def cuda(self):
-        self.agent.cuda()
-
     def save_models(self, path, name):
         th.save(self.agent.state_dict(), "{}/{}agent.th".format(path, name))
 

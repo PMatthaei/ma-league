@@ -21,15 +21,15 @@ class DQNAgentNetwork(AgentNetwork):
         super(DQNAgentNetwork, self).__init__(input_shape, args)
         self.args = args
 
-        self.fc1 = nn.Linear(input_shape, args.rnn_hidden_dim)
-        self.fc2 = nn.Linear(args.rnn_hidden_dim, args.n_actions)
+        self.fc1 = nn.Linear(input_shape, args.rnn_hidden_dim, device=self.args.device)
+        self.fc2 = nn.Linear(args.rnn_hidden_dim, args.n_actions, device=self.args.device)
 
     def init_hidden(self):
         """
         model has no hidden state, but we will pretend otherwise for consistency
         """
-        vbl = Variable(th.zeros(self.args.batch_size, 1, 1))
-        return vbl.cuda() if self.args.use_cuda else vbl
+        vbl = Variable(th.zeros(self.args.batch_size, 1, 1, device=self.args.device))
+        return vbl
 
     def forward(self, inputs, hidden_states):
         x = F.relu(self.fc1(inputs))

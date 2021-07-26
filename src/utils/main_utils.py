@@ -102,7 +102,7 @@ def build_config_argsparser(config, params):
         except NameError:
             continue
         except SyntaxError:
-            print(value)
+            continue
         value_type = type(value) if not isinstance(value, bool) else str_to_bool
         parser.add_argument(f'--{key}', type=value_type, default=value, required=False)
     for i, p in enumerate(params):

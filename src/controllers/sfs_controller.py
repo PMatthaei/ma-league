@@ -5,7 +5,7 @@ from torch import Tensor
 
 from components.episode_batch import EpisodeBatch
 from controllers.multi_agent_controller import MultiAgentController
-from modules.networks.policy_successor_features import PolicySuccessorFeatures
+from modules.layers.policy_successor_features import PolicySuccessorFeatures
 
 
 class SFSController(MultiAgentController):

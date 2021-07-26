@@ -1,4 +1,5 @@
 import argparse
+import traceback
 from typing import Dict
 
 from torch.multiprocessing import Process, current_process
@@ -72,6 +73,7 @@ class ExperimentProcess(Process):
             self._run_experiment()
         except Exception as e:  # Interrupt should not be issued in _run_experiment
             self._logger.info(f"Experiment process ended due to error: {e}")
+            traceback.print_exc()
 
     def _setup_logger(self, _log, _run, args):
         self._logger = MainLogger(_log, args)

@@ -16,9 +16,8 @@ from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
 from custom_logging.platforms import CustomConsoleLogger
 from league import SimpleLeague
-from league.components.payoff_role_based import RolebasedPayoff
-from league.processes.training.role_based_league_process import RolebasedLeagueProcess
-from league.processes.message_handler import CommandHandler
+from league.processes.training.role_based_league_instance import RolebasedLeagueProcess
+from league.processes.command_handler import CommandHandler
 from league.utils.team_composer import TeamComposer
 from custom_logging.logger import MainLogger
 from utils.main_utils import get_default_config, get_config, get_match_build_plan, recursive_dict_update, config_copy, \
