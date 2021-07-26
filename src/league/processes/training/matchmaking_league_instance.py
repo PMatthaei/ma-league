@@ -10,18 +10,16 @@ from runs.train.league_experiment import LeagueExperiment
 from runs.train.ma_experiment import MultiAgentExperiment
 
 
-class MatchmakingLeagueProcess(LeagueExperimentProcess):
-    def __init__(self,
-                 matchmaking: Matchmaking, home_team: Team, sync_barrier: Barrier,
-                 communication: Tuple[Queue, Queue],
-                 **kwargs):
-        super(MatchmakingLeagueProcess, self).__init__(matchmaking, home_team, communication, sync_barrier,
-                                                       **kwargs)
+class MatchmakingLeagueInstance(LeagueExperimentProcess):
+    def __init__(self, matchmaking: Matchmaking, home_team: Team, communication: Tuple[int, Tuple[Queue, Queue]],
+                 sync_barrier: Barrier, **kwargs):
+
+        super().__init__(matchmaking, home_team, communication, sync_barrier, **kwargs)
 
     def _run_experiment(self):
         self._logger.info(f"Start pre-training with AI in process: {self._proc_id} with {self._home_team}")
 
-        # Initial play to train policy of the team against AI against mirrored team
+        # Initial play to train policy of the team against mirrored AI
         self._configure_experiment(home=self._home_team, ai=True)
         self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
         self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)

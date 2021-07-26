@@ -9,20 +9,23 @@ from league.processes.league_experiment_process import LeagueExperimentProcess
 from league.roles.alphastar.main_player import MainPlayer
 from league.roles.players import Player
 from league.utils.team_composer import Team
+from runs.train.ma_experiment import MultiAgentExperiment
 
 
 class RolebasedLeagueProcess(LeagueExperimentProcess):
-    def __init__(self, players: List[Player], player_id: int, sync_barrier: Barrier,
-                 matchmaking: Matchmaking,
-                 home_team: Team, communication: Tuple[Queue, Queue], **kwargs):
+    def __init__(self, matchmaking: Matchmaking, home_team: Team, communication: Tuple[int, Tuple[Queue, Queue]],
+                 sync_barrier: Barrier, **kwargs):
+
         super().__init__(matchmaking, home_team, communication, sync_barrier, **kwargs)
 
     def _run_experiment(self):
-        # Share initial agent
-        self._share_agent_params()
+        self._logger.info(f"Start pre-training with AI in process: {self._proc_id} with {self._home_team}")
 
-        # Wait at barrier until every league process performed the sharing step before the next step
-        self._sync_barrier.wait()
+        # Initial play to train policy of the team against mirrored AI
+        self._configure_experiment(home=self._home_team, ai=True)
+        self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
+        self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
+        self._share_agent_params(self.home_agent_state)
 
         # Progress to save initial checkpoint of agents after all runs performed setup
         if isinstance(self._home, MainPlayer):  # TODO: Allow for different kinds of initial historical players
