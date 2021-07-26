@@ -46,13 +46,6 @@ class PrioritizedFictitiousSelfPlay(OpponentSampling):
         :param weighting:
         """
         super().__init__()
-        # TODO causes pickle error because of lambdas. Maybe prevent pickling by constructing the object in the processes!
-        # self.weightings = {
-        #     "variance": lambda x: x * (1 - x),
-        #     "linear": lambda x: 1 - x,
-        #     "linear_capped": lambda x: np.minimum(0.5, 1 - x),
-        #     "squared": lambda x: (1 - x) ** 2,
-        # }
 
     def sample(self, opponents, prio_measure=None, weighting="linear"):
         if prio_measure is None:
