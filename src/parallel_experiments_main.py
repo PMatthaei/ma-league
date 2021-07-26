@@ -10,6 +10,8 @@ import torch as th
 from league.processes.experiment_process import ExperimentProcess
 from copy import deepcopy
 
+from league.processes.training.ma_experiment_process import MultiAgentExperimentProcess
+
 th.multiprocessing.set_start_method('spawn', force=True)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
@@ -30,7 +32,7 @@ if __name__ == '__main__':
     procs = []
     # Start multiple experiments
     for idx in range(args.n):
-        proc = ExperimentProcess(idx=idx, params=params, configs_dir=src_dir, log_dir=log_dir)
+        proc = MultiAgentExperimentProcess(idx=idx, params=params, configs_dir=src_dir, log_dir=log_dir)
         procs.append(proc)
 
     [r.start() for r in procs]

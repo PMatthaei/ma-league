@@ -2,7 +2,7 @@ import uuid
 from enum import Enum
 from typing import  Any, Tuple, OrderedDict
 
-from league.components.payoff_role_based import PayoffEntry
+from league.components import PayoffEntry
 
 
 class CommandTypes(Enum):

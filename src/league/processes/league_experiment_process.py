@@ -98,7 +98,7 @@ class LeagueExperimentProcess(ExperimentProcess):
 
     def _request_close(self):
         """
-        Close this instance in the parent process
+        Close the communication channel to the league
         :return:
         """
         cmd = CloseCommunicationCommand(origin=self.idx)

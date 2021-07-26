@@ -1,4 +1,4 @@
-from modules.networks.mlp import MLP
+from modules.layers.mlp import MLP
 from torch.optim import RMSprop
 
 

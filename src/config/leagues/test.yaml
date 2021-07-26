@@ -8,9 +8,10 @@ env_args:
   record: False
   fps: 60
 
+buffer_cpu_only: False
 mac: "basic"
-headless_controls: "False"
-use_cuda: "True"
-use_tensorboard: "True"
+headless_controls: False
+use_cuda: True
+use_tensorboard: True
 
 matchmaking: "random"

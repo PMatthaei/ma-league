@@ -1,4 +1,4 @@
-from league.components.payoff_role_based import PayoffEntry
+from league.components import PayoffEntry
 
 
 def extract_result(env_info: dict, policy_team_id: int):
