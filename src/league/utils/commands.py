@@ -64,7 +64,7 @@ class PayoffUpdateCommand(BaseCommand):
         super().__init__(CommandTypes.UPDATE, origin, Resources.PAYOFF, data)
 
 
-class CloseLeagueProcessCommand(BaseCommand):
+class CloseCommunicationCommand(BaseCommand):
 
     def __init__(self, origin: int):
         super().__init__(CommandTypes.CLOSE, origin, Resources.PROCESS, None)

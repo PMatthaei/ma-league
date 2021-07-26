@@ -6,7 +6,7 @@ from league.components import AgentPool, Matchmaking
 from league.processes.command_handler import clone_state_dict
 from league.processes.experiment_process import ExperimentProcess
 from league.processes.training.utils import extract_result
-from league.utils.commands import PayoffUpdateCommand, CloseLeagueProcessCommand, AgentParamsUpdateCommand, \
+from league.utils.commands import PayoffUpdateCommand, CloseCommunicationCommand, AgentParamsUpdateCommand, \
     AgentParamsGetCommand
 from league.utils.team_composer import Team
 
@@ -101,7 +101,7 @@ class LeagueExperimentProcess(ExperimentProcess):
         Close this instance in the parent process
         :return:
         """
-        cmd = CloseLeagueProcessCommand(origin=self.idx)
+        cmd = CloseCommunicationCommand(origin=self.idx)
         self._in_queue.put(cmd)
         self._sync_with_ack()
         self._in_queue.close()

@@ -5,14 +5,15 @@ from collections import OrderedDict
 
 from custom_logging.platforms import CustomConsoleLogger
 from league.components import PayoffEntry
-from league.utils.commands import CloseLeagueProcessCommand, PayoffUpdateCommand, CheckpointCommand, \
+from league.utils.commands import CloseCommunicationCommand, PayoffUpdateCommand, CheckpointCommand, \
     AgentParamsUpdateCommand, \
     AgentParamsGetCommand, AgentPoolGetCommand
 
 
-def clone_state_dict(dict: OrderedDict):
-    clone = OrderedDict([(entry, dict[entry].clone()) for entry in dict])
+def clone_state_dict(state: OrderedDict):
+    clone = OrderedDict([(entry, state[entry].clone()) for entry in state])
     return clone
+
 
 class CommandHandler(Process):
     def __init__(self, allocation: Dict[int, int], n_senders: int, communication: Tuple[List[Queue], List[Queue]],
@@ -59,7 +60,7 @@ class CommandHandler(Process):
 
     def _handle_commands(self, in_queue: Queue):
         cmd = in_queue.get_nowait()
-        if isinstance(cmd, CloseLeagueProcessCommand):
+        if isinstance(cmd, CloseCommunicationCommand):
             self._close(cmd)
         elif isinstance(cmd, CheckpointCommand):
             self._checkpoint(cmd)
@@ -81,7 +82,7 @@ class CommandHandler(Process):
             self.shutdown = True
             self._in_queues[cmd.origin].close()
             self.logger.info("League Coordinator shut down.")
-        self._out_queues[cmd.origin].put(None) # ACK
+        self._out_queues[cmd.origin].put(None)  # ACK
         self._out_queues[cmd.origin].close()
 
     def _checkpoint(self, cmd: CheckpointCommand):
@@ -105,7 +106,7 @@ class CommandHandler(Process):
         self._payoff[home_instance, away_instance, PayoffEntry.GAMES] += 1
         self._payoff[home_instance, away_instance, outcome.value] += 1
         self.n_updates += 1
-        self._out_queues[cmd.origin].put(None) # ACK
+        self._out_queues[cmd.origin].put(None)  # ACK
 
     def _get_agent(self, cmd: AgentParamsGetCommand):
         agent_params = clone_state_dict(self._agent_pool[cmd.data])
@@ -121,5 +122,4 @@ class CommandHandler(Process):
         tid, params = cmd.data
         self._agent_pool[tid] = params
         self.logger.info(f"Received parameter update for agent of team {tid}")
-        self._out_queues[cmd.origin].put(None) # ACK
-
+        self._out_queues[cmd.origin].put(None)  # ACK

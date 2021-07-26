@@ -1,7 +1,7 @@
 from typing import Tuple
 from torch.multiprocessing import Queue
 
-from league.utils.commands import AgentPoolGetCommand
+from league.utils.commands import AgentPoolGetCommand, CloseCommunicationCommand
 
 
 class AgentPool:
@@ -22,3 +22,7 @@ class AgentPool:
         self._in_q.put(cmd)
         pool = self._out_q.get()
         return pool
+
+    def disconnect(self):
+        cmd = CloseCommunicationCommand(origin=self._comm_id)
+        self._in_q.put(cmd)

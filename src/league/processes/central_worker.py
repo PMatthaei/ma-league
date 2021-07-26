@@ -73,8 +73,8 @@ class CentralWorker(Process):
         # Components
         #
         in_q, out_q = (Queue(), Queue())
-        in_queues += (in_q, )
-        out_queues+= (out_q, )  # Register new queue for later command handler
+        in_queues += (in_q,)
+        out_queues += (out_q,)  # Register new queue for later command handler
         agent_pool = AgentPool(comm_id=comm_id, communication=(in_q, out_q))
         matchmaking = matchmaking_REGISTRY[self._args.matchmaking](
             agent_pool=agent_pool,
@@ -119,6 +119,7 @@ class CentralWorker(Process):
         # Wait for experiments to finish
         #
         [r.join() for r in procs]
+        agent_pool.disconnect()
         handler.join()
 
         #
