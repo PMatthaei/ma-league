@@ -4,7 +4,7 @@ from torch.multiprocessing import Barrier, Queue
 
 from typing import Union, Tuple, List
 
-from league.components import AgentPool, Matchmaking
+from league.components import Matchmaking
 from league.processes.league_experiment_process import LeagueExperimentProcess
 from league.roles.alphastar.main_player import MainPlayer
 from league.roles.players import Player
@@ -13,7 +13,7 @@ from runs.train.league_experiment import LeagueExperiment
 
 
 class RolebasedLeagueProcess(LeagueExperimentProcess):
-    def __init__(self, players: List[Player], player_id: int, sync_barrier: Barrier, agent_pool: AgentPool,
+    def __init__(self, players: List[Player], player_id: int, sync_barrier: Barrier,
                  matchmaking: Matchmaking,
                  home_team: Team, communication: Tuple[Queue, Queue], **kwargs):
         """
@@ -32,7 +32,7 @@ class RolebasedLeagueProcess(LeagueExperimentProcess):
         :param logger:
         :param sync_barrier: Barrier to synchronize all league processes
         """
-        super().__init__(agent_pool, matchmaking, home_team, communication, sync_barrier, **kwargs)
+        super().__init__(matchmaking, home_team, communication, sync_barrier, **kwargs)
 
     def _run_experiment(self):
         # Share initial agent

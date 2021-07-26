@@ -9,7 +9,6 @@ from maenv.utils.enums import EnumEncoder
 
 from custom_logging.platforms import CustomConsoleLogger
 from league.components import PayoffEntry
-from league.components.agent_pool import AgentPool
 from torch.multiprocessing import Barrier, Queue, Manager, current_process
 from maenv.core import RoleTypes, UnitAttackTypes
 from pathlib import Path
@@ -75,9 +74,8 @@ class CentralWorker(Process):
         in_q, out_q = (Queue(), Queue())
         in_queues += (in_q,)
         out_queues += (out_q,)  # Register new queue for later command handler
-        agent_pool = AgentPool(comm_id=comm_id, communication=(in_q, out_q))
         matchmaking = matchmaking_REGISTRY[self._args.matchmaking](
-            agent_pool=agent_pool,
+            comm_id=comm_id, communication=(in_q, out_q),
             payoff=payoff,
             allocation=team_allocation,
             teams=teams
@@ -119,7 +117,7 @@ class CentralWorker(Process):
         # Wait for experiments to finish
         #
         [r.join() for r in procs]
-        agent_pool.disconnect()
+        matchmaking.disconnect()
         handler.join()
 
         #

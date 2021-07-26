@@ -3,7 +3,6 @@ from torch.multiprocessing import Barrier, Queue
 
 from typing import Tuple
 
-from league.components.agent_pool import AgentPool
 from league.components.matchmaking import Matchmaking
 from league.processes.league_experiment_process import LeagueExperimentProcess
 from league.utils.team_composer import Team
@@ -12,7 +11,7 @@ from runs.train.ma_experiment import MultiAgentExperiment
 
 
 class MatchmakingLeagueProcess(LeagueExperimentProcess):
-    def __init__(self, #agent_pool: AgentPool,
+    def __init__(self,
                  matchmaking: Matchmaking, home_team: Team, sync_barrier: Barrier,
                  communication: Tuple[Queue, Queue],
                  **kwargs):

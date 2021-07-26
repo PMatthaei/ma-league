@@ -1,14 +1,14 @@
 import random
 from typing import Tuple, Dict, Union, List, OrderedDict
+from torch.multiprocessing import Queue
 
 import torch as th
 from torch import Tensor
 
 from league.components import PayoffEntry
-from league.components.agent_pool import AgentPool
-from league.components.self_play import OpponentSampling, PrioritizedFictitiousSelfPlay, FictitiousSelfPlay
+from league.components.self_play import PrioritizedFictitiousSelfPlay, FictitiousSelfPlay
+from league.utils.commands import AgentPoolGetCommand, CloseCommunicationCommand
 from league.utils.team_composer import Team
-from modules.agents import AgentNetwork
 
 
 def dd():
@@ -17,16 +17,28 @@ def dd():
 
 class Matchmaking:
 
-    def __init__(self, agent_pool: AgentPool, teams: List[Team], payoff: Tensor, allocation: Dict[int, int]):
-        self._agent_pool = agent_pool
+    def __init__(self, comm_id: int, communication: Tuple[Queue, Queue], teams: List[Team], payoff: Tensor,
+                 allocation: Dict[int, int]):
+        self._in_q, self._out_q = communication
+        self._comm_id = comm_id
         self._allocation = allocation
         self._payoff = payoff
         self._teams = teams
 
+    def get_agents(self):
+        cmd = AgentPoolGetCommand(origin=self._comm_id)
+        self._in_q.put(cmd)
+        pool = self._out_q.get()
+        return pool
+
+    def disconnect(self):
+        cmd = CloseCommunicationCommand(origin=self._comm_id)
+        self._in_q.put(cmd)
+
     def get_instance_id(self, team: Team) -> int:
         return self._allocation[team.id_]
 
-    def get_team(self, instance_id: int=None, tid=None) -> Team:
+    def get_team(self, instance_id: int = None, tid=None) -> Team:
         if tid is None:
             _inv_allocation = {v: k for k, v in self._allocation.items()}
             tid = _inv_allocation[instance_id]
@@ -37,13 +49,13 @@ class Matchmaking:
 
 
 class PFSPMatchmaking(Matchmaking):
-    def __init__(self, agent_pool: AgentPool, teams: List[Team], payoff: Tensor, allocation: Dict[int, int]):
-        super().__init__(agent_pool, teams, payoff, allocation)
+    def __init__(self, comm_id: int, communication: Tuple[Queue, Queue], teams: List[Team], payoff: Tensor, allocation: Dict[int, int]):
+        super().__init__(comm_id, communication, teams, payoff, allocation)
         self._sampling_strategy = PrioritizedFictitiousSelfPlay()
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         idx = self.get_instance_id(home_team)
-        opponents = self._agent_pool.agents
+        opponents = self.get_agents()
         games = self._payoff[idx, :, PayoffEntry.GAMES]
         no_game_mask = games == 0.0
         wins = self._payoff[idx, :, PayoffEntry.WIN]
@@ -57,13 +69,13 @@ class PFSPMatchmaking(Matchmaking):
 
 
 class FSPMatchmaking(Matchmaking):
-    def __init__(self, agent_pool: AgentPool, teams: List[Team], payoff: Tensor, allocation: Dict[int, int]):
-        super().__init__(agent_pool, teams, payoff, allocation)
+    def __init__(self, comm_id: int, communication: Tuple[Queue, Queue], teams: List[Team], payoff: Tensor, allocation: Dict[int, int]):
+        super().__init__(comm_id, communication, teams, payoff, allocation)
         self._sampling_strategy = FictitiousSelfPlay()
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         idx = self.get_instance_id(home_team)
-        opponents = self._agent_pool.agents
+        opponents = self.get_agents()
         chosen: Team = self._sampling_strategy.sample(opponents=opponents)
         chosen_idx = self.get_instance_id(chosen)
         self._payoff[idx, chosen_idx, PayoffEntry.MATCHES] += 1
@@ -71,12 +83,12 @@ class FSPMatchmaking(Matchmaking):
 
 
 class BalancedMatchmaking(Matchmaking):
-    def __init__(self, agent_pool: AgentPool, allocation: Dict[int, int], payoff: Tensor, teams: List[Team]):
-        super().__init__(agent_pool, teams, payoff, allocation)
+    def __init__(self, comm_id: int, communication: Tuple[Queue, Queue], teams: List[Team], payoff: Tensor, allocation: Dict[int, int]):
+        super().__init__(comm_id, communication, teams, payoff, allocation)
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         idx = self.get_instance_id(home_team)
-        agents = self._agent_pool.agents
+        agents = self.get_agents()
         matches = self._payoff[idx, :, PayoffEntry.MATCHES]
         # matches = matches[matches != idx] # Remove play against one self
         chosen_idx = th.argmin(matches).item()  # Get adversary we played the least
@@ -86,11 +98,11 @@ class BalancedMatchmaking(Matchmaking):
 
 
 class RandomMatchmaking(Matchmaking):
-    def __init__(self, agent_pool: AgentPool, allocation: Dict[int, int], payoff: Tensor, teams: List[Team]):
-        super().__init__(agent_pool, teams, payoff, allocation)
+    def __init__(self, comm_id: int, communication: Tuple[Queue, Queue], teams: List[Team], payoff: Tensor, allocation: Dict[int, int]):
+        super().__init__(comm_id, communication, teams, payoff, allocation)
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
-        agents = self._agent_pool.agents
+        agents = self.get_agents()
         ids = list(agents.keys())
         random_id = random.choice(ids)
         return self.get_team(tid=random_id), agents[random_id]

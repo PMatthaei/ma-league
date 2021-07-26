@@ -2,7 +2,7 @@ from typing import Tuple, Dict, OrderedDict
 
 from torch.multiprocessing import Queue, Barrier
 
-from league.components import AgentPool, Matchmaking
+from league.components import Matchmaking
 from league.processes.command_handler import clone_state_dict
 from league.processes.experiment_process import ExperimentProcess
 from league.processes.training.utils import extract_result
@@ -14,7 +14,6 @@ from league.utils.team_composer import Team
 class LeagueExperimentProcess(ExperimentProcess):
 
     def __init__(self,
-                 # agent_pool: AgentPool,
                  matchmaking: Matchmaking,
                  home_team: Team,
                  communication: Tuple[Queue, Queue],
