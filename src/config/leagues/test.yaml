@@ -1,5 +1,5 @@
 team_size: 5 # default size of a team within the league
-league_play_time_mins: 0.001 # how long is a play against one opponent running in minutes
+play_time_mins: 0.001 # how long is a play against one opponent running in minutes
 league_runtime_hours: 0.0017 # how long is the hole league running in hours
 n_league_evaluation_episodes: 1
 show_exp_parameters: True
@@ -8,10 +8,10 @@ env_args:
   record: False
   fps: 60
 
-buffer_cpu_only: False
-mac: "basic"
+buffer_cpu_only: True
+mac: "ensemble"
 headless_controls: False
-use_cuda: True
+use_cuda: False
 use_tensorboard: True
 
 matchmaking: "pfsp"

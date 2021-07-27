@@ -21,6 +21,6 @@ class MultiAgentExperimentProcess(ExperimentProcess):
 
     def _run_experiment(self) -> None:
         self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
-        self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
+        self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
         self._logger.info(f"Training in process finished: {self._proc_id}")
 

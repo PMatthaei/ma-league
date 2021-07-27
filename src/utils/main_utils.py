@@ -76,12 +76,17 @@ def get_config(params, arg_name, subfolder, path):
             break
 
     if config_name is not None:
-        with open(os.path.join(path, "config", subfolder, "{}.yaml".format(config_name)), "r") as f:
-            try:
-                config_dict = yaml.load(f, Loader=yaml.FullLoader)
-            except yaml.YAMLError as exc:
-                assert False, "{}.yaml error: {}".format(config_name, exc)
-        return config_dict
+        return load_config_yaml(path, subfolder, config_name)
+
+
+def load_config_yaml(src_path, subfolder, config_name):
+    with open(os.path.join(src_path, "config", subfolder, "{}.yaml".format(config_name)), "r") as f:
+        try:
+            config_dict = yaml.load(f, Loader=yaml.FullLoader)
+        except yaml.YAMLError as exc:
+            assert False, "{}.yaml error: {}".format(config_name, exc)
+
+    return config_dict
 
 
 def build_config_argsparser(config, params):

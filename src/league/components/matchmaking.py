@@ -133,8 +133,8 @@ class RandomMatchmaking(Matchmaking):
 
 
 REGISTRY = {
-    "uniform": BalancedMatchmaking,
     "pfsp": PFSPMatchmaking,
+    "uniform": BalancedMatchmaking,
     "random": RandomMatchmaking,
     "fsp": FSPMatchmaking
 }

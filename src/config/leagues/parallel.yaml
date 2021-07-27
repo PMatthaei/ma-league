@@ -1,2 +1,2 @@
-league_play_time_mins: 120 # how long is a play against one opponent running in minutes
+play_time_mins: 120 # how long is a play against one opponent running in minutes
 show_exp_parameters: True

@@ -44,7 +44,7 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
         self._configure_experiment(home=self._home_team, ai=True)
         self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
         self._logger.info(f"Train against AI in process: {self._proc_id}")
-        self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
+        self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
         self._logger.info(f"Share agent from process: {self._proc_id}")
         self._share_agent_params(agent=self.home_agent_state)  # make agent accessible to other instances
 
@@ -87,7 +87,7 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
             self._configure_experiment(home=self._away_team, ai=True)  # Set the foreign team constellation as home team
             self._experiment = EnsembleExperiment(args=self._args, logger=self._logger, on_episode_end=self._send_result)
             self._experiment.load_ensemble(native=foreign_agent_state, foreign_agent=agent_state)
-            self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
+            self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
 
             #
             # Share agent after training to make its current state accessible to other processes

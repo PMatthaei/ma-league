@@ -24,7 +24,7 @@ class RolebasedLeagueProcess(LeagueExperimentProcess):
         # Initial play to train policy of the team against mirrored AI
         self._configure_experiment(home=self._home_team, ai=True)
         self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
-        self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
+        self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
         self._share_agent_params(self.home_agent_state)
 
         # Progress to save initial checkpoint of agents after all runs performed setup
@@ -47,7 +47,7 @@ class RolebasedLeagueProcess(LeagueExperimentProcess):
 
             # Start training against new opponent and integrate the team of the away player
             self._register_team(self._away, rebuild=True)
-            self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
+            self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
 
             # Share agent after training
             self._share_agent_params()

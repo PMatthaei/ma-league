@@ -22,7 +22,7 @@ class MatchmakingLeagueInstance(LeagueExperimentProcess):
         # Initial play to train policy of the team against mirrored AI
         self._configure_experiment(home=self._home_team, ai=True)
         self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
-        self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
+        self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
         self._share_agent_params(self.home_agent_state)
 
         start_time = time.time()
@@ -41,7 +41,7 @@ class MatchmakingLeagueInstance(LeagueExperimentProcess):
             self._configure_experiment(home=self._home_team, away=self._away_team, ai=False)
             self._experiment = LeagueExperiment(args=self._args, logger=self._logger, on_episode_end=self._send_result)
             self._experiment.load_adversary(agent=away_agent)
-            self._experiment.start(play_time_seconds=self._args.league_play_time_mins * 60)
+            self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
 
             end_time = time.time()
 

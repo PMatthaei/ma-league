@@ -79,7 +79,7 @@ class MainPlayer(Player):
         if len(historical) == 0:  # no new historical opponents found # TODO
             return opponent, False
 
-        # PFSP on checkpoint of opponent
+        # PFSP on checkpoints of opponent
         win_rates = self._payoff[self.id_, historical]
         chosen = self._pfsp.sample(historical, prio_measure=win_rates, weighting="variance")
         return self._payoff.players[chosen], True
