@@ -60,7 +60,7 @@ class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
         if self.finish_callback is not None:
             self.finish_callback()
 
-    def _train_episode(self, episode_num, after_train=None):
+    def _train_episode(self, episode_num, on_train_end=None):
         # Run for a whole episode at a time
         home_batch, _, env_info = self.stepper.run(test_mode=False)
         if self.episode_callback is not None:
@@ -83,8 +83,8 @@ class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
             # ! WARN ! Only train the learning agent not it`s sampled self-play adversary
             self.home_learner.train(home_sample, self.stepper.t_env, episode_num)
 
-            if after_train:
-                after_train(self.learners)
+            if on_train_end:
+                on_train_end(self.learners)
 
     def evaluate_mean_returns(self, episode_n=1):
         self.logger.info("Evaluate for {} episodes.".format(episode_n))

@@ -32,7 +32,7 @@ class MultiAgentExperiment(ExperimentRun):
         self.learners = []
         self.start_time = time.time()
         self.last_time = self.start_time
-        self.episode_callback = on_episode_end
+        self.on_episode_end = on_episode_end
         self.home_mac, self.home_buffer, self.home_learner = None, None, None
 
         if self.args.sfs:  # Use feature function instead of reward
@@ -154,7 +154,7 @@ class MultiAgentExperiment(ExperimentRun):
         while self._has_not_reached_time_limit or self._has_not_reached_t_max:
 
             # Run for a whole episode at a time
-            self._train_episode(episode_num=episode, after_train=train_callback)
+            self._train_episode(episode_num=episode, on_train_end=train_callback)
 
             # Execute test runs once in a while
             n_test_runs = max(1, self.args.test_nepisode // self.stepper.batch_size)
@@ -201,10 +201,10 @@ class MultiAgentExperiment(ExperimentRun):
         self.stepper.close_env()
         self.logger.info("Finished.")
 
-    def _train_episode(self, episode_num, after_train=None):
+    def _train_episode(self, episode_num, on_train_end=None):
         episode_batch, env_info = self.stepper.run(test_mode=False)
-        if self.episode_callback is not None:
-            self.episode_callback(env_info)
+        if self.on_episode_end is not None:
+            self.on_episode_end(env_info)
 
         self.home_buffer.insert_episode_batch(episode_batch)
 
@@ -220,8 +220,8 @@ class MultiAgentExperiment(ExperimentRun):
 
             self.home_learner.train(episode_sample_batch, self.stepper.t_env, episode_num)
 
-            if after_train:
-                after_train(self.learners)
+            if on_train_end is not None:
+                on_train_end(self.learners)
 
     def _test(self, n_test_runs):
         self.last_test_T = self.stepper.t_env
