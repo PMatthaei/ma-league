@@ -76,6 +76,7 @@ class ExperimentProcess(Process):
     def run_sacred_framework(self, _run, _config, _log):
         self._args = SimpleNamespace(**_config)
         self._args.device = "cuda" if self._args.use_cuda else "cpu"
+        self._args.log_dir = self._instance_log_dir
         self._args.env_args["record"] = self._instance_log_dir if self._args.env_args["record"] else ""
 
         self._setup_logger(_log, _run, self._args)

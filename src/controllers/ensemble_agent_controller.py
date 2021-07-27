@@ -119,10 +119,13 @@ class EnsembleMAC(BasicMAC):
         self.agent.trained_steps = trained_steps
 
     def save_models(self, path, name):
-        raise NotImplementedError()
+        th.save(self.agent.state_dict(),  f"{path}/{name}agent.th")
+        for aid, state in self.ensemble.items():
+            th.save(state, f"{path}/{name}ensemble_agent{aid}.th")
 
     def load_models(self, path, name):
-        raise NotImplementedError()
+        self.agent.load_state_dict(
+            th.load("{}/{}agent.th".format(path, name), map_location=lambda storage, loc: storage))
 
     @property
     def n_native_agents(self):

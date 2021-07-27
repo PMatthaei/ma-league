@@ -23,59 +23,7 @@ while getopts ":h" option; do
   esac
 done
 
-base_command="python src/main.py "
-#
-#
-# EXPERIMENT SELECT
-#
-#
-title="Select experiment mode:"
-prompt="Pick:"
-mode_options=("Normal Play" "Self Play" "Role-based League Play" "Matchmaking League Play" "JPC Evaluation" "Quit")
-echo "$title"
-PS3="$prompt "
-select mode in "${mode_options[@]}"; do
-  case "$REPLY" in
-
-  1)
-    mode="play_mode=normal "
-    break
-    ;;
-
-  2)
-    mode="play_mode=self "
-    break
-    ;;
-
-  3)
-    base_command="python src/rolebased_league_main.py "
-    mode="play_mode=league --league-config=default "
-    break
-    ;;
-
-  4)
-    base_command="python src/matchmaking_league_main.py "
-    mode="play_mode=league --league-config=default "
-    break
-    ;;
-
-  5)
-    mode="play_mode=self eval=jpc "
-    break
-    ;;
-
-  6)
-    echo "User forced quit."
-    exit
-    ;;
-
-  *)
-    echo "Invalid option. Try another one. Or Quit"
-    continue
-    ;;
-
-  esac
-done
+base_command="python src/central_worker_main.py "
 
 #
 #
@@ -119,36 +67,27 @@ select alg in "${algs_options[@]}"; do
   esac
 done
 
-env_config="--env-config=ma with "
-
 #
 #
-# SAVE MODEL SELECT
+# EXPERIMENT SELECT
 #
 #
-title="Should training models be saved?:"
+title="Choose experiment:"
 prompt="Pick:"
-save_options=("Yes" "No" "Quit")
+base_league="--league-config="
+exp_options=("ENSEMBLE" "MATCHMAKING")
 echo "$title"
 PS3="$prompt "
-select save_model in "${save_options[@]}"; do
+select exp in "${exp_options[@]}"; do
   case "$REPLY" in
 
   1)
-    save_model="save_model=True "
-    #
-    #
-    # SAVE INTERVAL INPUT
-    #
-    #
-    echo "Enter desired save interval(in env steps) or press enter for default: "
-    read -r save_model_interval
-    save_model_interval="save_model_interval=${save_model_interval} "
+    exp=$base_league"ensemble "
     break
     ;;
 
   2)
-    save_model="save_model=False "
+    exp=$base_league"matchmaking "
     break
     ;;
 
@@ -165,53 +104,13 @@ select save_model in "${save_options[@]}"; do
   esac
 done
 
-
 #
+# FIXED ENVIRONMENT
 #
-# PARALLELISM SELECT
-#
-#
-title="Use parallelism in environment stepping:"
-prompt="Pick:"
-instances=""
-parallel_options=("Yes" "No" "Quit")
-echo "$title"
-PS3="$prompt "
-select parallel in "${parallel_options[@]}"; do
-  case "$REPLY" in
+env_config="--env-config=ma "
 
-  1)
-    parallel="runner=parallel "
-    #
-    #
-    # INSTANCES INPUT
-    #
-    #
-    echo "Enter desired number of parallel env instances: "
-    read -r instances
-    instances="batch_size_run=${instances} "
-    break
-    ;;
 
-  2)
-    parallel="runner=episode "
-    break
-    ;;
-
-  3)
-    echo "User forced quit."
-    exit
-    ;;
-
-  *)
-    echo "Invalid option. Try another one. Or Quit"
-    continue
-    ;;
-
-  esac
-done
-
-run=$base_command$alg$env_config$mode$save_model$save_model_interval$parallel$instances" headless_controls=False use_tensorboard=False"
+run=$base_command$alg$env_config$exp"--save_model=True --save_interval=250000 --headless_controls=False --use_tensorboard=True force-unit --unique --role=HEALER --attack=RANGED"
 
 # Split run command string to array of strings
 read -ra run -d '' <<<"$run"

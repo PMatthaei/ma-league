@@ -27,6 +27,7 @@ mkl-random==1.1.1
 mkl-service==2.3.0
 munch==2.5.0
 numpy==1.21.1
+nestargs==0.5.0
 oauthlib==3.1.1
 olefile==0.46
 packaging==21.0

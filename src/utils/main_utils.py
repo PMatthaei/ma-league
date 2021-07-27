@@ -112,6 +112,7 @@ def build_config_argsparser(config):
 
     return parser
 
+
 def build_argument(parser, key, value):
     try:
         value = eval(value) if isinstance(value, str) and value != "" else value
