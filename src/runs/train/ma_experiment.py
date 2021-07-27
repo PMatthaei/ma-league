@@ -143,7 +143,8 @@ class MultiAgentExperiment(ExperimentRun):
         # start training
         episode = 0
         if play_time_seconds:
-            self.logger.info("Beginning training for {} seconds.".format(play_time_seconds))
+            snds = play_time_seconds
+            self.logger.info(f"Beginning training for {snds} seconds - {snds / 60} min(s) - {snds/3600} hours")
         else:
             self.logger.info("Beginning training for {} timesteps.".format(self.args.t_max))
 

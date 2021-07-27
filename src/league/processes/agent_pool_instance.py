@@ -21,7 +21,7 @@ def is_cuda_state_dict(state_dict):
     return all([state_dict[entry].is_cuda for entry in state_dict])
 
 
-class CommandHandler(Process):
+class AgentPoolInstance(Process):
     def __init__(self, sync_barrier: Barrier):
         """
         Handles messages sent from league sub processes to the main league process.
@@ -29,7 +29,7 @@ class CommandHandler(Process):
         :param connections:
         """
         super().__init__()
-        self._agent_pool = dict()
+        self._storage = dict()
         self._in_queues, self._out_queues = [], []
         self._closed = []
         self._sync_barrier = sync_barrier
@@ -51,7 +51,7 @@ class CommandHandler(Process):
         return idx, (in_q, out_q)
 
     def run(self) -> None:
-        self.logger = CustomConsoleLogger("league-coordinator")
+        self.logger = CustomConsoleLogger("agent-pool-instance")
         self.logger.info("League Coordinator started.")
 
         # Receive messages from all processes over their connections
@@ -66,7 +66,7 @@ class CommandHandler(Process):
     def _on_sync(self):
         # All processes have arrived at barrier and passed
         if self._sync_barrier.n_waiting == 0 and self.last_waiting != 0:
-            self.logger.info("LeagueCoordinator synced with training instances")
+            self.logger.info("AgentPoolInstance synced with training instances")
         self.last_waiting = self._sync_barrier.n_waiting
 
     def _handle_commands(self, in_queue: Queue):
@@ -82,7 +82,7 @@ class CommandHandler(Process):
         elif isinstance(cmd, AgentPoolGetCommand):
             self._get_agent_pool(cmd)
         else:
-            raise Exception(f"Unknown command {cmd} received in LeagueCoordinator. Please implement this command.")
+            raise Exception(f"Unknown command {cmd} received in AgentPoolInstance. Please implement this command.")
 
     def _close(self, cmd):
         self.logger.info(f"Closing connection to process {cmd.origin}")
@@ -104,7 +104,7 @@ class CommandHandler(Process):
         raise NotImplementedError()
 
     def _get_agent(self, cmd: AgentParamsGetCommand):
-        agent_params = self._agent_pool[cmd.data]
+        agent_params = self._storage[cmd.data]
         agent_params_clone = None
         # Clone before send if state dict is stored on CUDA device
         if is_cuda_state_dict(agent_params):
@@ -114,16 +114,16 @@ class CommandHandler(Process):
         del agent_params_clone
 
     def _get_agent_pool(self, cmd: AgentPoolGetCommand):
-        all_agent_params = self._agent_pool.items()
+        all_agent_params = self._storage.items()
         pool_clone = None
         # Clone before send if state dict is stored on CUDA device
         if all([is_cuda_state_dict(agent) for tid, agent in all_agent_params]):
             pool_clone = {tid: clone_state_dict(agent_params) for tid, agent_params in all_agent_params}
-        self._out_queues[cmd.origin].put(self._agent_pool if pool_clone is None else pool_clone)
+        self._out_queues[cmd.origin].put(self._storage if pool_clone is None else pool_clone)
         del pool_clone
 
     def _update_agent_params(self, cmd: AgentParamsUpdateCommand):
         tid, params = cmd.data
-        self._agent_pool[tid] = params
+        self._storage[tid] = params
         self.logger.info(f"Received parameter update for agent of team {tid}")
         self._out_queues[cmd.origin].put(None)  # ACK

@@ -8,7 +8,7 @@ from custom_logging.platforms import CustomConsoleLogger
 from league.components import PayoffEntry
 from torch.multiprocessing import Barrier, Manager, current_process
 
-from league.processes.command_handler import CommandHandler
+from league.processes.agent_pool_instance import AgentPoolInstance
 from league.components.team_composer import TeamComposer
 from league.processes import REGISTRY as experiment_REGISTRY
 from league.components.matchmaker import REGISTRY as matchmaking_REGISTRY
@@ -66,7 +66,7 @@ class CentralWorker(Process):
         # Communication Infrastructure
         #
         # Handle command communication within the league
-        handler = CommandHandler(
+        handler = AgentPoolInstance(
             sync_barrier=sync_barrier
         )
 

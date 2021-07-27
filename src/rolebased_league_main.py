@@ -19,7 +19,7 @@ from sacred.utils import apply_backspaces_and_linefeeds
 from custom_logging.platforms import CustomConsoleLogger
 from league import SimpleLeague
 from league.processes.training.role_based_league_instance import RolebasedLeagueInstance
-from league.processes.command_handler import CommandHandler
+from league.processes.agent_pool_instance import AgentPoolInstance
 from league.components.team_composer import TeamComposer
 from custom_logging.logger import MainLogger
 from utils.main_utils import get_default_config, get_config, get_match_build_plan, recursive_dict_update, config_copy, \
@@ -101,7 +101,7 @@ def run(_run, _config, _log):
     [r.start() for r in procs]
 
     # Handle message communication within the league
-    coordinator = CommandHandler(
+    coordinator = AgentPoolInstance(
         logger=main_logger,
         players=players,
         queues=(in_queues, out_queues),

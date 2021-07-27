@@ -59,9 +59,9 @@ class ExperimentInstance(Process):
         os._exit(os.EX_OK)
 
     def _build_sacred_experiment(self) -> Experiment:
-        logger = CustomConsoleLogger("ma-league")
+        logger = CustomConsoleLogger(f"instance-{self.idx}")
 
-        ex = Experiment("ma-league")
+        ex = Experiment(f"instance-{self.idx}")
         ex.logger = logger
         ex.captured_out_filter = apply_backspaces_and_linefeeds
         ex.add_config(self.experiment_config)

@@ -4,7 +4,7 @@ from torch.multiprocessing import Barrier
 from torch.multiprocessing.queue import Queue
 
 from league.components import Matchmaker, PayoffEntry
-from league.processes.command_handler import clone_state_dict
+from league.processes.agent_pool_instance import clone_state_dict
 from league.processes.interfaces.experiment_process import ExperimentInstance
 from league.components.commands import CloseCommunicationCommand, AgentParamsUpdateCommand, AgentParamsGetCommand
 from league.components.team_composer import Team
@@ -105,6 +105,7 @@ class LeagueExperimentInstance(ExperimentInstance):
         """
         result = self._extract_result(env_info)
         assert self._adversary_idx is not None, "Ensure to set the opponents instance idx on matchmaking."
+        print(self.idx, self._adversary_idx, result)
         self._matchmaker.payoff[self.idx, self._adversary_idx, result] += 1
 
     def _request_close(self):
@@ -122,3 +123,6 @@ class LeagueExperimentInstance(ExperimentInstance):
         ack = self._out_queue.get()
         if ack is not None:
             raise Exception("Illegal ACK")
+
+    def __str__(self):
+        return "Process: " + str(self.idx) + " with " + str(self._home_team)
