@@ -105,12 +105,21 @@ select exp in "${exp_options[@]}"; do
 done
 
 #
+# Sizes
+#
+echo "Enter desired league size: "
+read -r league_size
+league_size=" --league_size=${league_size} "
+echo "Enter desired team size: "
+read -r team_size
+team_size=" --team_size=${team_size} "
+#
 # FIXED ENVIRONMENT
 #
 env_config="--env-config=ma "
 
 
-run=$base_command$alg$env_config$exp"--save_model=True --save_interval=250000 --headless_controls=False --use_tensorboard=True force-unit --unique --role=HEALER --attack=RANGED"
+run=$base_command$alg$env_config$exp$league_size$team_size"--save_model=True --save_interval=250000 --headless_controls=False --use_tensorboard=True force-unit --unique --role=HEALER --attack=RANGED"
 
 # Split run command string to array of strings
 read -ra run -d '' <<<"$run"
