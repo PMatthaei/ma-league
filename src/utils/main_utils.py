@@ -3,6 +3,7 @@ import collections
 import os
 from copy import deepcopy
 
+import nestargs
 import yaml
 from maenv.utils.enums import as_enum
 
@@ -89,28 +90,34 @@ def load_config_yaml(src_path, subfolder, config_name):
     return config_dict
 
 
-def build_config_argsparser(config, params):
-    parser = argparse.ArgumentParser()
+def str_to_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value.lower() in {'false', 'f', '0', 'no', 'n'}:
+        return False
+    elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
+        return True
+    raise ValueError(f'{value} is not a valid boolean value')
 
-    def str_to_bool(value):
-        if isinstance(value, bool):
-            return value
-        if value.lower() in {'false', 'f', '0', 'no', 'n'}:
-            return False
-        elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
-            return True
-        raise ValueError(f'{value} is not a valid boolean value')
+
+def build_config_argsparser(config):
+    parser = nestargs.NestedArgumentParser()
 
     for key, value in config.items():
-        try:
-            value = eval(value) if isinstance(value, str) and value != "" else value
-        except NameError:
-            continue
-        except SyntaxError:
-            continue
-        value_type = type(value) if not isinstance(value, bool) else str_to_bool
-        parser.add_argument(f'--{key}', type=value_type, default=value, required=False)
-    for i, p in enumerate(params):
-        if "=" in p:
-            params[i] = "--" + p
+        if isinstance(value, dict):
+            for k, v in value.items():
+                build_argument(parser, f'{key}.{k}', v)
+
+        build_argument(parser, key, value)
+
     return parser
+
+def build_argument(parser, key, value):
+    try:
+        value = eval(value) if isinstance(value, str) and value != "" else value
+    except NameError:
+        return  # Cannot eval values for entry such as "runner: episode"
+    except SyntaxError:
+        return
+    value_type = type(value) if not isinstance(value, bool) else str_to_bool
+    parser.add_argument(f'--{key}', type=value_type, default=value, required=False)

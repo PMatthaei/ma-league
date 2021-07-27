@@ -12,12 +12,10 @@ from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
 from custom_logging.platforms import CustomConsoleLogger
 from custom_logging.logger import MainLogger
-from utils.main_utils import get_default_config, get_config, get_match_build_plan, recursive_dict_update, config_copy, \
-    build_config_argsparser
+from utils.main_utils import config_copy
 
 from types import SimpleNamespace
 
-from utils.run_utils import args_sanity_check
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
@@ -34,10 +32,7 @@ class ExperimentProcess(Process):
         super(ExperimentProcess, self).__init__()
         self.idx = idx
         self.experiment_config = experiment_config
-
-        #self._params = params
         self._instance_log_dir = f'{experiment_config["log_dir"]}/instance_{self.idx}'
-        #self._src_dir = src_dir
 
         self._logger: MainLogger = None
         self._args = None
@@ -59,8 +54,6 @@ class ExperimentProcess(Process):
             # run the framework
             self.run_sacred_framework(_run, config, _log)
 
-        #additional_config = self._parse_additional_config(self.experiment_config)
-        #ex.run(config_updates=additional_config)
         ex.run()
 
         os._exit(os.EX_OK)
@@ -71,7 +64,6 @@ class ExperimentProcess(Process):
         ex = Experiment("ma-league")
         ex.logger = logger
         ex.captured_out_filter = apply_backspaces_and_linefeeds
-        #self.experiment_config = self._build_experiment_config()
         ex.add_config(self.experiment_config)
 
         # Save to disk by default for sacred
@@ -80,29 +72,6 @@ class ExperimentProcess(Process):
         file_obs_path = os.path.join(results_path, "sacred")
         ex.observers.append(FileStorageObserver(file_obs_path))
         return ex
-
-    # def _build_experiment_config(self):
-    #     # Get the defaults from default.yaml
-    #     config_dict = get_default_config(self._src_dir)
-    #
-    #     # Load env base config
-    #     env_config = get_config(self._params, "--env-config", "envs", path=self._src_dir)
-    #
-    #     # Load build plan if configured
-    #     env_args = env_config['env_args']
-    #     if "match_build_plan" in env_args:
-    #         env_args["match_build_plan"] = get_match_build_plan(self._src_dir, env_args)
-    #
-    #     # Load algorithm base config
-    #     alg_config = get_config(self._params, "--config", "algs", path=self._src_dir)
-    #
-    #     # Integrate loaded dicts into main dict
-    #     config_dict = recursive_dict_update(config_dict, env_config)
-    #     experiment_config = recursive_dict_update(config_dict, alg_config)  # Algorithm overwrites all config
-    #     experiment_config = args_sanity_check(experiment_config)  # check args are valid
-    #     experiment_config["device"] = "cuda" if experiment_config["use_cuda"] else "cpu"  # set device depending on cuda
-    #     experiment_config["log_dir"] = self._log_dir  # set logging directory for instance metrics and model
-    #     return experiment_config
 
     def run_sacred_framework(self, _run, _config, _log):
         self._args = SimpleNamespace(**_config)
@@ -129,12 +98,6 @@ class ExperimentProcess(Process):
         # sacred is on by default
         self._logger.setup_sacred(_run)
 
-    # def _parse_additional_config(self, config: Dict) -> Dict:
-    #     parser = build_config_argsparser(config, self._params)
-    #     args, _ = parser.parse_known_args(self._params)
-    #     args_dict = vars(args)
-    #     self.experiment_config.update(args_dict)
-    #     return args_dict
 
     def _set_seed(self, _config):
         config = config_copy(_config)

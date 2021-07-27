@@ -1,6 +1,8 @@
 from copy import deepcopy
 from typing import Dict
 
+from nestargs.parser import NestedNamespace
+
 from utils.main_utils import get_default_config, get_config, get_match_build_plan, recursive_dict_update, \
     build_config_argsparser
 from utils.run_utils import args_sanity_check
@@ -41,8 +43,16 @@ class ConfigBuilder:
         experiment_config["log_dir"] = self._log_dir  # set logging directory for instance metrics and model
 
         # Overwrite .yaml config with command params via update
-        # Build parser to parse all values known in current config
-        parser = build_config_argsparser(experiment_config, params)
+        # Build parser to parse the
+        parser = build_config_argsparser(experiment_config)
         args, _ = parser.parse_known_args(params)
-        experiment_config.update(vars(args))
+        args_dict = self._namespace_to_dict(args)
+        experiment_config.update(args_dict)
         return experiment_config
+
+    def _namespace_to_dict(self, args: NestedNamespace):
+        args_dict = vars(args)
+        for entry in args_dict:
+            if isinstance(args_dict[entry], NestedNamespace):
+                args_dict[entry] = self._namespace_to_dict(args_dict[entry]) # Recursive convert
+        return args_dict

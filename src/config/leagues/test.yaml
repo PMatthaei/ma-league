@@ -11,7 +11,7 @@ env_args:
 buffer_cpu_only: True
 mac: "ensemble"
 headless_controls: False
-use_cuda: False
+use_cuda: True
 use_tensorboard: True
 
 matchmaking: "pfsp"
