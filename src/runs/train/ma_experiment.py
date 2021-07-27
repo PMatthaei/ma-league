@@ -120,7 +120,7 @@ class MultiAgentExperiment(ExperimentRun):
     def _has_not_reached_time_limit(self):
         return self._play_time is not None and ((self._end_time - self._start_time) <= self._play_time)
 
-    def start(self, play_time_seconds=None, train_callback=None):
+    def start(self, play_time_seconds=None, on_train=None):
         """
         :param play_time_seconds: Play the run for a certain time in seconds.
         :return:
@@ -144,7 +144,7 @@ class MultiAgentExperiment(ExperimentRun):
         episode = 0
         if play_time_seconds:
             snds = play_time_seconds
-            self.logger.info(f"Beginning training for {snds} seconds - {snds / 60} min(s) - {snds/3600} hours")
+            self.logger.info(f"Beginning training for {snds} seconds - {snds / 60} min(s) - {(snds / 3600):.2f} hours")
         else:
             self.logger.info("Beginning training for {} timesteps.".format(self.args.t_max))
 
@@ -154,7 +154,7 @@ class MultiAgentExperiment(ExperimentRun):
         while self._has_not_reached_time_limit or self._has_not_reached_t_max:
 
             # Run for a whole episode at a time
-            self._train_episode(episode_num=episode, on_train_end=train_callback)
+            self._train_episode(episode_num=episode)
 
             # Execute test runs once in a while
             n_test_runs = max(1, self.args.test_nepisode // self.stepper.batch_size)
@@ -201,7 +201,7 @@ class MultiAgentExperiment(ExperimentRun):
         self.stepper.close_env()
         self.logger.info("Finished.")
 
-    def _train_episode(self, episode_num, on_train_end=None):
+    def _train_episode(self, episode_num):
         episode_batch, env_info = self.stepper.run(test_mode=False)
         if self.on_episode_end is not None:
             self.on_episode_end(env_info)
@@ -219,9 +219,6 @@ class MultiAgentExperiment(ExperimentRun):
                 episode_sample_batch.to(self.args.device)
 
             self.home_learner.train(episode_sample_batch, self.stepper.t_env, episode_num)
-
-            if on_train_end is not None:
-                on_train_end(self.learners)
 
     def _test(self, n_test_runs):
         self.last_test_T = self.stepper.t_env

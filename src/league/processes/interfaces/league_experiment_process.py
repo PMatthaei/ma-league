@@ -75,8 +75,6 @@ class LeagueExperimentInstance(ExperimentInstance):
         :param agent:
         :return:
         """
-        # self._agent_pool[self._home_team if team is None else team] = agent
-        # self._sync_barrier.wait() if self._sync_barrier is not None else None
         tid: int = self._home_team.id_ if team is None else team.id_
         agent_clone = clone_state_dict(agent)
         cmd = AgentParamsUpdateCommand(origin=self._comm_id, data=(tid, agent_clone))
@@ -110,9 +108,10 @@ class LeagueExperimentInstance(ExperimentInstance):
 
     def _request_close(self):
         """
-        Close the communication channel to the league
+        Close the communication channel to the agent pool
         :return:
         """
+        self._sync_barrier.wait() if self._sync_barrier is not None else None
         cmd = CloseCommunicationCommand(origin=self._comm_id)
         self._in_queue.put(cmd)
         self._ack()
@@ -125,4 +124,4 @@ class LeagueExperimentInstance(ExperimentInstance):
             raise Exception("Illegal ACK")
 
     def __str__(self):
-        return "Process: " + str(self.idx) + " with " + str(self._home_team)
+        return f"{self.__class__.__name__}: " + str(self.idx) + " with " + str(self._home_team)

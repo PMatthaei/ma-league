@@ -62,9 +62,9 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
             #
             # Fetch agents from another teams training instance
             #
-            self._adversary_idx, self._adversary_team, foreign_params = self._matchmaker.get_match(self._home_team) or (None, None, None)
-            if foreign_params is None:
-                self._logger.info(f"No match found. Ending {str(self)}")
+            adversary = (self._adversary_idx, self._adversary_team, foreign_params) = self._matchmaker.get_match(self._home_team) or (None, None, None)
+            if all(adversary):
+                self._logger.info(f"No match found: {adversary}. Ending {str(self)}")
                 break
 
             self._logger.info(f"Matched foreign team {self._adversary_team.id_} in {str(self)}")
@@ -74,13 +74,16 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
             #
             self._logger.info(f"Build foreign team play in {str(self)}")
             self._configure_experiment(home=self._adversary_team, ai=True)  # Set the foreign team constellation as home team
+            self._logger.info(f"Build ensemble experiment in {str(self)}")
             self._experiment = EnsembleExperiment(args=self._args, logger=self._logger, on_episode_end=self._update_payoff)
+            self._logger.info(f"Load ensemble agents {str(self)}")
             self._experiment.load_ensemble(native=foreign_params, foreign_agent=agent_state)
             self._logger.info(f"Evaluate ensemble in {str(self)}")
             self._experiment.evaluate_sequential(test_n_episode=self._args.n_league_evaluation_episodes)
             #
             # Train the native agent in an ensemble with the foreign agent (and its team constellation)
             #
+            self._logger.info(f"Train ensemble agents {str(self)}")
             self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
 
             #

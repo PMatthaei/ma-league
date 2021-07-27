@@ -34,6 +34,9 @@ class Matchmaker:
     def disconnect(self):
         cmd = CloseCommunicationCommand(origin=self._comm_id)
         self._in_q.put(cmd)
+        ack = self._out_q.get()
+        if ack is not None:
+            raise Exception("Illegal ACK")
 
     def get_instance_id(self, team: Team) -> int:
         return self._instance_to_tid[team.id_]

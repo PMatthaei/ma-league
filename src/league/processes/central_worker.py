@@ -11,7 +11,7 @@ from torch.multiprocessing import Barrier, Manager, current_process
 from league.processes.agent_pool_instance import AgentPoolInstance
 from league.components.team_composer import TeamComposer
 from league.processes import REGISTRY as experiment_REGISTRY
-from league.components.matchmaker import REGISTRY as matchmaking_REGISTRY
+from league.components.matchmaker import REGISTRY as matchmaking_REGISTRY, Matchmaker
 from utils.config_builder import ConfigBuilder
 
 
@@ -43,7 +43,6 @@ class CentralWorker(Process):
         teams = composer.sample(k=self._args.league_size, contains=uid, unique=self._args.unique)
         # Sort ranged healer first in all teams for later consistency
         teams = composer.sort_team_units(teams, uid=uid)
-        team_ids = list(map(lambda team: team.id_, teams))
         n_teams = len(teams)
 
         #
@@ -54,27 +53,23 @@ class CentralWorker(Process):
         #
         # Shared objects
         #
-        manager = Manager()
-
         n_entries = len(PayoffEntry)
         from torch import zeros
         payoff = zeros((n_teams, n_teams, n_entries)).share_memory_()
-
-        team_allocation: Dict[int, int] = manager.dict({tid: idx for idx, tid in enumerate(team_ids)})  # Mapping team id -> instance id
 
         #
         # Communication Infrastructure
         #
         # Handle command communication within the league
-        handler = AgentPoolInstance(
+        agent_pool = AgentPoolInstance(
             sync_barrier=sync_barrier
         )
 
         #
         # Components
         #
-        comm = handler.register()
-        matchmaking = matchmaking_REGISTRY[self._args.matchmaking](
+        comm = agent_pool.register()
+        matchmaker: Matchmaker = matchmaking_REGISTRY[self._args.matchmaking](
             communication=comm,
             payoff=payoff,
             teams=teams
@@ -90,29 +85,30 @@ class CentralWorker(Process):
                 idx=idx,
                 experiment_config=config_builder.build(idx),
                 home_team=team,
-                matchmaking=matchmaking,
-                communication=handler.register(),
+                matchmaking=matchmaker,
+                communication=agent_pool.register(),
                 sync_barrier=sync_barrier
             )
             procs.append(proc)
 
-        handler.start()
+        agent_pool.start()
 
-        [r.start() for r in procs]
+        [p.start() for p in procs]
 
         #
         # Wait for experiments to finish
         #
-        [r.join() for r in procs]
-        matchmaking.disconnect()
-        handler.join()
+        [p.join() for p in procs]
+        matchmaker.disconnect() # TODO! Why do we get here and the pool never joins?!? Why do all procs join?
+        agent_pool.join()
 
         #
         # Print Payoff tensor
         #
-        self._print_payoff(payoff, team_allocation, teams)
+        self._print_payoff(payoff, teams)
 
-    def _print_payoff(self, payoff, team_allocation, teams):
+    def _print_payoff(self, payoff, teams):
+        team_allocation: Dict[int, int] = dict({team.id_: idx for idx, team in enumerate(teams)})  # Mapping team id -> instance id
         for team in teams:
             tid = team.id_
             index = team_allocation[tid]

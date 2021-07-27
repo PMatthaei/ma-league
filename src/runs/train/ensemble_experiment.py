@@ -15,7 +15,6 @@ class EnsembleExperiment(MultiAgentExperiment):
         """
         super().__init__(args, logger, on_episode_end)
         assert isinstance(self.home_mac, EnsembleMAC), 'Ensemble experiment enforces "mac"=ensemble in configuration'
-        self.home_mac: EnsembleMAC = self.home_mac  # For type-safety
 
     def load_ensemble(self, native: OrderedDict, foreign_agent: OrderedDict):
         """
