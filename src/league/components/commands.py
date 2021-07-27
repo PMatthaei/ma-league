@@ -52,7 +52,7 @@ class AgentParamsGetCommand(BaseCommand):
         super().__init__(CommandTypes.GET, origin, Resources.AGENT, data)
 
 
-class CheckpointCommand(BaseCommand):
+class AgentCheckpointAddCommand(BaseCommand):
 
     def __init__(self, origin: int):
         super().__init__(CommandTypes.POST, origin, Resources.AGENT, None)

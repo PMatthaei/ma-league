@@ -1,10 +1,10 @@
 import os
 from typing import List, OrderedDict, Dict, Union
 
-from maenv.utils.enums import EnumEncoder, as_enum
+from maenv.utils.enums import as_enum
 
 from exceptions.checkpoint_exceptions import NoLearnersProvided
-from league.utils.team_composer import Team
+from league.components.team_composer import Team
 from learners.learner import Learner
 from utils.run_utils import find_latest_model_path
 

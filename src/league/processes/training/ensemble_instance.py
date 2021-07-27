@@ -1,10 +1,9 @@
-import copy
 import time
 
 from typing import Tuple, OrderedDict
 
-from league.processes.league_experiment_process import LeagueExperimentInstance
-from league.utils.team_composer import Team
+from league.processes.interfaces.league_experiment_process import LeagueExperimentInstance
+from league.components.team_composer import Team
 from runs.train.ensemble_experiment import EnsembleExperiment
 from runs.train.ma_experiment import MultiAgentExperiment
 
@@ -63,21 +62,21 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
             #
             # Fetch agents from another teams training instance
             #
-            foreign: Tuple[Team, OrderedDict] = self._matchmaking.get_match(self._home_team)
-            if foreign is None:
-                self._logger.info(f"No match found. Ending process: {self._proc_id} with {self._home_team}")
+            self._adversary_idx, self._adversary_team, foreign_params = self._matchmaker.get_match(self._home_team) or (None, None, None)
+            if foreign_params is None:
+                self._logger.info(f"No match found. Ending {str(self)}")
                 break
-            self._away_team, foreign_agent_state = foreign  # Note: Set away team for payoff tensor
-            self._logger.info(f"Matched foreign team {self._away_team.id_} in process: {self._proc_id}")
+
+            self._logger.info(f"Matched foreign team {self._adversary_team.id_} in {str(self)}")
 
             #
             # Evaluate how the agent performs in an ensemble with the foreign agent (and its team constellation)
             #
-            self._logger.info(f"Build foreign team play in process: {self._proc_id}")
-            self._configure_experiment(home=self._away_team, ai=True)  # Set the foreign team constellation as home team
-            self._experiment = EnsembleExperiment(args=self._args, logger=self._logger, on_episode_end=self._send_result)
-            self._experiment.load_ensemble(native=foreign_agent_state, foreign_agent=agent_state)
-            self._logger.info(f"Evaluate ensemble in process: {self._proc_id}")
+            self._logger.info(f"Build foreign team play in {str(self)}")
+            self._configure_experiment(home=self._adversary_team, ai=True)  # Set the foreign team constellation as home team
+            self._experiment = EnsembleExperiment(args=self._args, logger=self._logger, on_episode_end=self._update_payoff)
+            self._experiment.load_ensemble(native=foreign_params, foreign_agent=agent_state)
+            self._logger.info(f"Evaluate ensemble in {str(self)}")
             self._experiment.evaluate_sequential(test_n_episode=self._args.n_league_evaluation_episodes)
             #
             # Train the native agent in an ensemble with the foreign agent (and its team constellation)
@@ -87,11 +86,11 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
             #
             # Share agent after training to make its current state accessible to other processes
             #
-            self._logger.info(f"Share trained ensemble in process: {self._proc_id}")
+            self._logger.info(f"Share trained ensemble in {str(self)}")
             self._share_agent_params(agent=self.ensemble_agent_state)
 
             end_time = time.time()
 
-        self._logger.info(f"Training in process finished: {self._proc_id}")
+        self._logger.info(f"Training in {str(self)} finished")
 
         self._request_close()

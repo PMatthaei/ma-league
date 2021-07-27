@@ -9,7 +9,7 @@ env_args:
   fps: 60
 
 buffer_cpu_only: True
-mac: "basic"
+mac: "ensemble"
 headless_controls: False
 use_cuda: True
 use_tensorboard: True

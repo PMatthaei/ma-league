@@ -3,18 +3,17 @@ from typing import Tuple, Dict, OrderedDict
 from torch.multiprocessing import Barrier
 from torch.multiprocessing.queue import Queue
 
-from league.components import Matchmaking, PayoffEntry
+from league.components import Matchmaker, PayoffEntry
 from league.processes.command_handler import clone_state_dict
-from league.processes.experiment_process import ExperimentInstance
-from league.utils.commands import PayoffUpdateCommand, CloseCommunicationCommand, AgentParamsUpdateCommand, \
-    AgentParamsGetCommand
-from league.utils.team_composer import Team
+from league.processes.interfaces.experiment_process import ExperimentInstance
+from league.components.commands import CloseCommunicationCommand, AgentParamsUpdateCommand, AgentParamsGetCommand
+from league.components.team_composer import Team
 
 
 class LeagueExperimentInstance(ExperimentInstance):
 
     def __init__(self,
-                 matchmaking: Matchmaking,
+                 matchmaking: Matchmaker,
                  home_team: Team,
                  communication: Tuple[int, Tuple[Queue, Queue]],
                  sync_barrier: Barrier, **kwargs):
@@ -35,9 +34,9 @@ class LeagueExperimentInstance(ExperimentInstance):
         super(LeagueExperimentInstance, self).__init__(**kwargs)
 
         self._home_team: Team = home_team
-        self._away_team: Team = None
-        # self._agent_pool: AgentPool = agent_pool  # Process private copy of the agent pool
-        self._matchmaking: Matchmaking = matchmaking
+        self._adversary_team: Team = None
+        self._adversary_idx: int = None
+        self._matchmaker: Matchmaker = matchmaking
 
         self._comm_id = communication[0]
         self._in_queue, self._out_queue = communication[1]  # In- and Outgoing Communication
@@ -86,7 +85,8 @@ class LeagueExperimentInstance(ExperimentInstance):
         self._ack()
         self._sync_barrier.wait() if self._sync_barrier is not None else None
 
-    def _extract_result(self, env_info: dict, policy_team_id: int):
+    def _extract_result(self, env_info: dict):
+        policy_team_id = self._experiment.stepper.policy_team_id
         draw = env_info["draw"]
         battle_won = env_info["battle_won"]
         if draw or all(battle_won) or not any(battle_won):
@@ -97,17 +97,15 @@ class LeagueExperimentInstance(ExperimentInstance):
             result = PayoffEntry.LOSS  # Policy team(= home team) lost
         return result
 
-    def _send_result(self, env_info: Dict):
+    def _update_payoff(self, env_info: Dict):
         """
         Send the result of an episode the the central coordinator for processing.
         :param env_info:
         :return:
         """
-        result = self._extract_result(env_info, self._experiment.stepper.policy_team_id)
-        data = ((self._home_team.id_, self._away_team.id_), result)
-        cmd = PayoffUpdateCommand(origin=self._comm_id, data=data)
-        self._in_queue.put(cmd)
-        self._ack()
+        result = self._extract_result(env_info)
+        assert self._adversary_idx is not None, "Ensure to set the opponents instance idx on matchmaking."
+        self._matchmaker.payoff[self.idx, self._adversary_idx, result] += 1
 
     def _request_close(self):
         """

@@ -75,7 +75,7 @@ done
 title="Choose experiment:"
 prompt="Pick:"
 base_league="--league-config="
-exp_options=("ENSEMBLE" "MATCHMAKING")
+exp_options=("Ensemble Self-Play" "Matchmaking League")
 echo "$title"
 PS3="$prompt "
 select exp in "${exp_options[@]}"; do
@@ -113,6 +113,7 @@ league_size=" --league_size=${league_size} "
 echo "Enter desired team size: "
 read -r team_size
 team_size=" --team_size=${team_size} "
+
 #
 # FIXED ENVIRONMENT
 #

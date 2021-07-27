@@ -5,14 +5,14 @@ from typing import Tuple, Union, Any, List, Dict
 from torch import Tensor
 from torch.multiprocessing.queue import Queue
 
-from league.components import Matchmaking
+from league.components import Matchmaker
 from league.components.self_play import PFSPSampling
 
 from league.roles.players import Player
-from league.utils.team_composer import Team
+from league.components.team_composer import Team
 
 
-class SimplePlayer(Matchmaking):
+class SimplePlayer(Matchmaker):
 
     def __init__(self, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor,
                  allocation: Dict[int, int]):
@@ -26,9 +26,9 @@ class SimplePlayer(Matchmaking):
         :return:
         """
         simple_players = self.payoff.get_players_of_type(SimplePlayer)
-        win_rates = self._payoff[self, simple_players]
+        win_rates = self.payoff[self, simple_players]
         chosen = self._pfsp.sample(simple_players, prio_measure=win_rates, weighting="squared")
-        return self._payoff.players[chosen], True
+        return self.payoff.players[chosen], True
 
     def ready_to_checkpoint(self) -> bool:
         """

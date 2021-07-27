@@ -1,14 +1,15 @@
 from torch import Tensor
 from torch.multiprocessing import get_context, Process, Barrier
-from typing import List, Tuple, Dict
+from typing import Tuple, Dict, List
 from collections import OrderedDict
 from torch.multiprocessing.queue import Queue
 
 from custom_logging.platforms import CustomConsoleLogger
 from league.components import PayoffEntry
-from league.utils.commands import CloseCommunicationCommand, PayoffUpdateCommand, CheckpointCommand, \
+from league.components.commands import CloseCommunicationCommand, PayoffUpdateCommand, AgentCheckpointAddCommand, \
     AgentParamsUpdateCommand, \
     AgentParamsGetCommand, AgentPoolGetCommand
+from league.components.team_composer import Team
 
 
 def clone_state_dict(state_dict: OrderedDict):
@@ -21,9 +22,7 @@ def is_cuda_state_dict(state_dict):
 
 
 class CommandHandler(Process):
-    def __init__(self, allocation: Dict[int, int],
-                 payoff: Tensor,
-                 sync_barrier: Barrier):
+    def __init__(self, sync_barrier: Barrier):
         """
         Handles messages sent from league sub processes to the main league process.
         :param league:
@@ -32,8 +31,6 @@ class CommandHandler(Process):
         super().__init__()
         self._agent_pool = dict()
         self._in_queues, self._out_queues = [], []
-        self._allocation = allocation
-        self._payoff = payoff
         self._closed = []
         self._sync_barrier = sync_barrier
 
@@ -76,10 +73,8 @@ class CommandHandler(Process):
         cmd = in_queue.get_nowait()
         if isinstance(cmd, CloseCommunicationCommand):
             self._close(cmd)
-        elif isinstance(cmd, CheckpointCommand):
+        elif isinstance(cmd, AgentCheckpointAddCommand):
             self._checkpoint(cmd)
-        elif isinstance(cmd, PayoffUpdateCommand):
-            self._update_payoff(cmd)
         elif isinstance(cmd, AgentParamsUpdateCommand):
             self._update_agent_params(cmd)
         elif isinstance(cmd, AgentParamsGetCommand):
@@ -99,7 +94,7 @@ class CommandHandler(Process):
         self._out_queues[cmd.origin].put(None)  # ACK
         self._out_queues[cmd.origin].close()
 
-    def _checkpoint(self, cmd: CheckpointCommand):
+    def _checkpoint(self, cmd: AgentCheckpointAddCommand):
         """
         Save a checkpoint of the agent with the ID provided in the message.
         :param msg:
@@ -107,20 +102,6 @@ class CommandHandler(Process):
         """
         self.logger.info(f"Create historical player of player {cmd.origin}")
         raise NotImplementedError()
-
-    def _update_payoff(self, cmd: PayoffUpdateCommand):
-        """
-        Update the payoff matrix.
-        Check if the learning (=home) player should be checkpointed after each update
-        :param cmd:
-        :return:
-        """
-        (home_team, away_team), outcome = cmd.data
-        home_instance, away_instance = self._allocation[home_team], self._allocation[away_team]
-        self._payoff[home_instance, away_instance, PayoffEntry.GAMES] += 1
-        self._payoff[home_instance, away_instance, outcome.value] += 1
-        self.n_updates += 1
-        self._out_queues[cmd.origin].put(None)  # ACK
 
     def _get_agent(self, cmd: AgentParamsGetCommand):
         agent_params = self._agent_pool[cmd.data]

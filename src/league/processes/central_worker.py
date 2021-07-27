@@ -9,11 +9,10 @@ from league.components import PayoffEntry
 from torch.multiprocessing import Barrier, Manager, current_process
 
 from league.processes.command_handler import CommandHandler
-from league.utils.team_composer import TeamComposer
+from league.components.team_composer import TeamComposer
 from league.processes import REGISTRY as experiment_REGISTRY
-from league.components.matchmaking import REGISTRY as matchmaking_REGISTRY
+from league.components.matchmaker import REGISTRY as matchmaking_REGISTRY
 from utils.config_builder import ConfigBuilder
-from utils.main_utils import load_config_yaml
 
 
 class CentralWorker(Process):
@@ -44,6 +43,7 @@ class CentralWorker(Process):
         teams = composer.sample(k=self._args.league_size, contains=uid, unique=self._args.unique)
         # Sort ranged healer first in all teams for later consistency
         teams = composer.sort_team_units(teams, uid=uid)
+        team_ids = list(map(lambda team: team.id_, teams))
         n_teams = len(teams)
 
         #
@@ -60,15 +60,13 @@ class CentralWorker(Process):
         from torch import zeros
         payoff = zeros((n_teams, n_teams, n_entries)).share_memory_()
 
-        team_allocation: Dict[int, int] = manager.dict()  # Mapping team -> training instance it is running on
+        team_allocation: Dict[int, int] = manager.dict({tid: idx for idx, tid in enumerate(team_ids)})  # Mapping team id -> instance id
 
         #
         # Communication Infrastructure
         #
         # Handle command communication within the league
         handler = CommandHandler(
-            allocation=team_allocation,
-            payoff=payoff,
             sync_barrier=sync_barrier
         )
 
@@ -79,7 +77,6 @@ class CentralWorker(Process):
         matchmaking = matchmaking_REGISTRY[self._args.matchmaking](
             communication=comm,
             payoff=payoff,
-            allocation=team_allocation,
             teams=teams
         )
 
@@ -89,14 +86,12 @@ class CentralWorker(Process):
         procs = []  # All running processes representing an agent playing in the league
         experiment = experiment_REGISTRY[self._args.experiment]
         for idx, team in enumerate(teams):
-            comm = handler.register()
-            team_allocation[team.id_] = idx
             proc = experiment(
                 idx=idx,
                 experiment_config=config_builder.build(idx),
                 home_team=team,
                 matchmaking=matchmaking,
-                communication=comm,
+                communication=handler.register(),
                 sync_barrier=sync_barrier
             )
             procs.append(proc)

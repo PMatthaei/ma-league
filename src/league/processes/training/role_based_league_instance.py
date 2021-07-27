@@ -3,17 +3,17 @@ from logging import warning
 from torch.multiprocessing import Barrier
 from torch.multiprocessing.queue import Queue
 
-from typing import Union, Tuple, List
+from typing import Tuple
 
-from league.components import Matchmaking
-from league.processes.league_experiment_process import LeagueExperimentInstance
+from league.components import Matchmaker
+from league.processes.interfaces.league_experiment_process import LeagueExperimentInstance
 from league.roles.alphastar.main_player import MainPlayer
-from league.utils.team_composer import Team
+from league.components.team_composer import Team
 from runs.train.league_experiment import LeagueExperiment
 
 
 class RolebasedLeagueInstance(LeagueExperimentInstance):
-    def __init__(self, matchmaking: Matchmaking, home_team: Team, communication: Tuple[int, Tuple[Queue, Queue]],
+    def __init__(self, matchmaking: Matchmaker, home_team: Team, communication: Tuple[int, Tuple[Queue, Queue]],
                  sync_barrier: Barrier, **kwargs):
 
         super().__init__(matchmaking, home_team, communication, sync_barrier, **kwargs)
