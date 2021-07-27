@@ -124,13 +124,3 @@ class CentralWorker(Process):
             print(f'Stats for {team} from instance {index}')
             for entry in PayoffEntry:
                 print(f"{entry.name.capitalize()} {payoff[index, :, entry]}")
-
-    # def _build_instance_params(self, params):
-    #     """
-    #     Build the params for the instance with idx.
-    #     :param params: Original params
-    #     :return:
-    #     """
-    #
-    #     params += [f'--{k}={v}' for k, v in self._league_config.items()]
-    #     return params

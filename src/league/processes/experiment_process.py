@@ -107,24 +107,33 @@ class ExperimentInstance(Process):
         return config
 
 
-class EmptyInstance(ExperimentInstance):  # For test only
+class EmptyInstance(ExperimentInstance):  # For demonstration only
 
     def _run_experiment(self):
         import torch
         from torch import nn
 
+        epochs = 100
+        lr = 0.01
         if torch.cuda.is_available() and self.experiment_config["use_cuda"]:
             dev = "cuda:0"
         else:
             dev = "cpu"
 
-        x = torch.rand(5, device=torch.device(dev))
-        model = nn.Linear(5, 2, device=torch.device(dev))
+        x = torch.tensor([1, 2, 3, 4, 5], device=torch.device(dev), dtype=torch.float32).view(-1, 1)
+        y_target = torch.tensor([2, 4, 9, 16, 25], device=torch.device(dev), dtype=torch.float32).view(-1, 1)
+        linear_regression_model = nn.Linear(in_features=1, out_features=1, device=torch.device(dev))
+        criterion = torch.nn.MSELoss()
 
-        i = 0
-        while i < 100:
-            print(x)
-            y = model(x)
-            print(y)
-            time.sleep(1)
-            i += 1
+        optimizer = torch.optim.SGD(linear_regression_model.parameters(), lr=lr)
+
+        for epoch in range(epochs):
+            y_pred = linear_regression_model(x)
+            loss = criterion(y_pred, y_target)
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+            loss = loss.item()
+            self._logger.log_stat(key="loss", value=loss, t_env=epoch)
+            if (epoch + 1) % 10 == 0:
+                self._logger.info('Epoch: {} - Loss {}'.format(epoch, loss))
