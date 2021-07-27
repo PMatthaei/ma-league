@@ -1,20 +1,26 @@
 from __future__ import annotations
 
-from typing import Tuple, Union, Any
+from typing import Tuple, Union, Any, List, Dict
 
+from torch import Tensor
+from torch.multiprocessing.queue import Queue
 
-from league.components.self_play import PrioritizedFictitiousSelfPlay
+from league.components import Matchmaking
+from league.components.self_play import PFSPSampling
 
 from league.roles.players import Player
+from league.utils.team_composer import Team
 
 
-class SimplePlayer(Player):
-    def __init__(self, player_id: int, payoff, team):
-        super().__init__(player_id, payoff, team)
+class SimplePlayer(Matchmaking):
+
+    def __init__(self, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor,
+                 allocation: Dict[int, int]):
+        super().__init__(communication, teams, payoff, allocation)
         self._checkpoint_step = 0
-        self._pfsp = PrioritizedFictitiousSelfPlay()
+        self._pfsp = PFSPSampling()
 
-    def get_match(self) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
+    def get_match(self, home_team) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
         """
         Samples an SimplePlayer opponent using PFSP with win rates as prioritization.
         :return:

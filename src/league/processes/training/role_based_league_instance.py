@@ -8,9 +8,8 @@ from typing import Union, Tuple, List
 from league.components import Matchmaking
 from league.processes.league_experiment_process import LeagueExperimentProcess
 from league.roles.alphastar.main_player import MainPlayer
-from league.roles.players import Player
 from league.utils.team_composer import Team
-from runs.train.ma_experiment import MultiAgentExperiment
+from runs.train.league_experiment import LeagueExperiment
 
 
 class RolebasedLeagueProcess(LeagueExperimentProcess):
@@ -24,7 +23,7 @@ class RolebasedLeagueProcess(LeagueExperimentProcess):
 
         # Initial play to train policy of the team against mirrored AI
         self._configure_experiment(home=self._home_team, ai=True)
-        self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
+        self._experiment = LeagueExperiment(args=self._args, logger=self._logger)
         self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
         self._share_agent_params(self.home_agent_state)
 
@@ -38,11 +37,14 @@ class RolebasedLeagueProcess(LeagueExperimentProcess):
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
 
             self._away, flag = self._home.get_match()
-            away_agent = self._get_agent_params(self._away)
-            if away_agent is None:
+            match = self._get_agent_params(self._away)
+            if match is None:
                 warning("No Opponent was found.")
                 continue
-            self._experiment.load_adversary(agent=away_agent)
+
+            self._away_team, agent = match
+
+            self._experiment.load_adversary(agent=match)
 
             self._logger.info(str(self))
 
@@ -59,3 +61,6 @@ class RolebasedLeagueProcess(LeagueExperimentProcess):
             self._sync_barrier.wait()
 
         self._request_close()
+
+    def _request_checkpoint(self):
+        pass

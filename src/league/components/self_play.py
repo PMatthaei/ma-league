@@ -15,7 +15,7 @@ class OpponentSampling:
         raise NotImplementedError()
 
 
-class SelfPlay(OpponentSampling):
+class SPSampling(OpponentSampling):
 
     def __init__(self, opponent_id):
         super().__init__()
@@ -25,7 +25,7 @@ class SelfPlay(OpponentSampling):
         return opponents[self.opponent_id]
 
 
-class FictitiousSelfPlay(OpponentSampling):
+class FSPSampling(OpponentSampling):
 
     def __init__(self):
         """
@@ -38,7 +38,7 @@ class FictitiousSelfPlay(OpponentSampling):
         return np.random.choice(opponents, p=p)
 
 
-class PrioritizedFictitiousSelfPlay(OpponentSampling):
+class PFSPSampling(OpponentSampling):
 
     def __init__(self):
         """
@@ -67,7 +67,7 @@ class PrioritizedFictitiousSelfPlay(OpponentSampling):
 
 
 REGISTRY = {
-    "sp": SelfPlay,
-    "fsp": FictitiousSelfPlay,
-    "pfsp": PrioritizedFictitiousSelfPlay
+    "sp": SPSampling,
+    "fsp": FSPSampling,
+    "pfsp": PFSPSampling
 }

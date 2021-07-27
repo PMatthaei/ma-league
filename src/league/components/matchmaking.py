@@ -6,7 +6,7 @@ import torch as th
 from torch import Tensor
 
 from league.components import PayoffEntry
-from league.components.self_play import PrioritizedFictitiousSelfPlay, FictitiousSelfPlay
+from league.components.self_play import PFSPSampling, FSPSampling
 from league.utils.commands import AgentPoolGetCommand, CloseCommunicationCommand
 from league.utils.team_composer import Team
 
@@ -54,7 +54,7 @@ class PFSPMatchmaking(Matchmaking):
                  payoff: Tensor,
                  allocation: Dict[int, int]):
         super().__init__(communication, teams, payoff, allocation)
-        self._sampling_strategy = PrioritizedFictitiousSelfPlay()
+        self._sampling_strategy = PFSPSampling()
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         home_instance = self.get_instance_id(home_team)
@@ -82,7 +82,7 @@ class FSPMatchmaking(Matchmaking):
                  payoff: Tensor,
                  allocation: Dict[int, int]):
         super().__init__(communication, teams, payoff, allocation)
-        self._sampling_strategy = FictitiousSelfPlay()
+        self._sampling_strategy = FSPSampling()
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[Team, OrderedDict]]:
         home_instance = self.get_instance_id(home_team)
