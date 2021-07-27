@@ -5,13 +5,13 @@ from torch.multiprocessing.queue import Queue
 
 from league.components import Matchmaking, PayoffEntry
 from league.processes.command_handler import clone_state_dict
-from league.processes.experiment_process import ExperimentProcess
+from league.processes.experiment_process import ExperimentInstance
 from league.utils.commands import PayoffUpdateCommand, CloseCommunicationCommand, AgentParamsUpdateCommand, \
     AgentParamsGetCommand
 from league.utils.team_composer import Team
 
 
-class LeagueExperimentProcess(ExperimentProcess):
+class LeagueExperimentInstance(ExperimentInstance):
 
     def __init__(self,
                  matchmaking: Matchmaking,
@@ -32,7 +32,7 @@ class LeagueExperimentProcess(ExperimentProcess):
         :param communication:
         :param sync_barrier:
         """
-        super(LeagueExperimentProcess, self).__init__(**kwargs)
+        super(LeagueExperimentInstance, self).__init__(**kwargs)
 
         self._home_team: Team = home_team
         self._away_team: Team = None

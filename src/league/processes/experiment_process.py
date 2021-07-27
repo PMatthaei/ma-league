@@ -22,14 +22,14 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"  # Deactivate message from envs built pygame
 
 
-class ExperimentProcess(Process):
+class ExperimentInstance(Process):
     def __init__(self, idx: int, experiment_config: Dict):
         """
         Captures main.py functionality in a process to spawn multiple experiments.
         :param params:
         :param configs_dir:
         """
-        super(ExperimentProcess, self).__init__()
+        super(ExperimentInstance, self).__init__()
         self.idx = idx
         self.experiment_config = experiment_config
         self._instance_log_dir = f'{experiment_config["log_dir"]}/instance_{self.idx}'

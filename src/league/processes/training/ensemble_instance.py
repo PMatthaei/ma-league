@@ -3,13 +3,13 @@ import time
 
 from typing import Tuple, OrderedDict
 
-from league.processes.league_experiment_process import LeagueExperimentProcess
+from league.processes.league_experiment_process import LeagueExperimentInstance
 from league.utils.team_composer import Team
 from runs.train.ensemble_experiment import EnsembleExperiment
 from runs.train.ma_experiment import MultiAgentExperiment
 
 
-class EnsembleLeagueInstance(LeagueExperimentProcess):
+class EnsembleLeagueInstance(LeagueExperimentInstance):
 
     def __init__(self, **kwargs):
         """

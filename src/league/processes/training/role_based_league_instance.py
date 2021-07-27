@@ -6,13 +6,13 @@ from torch.multiprocessing.queue import Queue
 from typing import Union, Tuple, List
 
 from league.components import Matchmaking
-from league.processes.league_experiment_process import LeagueExperimentProcess
+from league.processes.league_experiment_process import LeagueExperimentInstance
 from league.roles.alphastar.main_player import MainPlayer
 from league.utils.team_composer import Team
 from runs.train.league_experiment import LeagueExperiment
 
 
-class RolebasedLeagueProcess(LeagueExperimentProcess):
+class RolebasedLeagueInstance(LeagueExperimentInstance):
     def __init__(self, matchmaking: Matchmaking, home_team: Team, communication: Tuple[int, Tuple[Queue, Queue]],
                  sync_barrier: Barrier, **kwargs):
 

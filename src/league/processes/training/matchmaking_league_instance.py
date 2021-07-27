@@ -4,13 +4,13 @@ from torch.multiprocessing import Barrier, Queue
 from typing import Tuple
 
 from league.components.matchmaking import Matchmaking
-from league.processes.league_experiment_process import LeagueExperimentProcess
+from league.processes.league_experiment_process import LeagueExperimentInstance
 from league.utils.team_composer import Team
 from runs.train.league_experiment import LeagueExperiment
 from runs.train.ma_experiment import MultiAgentExperiment
 
 
-class MatchmakingLeagueInstance(LeagueExperimentProcess):
+class MatchmakingLeagueInstance(LeagueExperimentInstance):
     def __init__(self, matchmaking: Matchmaking, home_team: Team, communication: Tuple[int, Tuple[Queue, Queue]],
                  sync_barrier: Barrier, **kwargs):
 

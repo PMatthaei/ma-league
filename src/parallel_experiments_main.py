@@ -7,7 +7,7 @@ from os.path import dirname, abspath
 
 import torch as th
 
-from league.processes.experiment_process import ExperimentProcess
+from league.processes.experiment_process import ExperimentInstance
 from copy import deepcopy
 
 from league.processes.training.ma_experiment_instance import MultiAgentExperimentInstance

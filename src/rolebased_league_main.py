@@ -18,7 +18,7 @@ from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
 from custom_logging.platforms import CustomConsoleLogger
 from league import SimpleLeague
-from league.processes.training.role_based_league_instance import RolebasedLeagueProcess
+from league.processes.training.role_based_league_instance import RolebasedLeagueInstance
 from league.processes.command_handler import CommandHandler
 from league.utils.team_composer import TeamComposer
 from custom_logging.logger import MainLogger
@@ -88,7 +88,7 @@ def run(_run, _config, _log):
 
     # Start league instances
     for idx, (in_q, out_q) in enumerate(zip(in_queues, out_queues)):
-        proc = RolebasedLeagueProcess(
+        proc = RolebasedLeagueInstance(
             player_id=idx,
             players=players,
             queue=(in_q, out_q),
