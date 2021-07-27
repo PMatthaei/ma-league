@@ -8,7 +8,9 @@ import torch as th
 
 from copy import deepcopy
 from random import sample
-from torch.multiprocessing import Barrier, Queue, Manager
+from torch.multiprocessing import Barrier, Manager
+from torch.multiprocessing.queue import Queue
+
 from os.path import dirname, abspath
 from maenv.core import RoleTypes, UnitAttackTypes
 from sacred import SETTINGS, Experiment

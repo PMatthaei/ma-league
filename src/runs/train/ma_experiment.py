@@ -227,7 +227,7 @@ class MultiAgentExperiment(ExperimentRun):
         for _ in range(n_test_runs):
             self.stepper.run(test_mode=True)
 
-    def evaluate_sequential(self, test_n_episode=None):
+    def evaluate_sequential(self, test_n_episode=None, clean_up=False):
         n_episode = self.args.test_nepisode if test_n_episode is None else test_n_episode
         self.logger.info("Evaluate for {} steps.".format(n_episode))
 
@@ -239,7 +239,8 @@ class MultiAgentExperiment(ExperimentRun):
         if self.args.save_replay:
             self.stepper.save_replay()
 
-        self.stepper.close_env()
+        if clean_up:
+            self.stepper.close_env()
 
         self.logger.log_stat("episode", n_episode, self.stepper.t_env)
         self.logger.log_report()

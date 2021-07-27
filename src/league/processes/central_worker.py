@@ -94,9 +94,6 @@ class CentralWorker(Process):
             proc = experiment(
                 idx=idx,
                 experiment_config=config_builder.build(idx),
-                #log_dir=self._log_dir,
-                #src_dir=self._src_dir,
-                #params=self._build_instance_params(self._params),  # Delegate params to experiment instance
                 home_team=team,
                 matchmaking=matchmaking,
                 communication=comm,

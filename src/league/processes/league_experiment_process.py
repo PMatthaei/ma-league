@@ -1,6 +1,7 @@
 from typing import Tuple, Dict, OrderedDict
 
-from torch.multiprocessing import Queue, Barrier
+from torch.multiprocessing import Barrier
+from torch.multiprocessing.queue import Queue
 
 from league.components import Matchmaking, PayoffEntry
 from league.processes.command_handler import clone_state_dict

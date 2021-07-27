@@ -9,7 +9,7 @@ from runs.train.ensemble_experiment import EnsembleExperiment
 from runs.train.ma_experiment import MultiAgentExperiment
 
 
-class EnsembleLeagueProcess(LeagueExperimentProcess):
+class EnsembleLeagueInstance(LeagueExperimentProcess):
 
     def __init__(self, **kwargs):
         """
@@ -28,7 +28,7 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
         :param logger:
         :param sync_barrier:
         """
-        super(EnsembleLeagueProcess, self).__init__(**kwargs)
+        super(EnsembleLeagueInstance, self).__init__(**kwargs)
 
         self._ensemble = None
 
@@ -79,14 +79,9 @@ class EnsembleLeagueProcess(LeagueExperimentProcess):
             self._experiment.load_ensemble(native=foreign_agent_state, foreign_agent=agent_state)
             self._logger.info(f"Evaluate ensemble in process: {self._proc_id}")
             self._experiment.evaluate_sequential(test_n_episode=self._args.n_league_evaluation_episodes)
-
             #
             # Train the native agent in an ensemble with the foreign agent (and its team constellation)
             #
-            self._logger.info(f"Train ensemble in process: {self._proc_id}")
-            self._configure_experiment(home=self._away_team, ai=True)  # Set the foreign team constellation as home team
-            self._experiment = EnsembleExperiment(args=self._args, logger=self._logger, on_episode_end=self._send_result)
-            self._experiment.load_ensemble(native=foreign_agent_state, foreign_agent=agent_state)
             self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
 
             #

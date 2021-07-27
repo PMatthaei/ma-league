@@ -1,6 +1,6 @@
 import random
 from typing import Tuple, Dict, Union, List, OrderedDict
-from torch.multiprocessing import Queue
+from torch.multiprocessing.queue import Queue
 
 import torch as th
 from torch import Tensor

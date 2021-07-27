@@ -1,5 +1,5 @@
 import torch
-from torch.multiprocessing import Queue
+from torch.multiprocessing.queue import Queue
 
 from custom_logging.collectibles import Collectibles
 from custom_logging.utils.enums import Originator

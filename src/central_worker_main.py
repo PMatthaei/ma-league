@@ -32,7 +32,7 @@ def main():
     #
     # Main Command
     #
-    parser.add_argument('--team_size', default=3, type=int,
+    parser.add_argument('--team_size', default=5, type=int,
                         help="Define how many agents comprise a team. Each team has same size")
     parser.add_argument('--league_size', default=2, type=int,
                         help="Define the size of the league (= how many teams)")

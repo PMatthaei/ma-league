@@ -10,14 +10,14 @@ from runs.train.ensemble_experiment import EnsembleExperiment
 from runs.train.ma_experiment import MultiAgentExperiment
 
 
-class MultiAgentExperimentProcess(ExperimentProcess):
+class MultiAgentExperimentInstance(ExperimentProcess):
 
     def __init__(self, **kwargs):
         """
         A simple Multi-Agent Experiment running as its own process for a given time.
         :param kwargs:
         """
-        super(MultiAgentExperimentProcess, self).__init__(**kwargs)
+        super(MultiAgentExperimentInstance, self).__init__(**kwargs)
 
     def _run_experiment(self) -> None:
         self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)

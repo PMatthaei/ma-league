@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 
-from torch.multiprocessing import Process, Queue
+from torch.multiprocessing import Process
+from torch.multiprocessing.queue import Queue
+
 from envs import REGISTRY as env_REGISTRY
 
 

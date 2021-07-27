@@ -1,6 +1,7 @@
 import time
 from logging import warning
-from torch.multiprocessing import Barrier, Queue
+from torch.multiprocessing import Barrier
+from torch.multiprocessing.queue import Queue
 
 from typing import Union, Tuple, List
 

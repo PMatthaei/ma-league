@@ -1,7 +1,8 @@
 from torch import Tensor
-from torch.multiprocessing import Process, Queue, Barrier
+from torch.multiprocessing import get_context, Process, Barrier
 from typing import List, Tuple, Dict
 from collections import OrderedDict
+from torch.multiprocessing.queue import Queue
 
 from custom_logging.platforms import CustomConsoleLogger
 from league.components import PayoffEntry
@@ -45,7 +46,7 @@ class CommandHandler(Process):
         self.logger = None
 
     def register(self) -> Tuple[int, Tuple[Queue, Queue]]:
-        in_q, out_q = (Queue(), Queue())
+        in_q, out_q = (Queue(ctx=get_context()), Queue(ctx=get_context()))
         self._in_queues += (in_q,)
         self._out_queues += (out_q,)
         idx = self.n_senders
