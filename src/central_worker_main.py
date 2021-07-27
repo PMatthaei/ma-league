@@ -53,7 +53,9 @@ def main():
     #
     # Sub-Command: Force Unit in Team
     #
-    force_unit_parser = sub_parsers.add_parser('force-unit', help='a help')
+    force_unit_parser = sub_parsers.add_parser('force-unit',
+                                               help='Forces the team composer to create teams with one ore more specified unit(s).'
+                                                    'A unit is specified via its role and attack type.')
     force_unit_parser.add_argument('--role', choices=list(RoleTypes),
                                    type=lambda role: RoleTypes[role],
                                    default=list(RoleTypes)[0],

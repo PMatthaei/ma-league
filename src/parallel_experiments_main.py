@@ -5,19 +5,17 @@ import sys
 import threading
 from os.path import dirname, abspath
 
-import torch as th
+from torch.multiprocessing import set_start_method
 
-from league.processes.experiment_process import ExperimentInstance
+from league.processes.experiment_process import  EmptyInstance
 from copy import deepcopy
-
-from league.processes.training.ma_experiment_instance import MultiAgentExperimentInstance
-
-th.multiprocessing.set_start_method('spawn', force=True)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"  # Deactivate message from envs built pygame
 
 if __name__ == '__main__':
+    set_start_method('spawn', force=True)
+
     # Handle pre experiment start arguments without sacred
     params = deepcopy(sys.argv)
     parser = argparse.ArgumentParser()
@@ -32,7 +30,9 @@ if __name__ == '__main__':
     procs = []
     # Start multiple experiments
     for idx in range(args.n):
-        proc = MultiAgentExperimentInstance(idx=idx, params=params, configs_dir=src_dir, log_dir=log_dir)
+        dummy = {"name": "empty", "log_dir": src_dir, "use_cuda": True, "env_args": {"seed": None, "record": False},
+                 "test_nepisode": 1, "runner_log_interval": 1, "use_tensorboard": False}
+        proc = EmptyInstance(idx=idx, experiment_config=dummy)
         procs.append(proc)
 
     [r.start() for r in procs]

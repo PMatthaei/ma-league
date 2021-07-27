@@ -1,3 +1,4 @@
+import time
 import traceback
 from typing import Dict
 
@@ -5,7 +6,7 @@ from torch.multiprocessing import Process, current_process
 import os
 import datetime
 import numpy as np
-from torch import manual_seed
+from torch import manual_seed, device
 
 from sacred import SETTINGS, Experiment
 from sacred.observers import FileStorageObserver
@@ -15,7 +16,6 @@ from custom_logging.logger import MainLogger
 from utils.main_utils import config_copy
 
 from types import SimpleNamespace
-
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
@@ -75,7 +75,7 @@ class ExperimentInstance(Process):
 
     def run_sacred_framework(self, _run, _config, _log):
         self._args = SimpleNamespace(**_config)
-        self._args.device = "cuda" if self._args.use_cuda else "cpu"
+        self._args.device = device("cuda" if self._args.use_cuda else "cpu")
         self._args.log_dir = self._instance_log_dir
         self._args.env_args["record"] = self._instance_log_dir if self._args.env_args["record"] else ""
 
@@ -99,10 +99,32 @@ class ExperimentInstance(Process):
         # sacred is on by default
         self._logger.setup_sacred(_run)
 
-
     def _set_seed(self, _config):
         config = config_copy(_config)
         np.random.seed(config["seed"])
         manual_seed(config["seed"])
         config['env_args']['seed'] = config["seed"]
         return config
+
+
+class EmptyInstance(ExperimentInstance):  # For test only
+
+    def _run_experiment(self):
+        import torch
+        from torch import nn
+
+        if torch.cuda.is_available() and self.experiment_config["use_cuda"]:
+            dev = "cuda:0"
+        else:
+            dev = "cpu"
+
+        x = torch.rand(5, device=torch.device(dev))
+        model = nn.Linear(5, 2, device=torch.device(dev))
+
+        i = 0
+        while i < 100:
+            print(x)
+            y = model(x)
+            print(y)
+            time.sleep(1)
+            i += 1

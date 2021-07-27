@@ -1,4 +1,0 @@
-play_time_mins: 120 # how long is a play against one opponent running in minutes
-league_runtime_hours: 24 # how long is the hole league running in hours
-n_league_evaluation_episodes: 1
-show_exp_parameters: False
