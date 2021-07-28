@@ -1,6 +1,7 @@
-import torch as th
-import numpy as np
 from types import SimpleNamespace as SN
+
+import numpy as np
+import torch as th
 
 
 def _check_safe_view(v, dest, key):

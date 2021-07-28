@@ -3,12 +3,12 @@ import datetime
 import os
 import sys
 import threading
+from copy import deepcopy
 from os.path import dirname, abspath
 
 from torch.multiprocessing import set_start_method
 
 from league.processes.interfaces.experiment_process import EmptyInstance
-from copy import deepcopy
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"  # Deactivate message from envs built pygame

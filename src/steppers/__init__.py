@@ -1,5 +1,5 @@
-from .parallel_stepper import ParallelStepper
 from .episode_stepper import EpisodeStepper
+from .parallel_stepper import ParallelStepper
 from .self_play_parallel_stepper import SelfPlayParallelStepper
 from .self_play_stepper import SelfPlayStepper
 

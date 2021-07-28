@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import OrderedDict
 
+import torch as th
+
 from components.episode_batch import EpisodeBatch
 from controllers.multi_agent_controller import MultiAgentController
 from exceptions.mac_exceptions import HiddenStateNotInitialized
 from modules.agents import REGISTRY as agent_REGISTRY, AgentNetwork
-import torch as th
 
 
 class BasicMAC(MultiAgentController):

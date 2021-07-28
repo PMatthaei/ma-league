@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from collections import defaultdict, Sized
 from typing import Any
+
 import numpy as np
+
 from custom_logging.collectibles import Collectibles
 from custom_logging.platforms import CustomSacredLogger, CustomTensorboardLogger
 from custom_logging.platforms.console import CustomConsoleLogger

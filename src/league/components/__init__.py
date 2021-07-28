@@ -1,2 +1,2 @@
-from .payoff_entry import PayoffEntry
 from .matchmaker import Matchmaker
+from .payoff_entry import PayoffEntry

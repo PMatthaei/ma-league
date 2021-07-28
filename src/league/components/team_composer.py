@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-import itertools
-
 import enum
+import itertools
 import math
-
-import numpy as np
-
 from collections import Counter
 from functools import reduce
-from typing import List, Dict, Union, Tuple
 from random import sample
+from typing import List, Dict, Union, Tuple
 
+import numpy as np
 from maenv.core import RoleTypes, UnitAttackTypes
 
 

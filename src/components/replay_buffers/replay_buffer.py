@@ -1,5 +1,6 @@
-from components.episode_batch import EpisodeBatch
 import numpy as np
+
+from components.episode_batch import EpisodeBatch
 
 
 class ReplayBuffer(EpisodeBatch):

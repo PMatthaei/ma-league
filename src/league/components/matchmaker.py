@@ -1,13 +1,13 @@
 import random
-from typing import Tuple, Dict, Union, List, OrderedDict
-from torch.multiprocessing.queue import Queue
+from typing import Tuple, Union, List, OrderedDict
 
 import torch as th
 from torch import Tensor
+from torch.multiprocessing.queue import Queue
 
 from league.components import PayoffEntry
-from league.components.self_play import PFSPSampling, FSPSampling
 from league.components.commands import AgentPoolGetCommand, CloseCommunicationCommand
+from league.components.self_play import PFSPSampling, FSPSampling
 from league.components.team_composer import Team
 
 

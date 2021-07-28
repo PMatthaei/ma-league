@@ -1,10 +1,7 @@
-import io
 import math
-from collections import Sized
 from typing import List
 
 import matplotlib.pyplot as plt
-
 from matplotlib.cm import get_cmap
 from matplotlib.figure import Figure
 

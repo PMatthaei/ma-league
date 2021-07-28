@@ -1,5 +1,5 @@
-import torch as th
 import numpy as np
+import torch as th
 
 
 def percentage(x):

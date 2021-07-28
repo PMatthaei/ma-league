@@ -1,11 +1,10 @@
 from typing import OrderedDict
 
-from runs.train.ma_experiment import MultiAgentExperiment
-
-from controllers import REGISTRY as mac_REGISTRY
-from steppers import SELF_REGISTRY as self_steppers_REGISTRY
 import torch as th
 
+from controllers import REGISTRY as mac_REGISTRY
+from runs.train.ma_experiment import MultiAgentExperiment
+from steppers import SELF_REGISTRY as self_steppers_REGISTRY
 from steppers.episode_stepper import EnvStepper
 
 

@@ -1,7 +1,7 @@
+import numpy as np
 import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 
 class QMixer(nn.Module):

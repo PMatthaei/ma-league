@@ -1,31 +1,29 @@
-import os
-
 import datetime
+import os
 import sys
 import threading
+from copy import deepcopy
+from os.path import dirname, abspath
+from random import sample
+from types import SimpleNamespace
+
 import numpy as np
 import torch as th
-
-from copy import deepcopy
-from random import sample
-from torch.multiprocessing import Barrier, Manager
-from torch.multiprocessing.queue import Queue
-
-from os.path import dirname, abspath
 from maenv.core import RoleTypes, UnitAttackTypes
 from sacred import SETTINGS, Experiment
 from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
+from torch.multiprocessing import Barrier, Manager
+from torch.multiprocessing.queue import Queue
+
+from custom_logging.logger import MainLogger
 from custom_logging.platforms import CustomConsoleLogger
 from league import SimpleLeague
-from league.processes.training.role_based_league_instance import RolebasedLeagueInstance
-from league.processes.agent_pool_instance import AgentPoolInstance
 from league.components.team_composer import TeamComposer
-from custom_logging.logger import MainLogger
+from league.processes.agent_pool_instance import AgentPoolInstance
+from league.processes.training.role_based_league_instance import RolebasedLeagueInstance
 from utils.main_utils import get_default_config, get_config, get_match_build_plan, recursive_dict_update, config_copy, \
     set_agents_only
-
-from types import SimpleNamespace
 from utils.run_utils import args_sanity_check
 
 th.multiprocessing.set_start_method('spawn', force=True)

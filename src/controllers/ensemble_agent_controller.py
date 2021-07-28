@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import copy
 from typing import Dict, OrderedDict
+
+import torch as th
 
 from controllers import BasicMAC
 from modules.agents import AgentNetwork
-import torch as th
 
 
 class EnsembleMAC(BasicMAC):

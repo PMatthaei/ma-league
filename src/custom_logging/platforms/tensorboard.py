@@ -1,9 +1,9 @@
 from collections import defaultdict
 
+import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
 
 from custom_logging.utils.plots import plot_greedy_actions
-import matplotlib.pyplot as plt
 
 
 class CustomTensorboardLogger:

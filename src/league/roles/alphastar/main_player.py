@@ -5,9 +5,8 @@ from typing import Tuple, Union, Any
 import numpy as np
 
 from league.components.self_play import PFSPSampling
-from league.utils.helpers import remove_monotonic_suffix
-
 from league.roles.players import Player, HistoricalPlayer
+from league.utils.helpers import remove_monotonic_suffix
 
 
 class MainPlayer(Player):

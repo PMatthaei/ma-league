@@ -2,13 +2,11 @@ from __future__ import annotations
 
 from typing import OrderedDict
 
+import torch as th
 from torch import Tensor
 
-from components.episode_batch import EpisodeBatch
 from components.action_selectors import REGISTRY as action_REGISTRY
-
-import torch as th
-
+from components.episode_batch import EpisodeBatch
 from modules.agents import AgentNetwork
 
 

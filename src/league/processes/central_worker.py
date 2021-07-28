@@ -1,16 +1,16 @@
-from maenv.core import RoleTypes, UnitAttackTypes
-from torch.multiprocessing import Process
 from argparse import Namespace
 from typing import Dict
 
+from maenv.core import RoleTypes, UnitAttackTypes
+from torch.multiprocessing import Barrier, current_process
+from torch.multiprocessing import Process
+
 from custom_logging.platforms import CustomConsoleLogger
 from league.components import PayoffEntry
-from torch.multiprocessing import Barrier, current_process
-
-from league.processes.agent_pool_instance import AgentPoolInstance
+from league.components.matchmaker import REGISTRY as matchmaking_REGISTRY, Matchmaker
 from league.components.team_composer import TeamComposer
 from league.processes import REGISTRY as experiment_REGISTRY
-from league.components.matchmaker import REGISTRY as matchmaking_REGISTRY, Matchmaker
+from league.processes.agent_pool_instance import AgentPoolInstance
 from utils.config_builder import ConfigBuilder
 
 

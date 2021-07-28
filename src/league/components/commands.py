@@ -1,6 +1,6 @@
 import uuid
 from enum import Enum
-from typing import  Any, Tuple, OrderedDict
+from typing import Any, Tuple, OrderedDict
 
 from league.components import PayoffEntry
 

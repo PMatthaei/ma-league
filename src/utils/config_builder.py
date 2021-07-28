@@ -20,7 +20,7 @@ class ConfigBuilder:
     def build(self, training_idx: int) -> Dict:
         params = deepcopy(self._params)  # Copy to prevent changing for subsequent build() calls
 
-        experiment_config = self._read_config_yamls(params)
+        experiment_config = self._read_config_yamls(params)  # Read yamls in src/config
 
         experiment_config["log_dir"] = self._log_dir  # set logging directory for instance metrics and model
 
