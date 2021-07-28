@@ -6,6 +6,7 @@ import torch as th
 from torch import Tensor
 
 from league.components import PayoffEntry
+from league.components.payoff_entry import PayoffWrapper
 from league.components.self_play import PFSPSampling, FSPSampling
 from league.utils.commands import AgentPoolGetCommand, CloseCommunicationCommand
 from league.components.team_composer import Team
@@ -18,12 +19,11 @@ def dd():
 class Matchmaker:
 
     def __init__(self, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor):
-        self._in_q, self._out_q = communication[1]
-        self._comm_id = communication[0]
+        self._comm_id, (self._in_q, self._out_q) = communication
         self._teams_dict = {team.id_: team for team in teams}
         self._instance_to_tid = {team.id_: idx for idx, team in enumerate(teams)}
         self._tid_to_instance = {v: k for k, v in self._instance_to_tid.items()}
-        self.payoff = payoff
+        self.payoff: PayoffWrapper = PayoffWrapper(payoff)
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[int, Team, OrderedDict]]:
         raise NotImplementedError()
@@ -65,11 +65,11 @@ class PFSPMatchmaking(Matchmaker):
         chosen_tid: int = self._sampling_strategy.sample(opponents=list(opponents.keys()), prio_measure=win_rates)
         chosen_idx = self._instance_to_tid[chosen_tid]
         team = self.get_team(tid=chosen_tid)
-        self.payoff[home_instance, chosen_idx, PayoffEntry.MATCHES] += 1
+        self.payoff.match(home_instance, chosen_idx)
         return chosen_idx, team, opponents[chosen_tid]
 
     def _win_rates(self, idx):
-        games = self.payoff[idx, :, PayoffEntry.GAMES]
+        games = self.payoff.games(idx)
         no_game_mask = games == 0.0
         wins = self.payoff[idx, :, PayoffEntry.WIN]
         draws = self.payoff[idx, :, PayoffEntry.DRAW]
@@ -89,7 +89,7 @@ class FSPMatchmaking(Matchmaker):
         chosen_tid: int = self._sampling_strategy.sample(opponents=list(opponents.keys()))
         chosen_idx = self._instance_to_tid[chosen_tid]
         team = self.get_team(tid=chosen_tid)
-        self.payoff[home_instance, chosen_idx, PayoffEntry.MATCHES] += 1
+        self.payoff.match(home_instance, chosen_idx)
         return chosen_idx, team, opponents[chosen_tid]
 
 
@@ -99,12 +99,12 @@ class BalancedMatchmaking(Matchmaker):
         super().__init__(communication, teams, payoff)
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[int, Team, OrderedDict]]:
-        idx = self.get_instance_id(home_team)
+        home_instance = self.get_instance_id(home_team)
         agents = self.get_agents()
-        matches = self.payoff[idx, :, PayoffEntry.MATCHES]
+        matches = self.payoff.matches(home_instance)
         # matches = matches[matches != idx] # Remove play against one self
         chosen_idx = th.argmin(matches).item()  # Get adversary we played the least
-        self.payoff[idx, chosen_idx, PayoffEntry.MATCHES] += 1
+        self.payoff.match(home_instance, chosen_idx)
         team = self.get_team(chosen_idx)
         return chosen_idx, team, agents[team]
 
@@ -114,14 +114,14 @@ class RandomMatchmaking(Matchmaker):
         super().__init__(communication, teams, payoff)
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[int, Team, OrderedDict]]:
-        idx = self.get_instance_id(home_team)
+        home_instance = self.get_instance_id(home_team)
 
         agents = self.get_agents()
         ids = list(agents.keys())
         random_id = random.choice(ids)
         chosen_idx = self._instance_to_tid[random_id]
 
-        self.payoff[idx, chosen_idx, PayoffEntry.MATCHES] += 1
+        self.payoff.match(home_instance, chosen_idx)
         team = self.get_team(tid=random_id)
         return chosen_idx, team, agents[random_id]
 
@@ -135,14 +135,14 @@ class NonRecurringAllAdversaryMatchmaking(Matchmaker):
         home_instance = self.get_instance_id(home_team)
 
         agents = self.get_agents()
-        matches = self.payoff[home_instance, :, PayoffEntry.MATCHES]
+        matches = self.payoff.matches(home_instance)
         matches[home_instance] = 2 # Fake two matches played to prevent self selection
         if th.all(matches > 0): # If every adversary played once
             return None
         chosen_idx = th.argmin(matches).item()  # Get adversary we played the least
         if chosen_idx == home_instance:
             raise Exception(f"Invalid adversary in instance {chosen_idx}. Should not play against self.")
-        self.payoff[home_instance, chosen_idx, PayoffEntry.MATCHES] += 1
+        self.payoff.match(home_instance, chosen_idx)
         team = self.get_team(chosen_idx)
         return chosen_idx, team, agents[team.id_]
 

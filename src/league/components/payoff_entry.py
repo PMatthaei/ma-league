@@ -28,5 +28,23 @@ class PayoffWrapper:
         win_rates[no_game_mask] = .5  # If no games played we divided by 0 -> NaN -> replace with .5
         return win_rates
 
-    def _increment(self, i, j, entry: PayoffEntry):
+    def games(self, i):
+        return self._payoff_tensor[i, :, PayoffEntry.WIN]
+
+    def matches(self, i):
+        return self._payoff_tensor[i, :, PayoffEntry.MATCHES]
+
+    def win(self, i, j):
+        self.increment(i, j, PayoffEntry.WIN)
+
+    def draw(self, i, j):
+        self.increment(i, j, PayoffEntry.DRAW)
+
+    def loss(self, i, j):
+        self.increment(i, j, PayoffEntry.LOSS)
+
+    def match(self, i, j):
+        self.increment(i, j, PayoffEntry.MATCHES)
+
+    def increment(self, i, j, entry: PayoffEntry):
         self._payoff_tensor[i, j, entry] += 1

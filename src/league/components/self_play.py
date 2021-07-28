@@ -3,7 +3,6 @@ import numpy as np
 
 class OpponentSampling:
     def __init__(self):
-        # TODO: Set and update opponent pool so that it does not have to be part of the sample method arguments
         pass
 
     def sample(self, opponents):
