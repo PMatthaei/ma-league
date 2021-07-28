@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import re
 import subprocess
 import uuid
 
@@ -28,9 +29,11 @@ def enter(title, arg):
 
 
 def choice(title, arg):
-    print(f"Activate {title}")
+    print(f"Activate {title} ?")
     response = select(title="", options=["Yes", "No"], arg=arg)
-    return response.replace("yes", "True").replace("no", "False")
+    yes = "yes" in response
+    final_response = response.replace("yes", "True").replace("no", "False")
+    return final_response, yes
 
 
 if __name__ == '__main__':
@@ -47,13 +50,16 @@ if __name__ == '__main__':
     league_size = enter("League size", arg="--league_size")
     team_size = enter("Team size", arg="--team_size")
 
-    use_cuda = choice("CUDA", arg="--use_cuda")
+    use_cuda, _ = choice("CUDA", arg="--use_cuda")
 
-    python_cmd = f"{python_cmd_base} {experiment} {matchmaking} {alg} {env} {league} {league_size} {team_size} {use_cuda} force-unit --unique --role=HEALER --attack=RANGED"
+    save_model, yes = choice("model saving", arg="--save_model")
+    save_model_interval = enter("model saving interval", arg="--save_model_interval") if yes else ""
 
+    python_cmd = f"{python_cmd_base} {experiment} {matchmaking} {alg} {env} {league} {league_size} {team_size} {use_cuda} {save_model} {save_model_interval} force-unit --unique --role=HEALER --attack=RANGED"
+
+    python_cmd = re.sub(' +', ' ', python_cmd)  # Clean multiple whitespaces
     print(f"Python Command: {python_cmd}")
 
     subprocess.check_call(python_cmd.split(" "))
 
     exit(1)
-
