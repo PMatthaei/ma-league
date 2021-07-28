@@ -69,7 +69,7 @@ class CentralWorker(Process):
         agent_pool = AgentPoolInstance(
             sync_barrier=sync_barrier
         )
-        league, matchmaker = None, None
+        matchmakers, matchmaker = None, None
         if self._args.experiment == "matchmaking" or self._args.experiment == "ensemble":
             matchmaker: Matchmaker = matchmaking_REGISTRY[self._args.matchmaking](
                 communication=agent_pool.register(),
@@ -77,7 +77,7 @@ class CentralWorker(Process):
                 teams=teams
             )
         elif self._args.experiment == "rolebased":
-            league: League = SimpleLeague(teams=teams, payoff=payoff, communication=agent_pool.register())
+            matchmakers: League = SimpleLeague(teams=teams, payoff=payoff, agent_pool=agent_pool)
         else:
             raise NotImplementedError("Experiment not supported.")
 
@@ -90,8 +90,8 @@ class CentralWorker(Process):
             proc = experiment(
                 idx=idx,
                 experiment_config=self.config_builder.build(idx),
-                home_team=team,
-                matchmaking=matchmaker if matchmaker is not None else league[idx],
+                home_team=team, # TODO replace with teams[idx] from matchmaker
+                matchmaker=matchmaker if matchmaker is not None else matchmakers[idx],
                 communication=agent_pool.register(),
                 sync_barrier=sync_barrier
             )

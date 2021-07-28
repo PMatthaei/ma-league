@@ -4,6 +4,7 @@ from collections import OrderedDict
 from torch.multiprocessing.queue import Queue
 
 from custom_logging.platforms import CustomConsoleLogger
+from league.rolebased.players import HistoricalPlayer
 from league.utils.commands import CloseCommunicationCommand, AgentCheckpointAddCommand, \
     AgentParamsUpdateCommand, \
     AgentParamsGetCommand, AgentPoolGetCommand
@@ -96,7 +97,9 @@ class AgentPoolInstance(Process):
         :param msg:
         :return:
         """
+        agent_params = self._storage[cmd.data]
         self.logger.info(f"Create historical player of player {cmd.origin}")
+        self._storage.update({None: HistoricalPlayer()}) # TODO create correct player
         raise NotImplementedError()
 
     def _get_agent(self, cmd: AgentParamsGetCommand):

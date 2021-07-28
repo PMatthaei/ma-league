@@ -11,10 +11,10 @@ from runs.train.ma_experiment import MultiAgentExperiment
 
 
 class MatchmakingLeagueInstance(LeagueExperimentInstance):
-    def __init__(self, matchmaking: Matchmaker, home_team: Team, communication: Tuple[int, Tuple[Queue, Queue]],
+    def __init__(self, matchmaker: Matchmaker, home_team: Team, communication: Tuple[int, Tuple[Queue, Queue]],
                  sync_barrier: Barrier, **kwargs):
 
-        super().__init__(matchmaking, home_team, communication, sync_barrier, **kwargs)
+        super().__init__(matchmaker, home_team, communication, sync_barrier, **kwargs)
 
     def _run_experiment(self):
         self._logger.info(f"Start pre-training with AI in {str(self)}")

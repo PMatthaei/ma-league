@@ -24,19 +24,19 @@ class AlphaStarLeague(League):
         for i, team_plan in enumerate(initial_agents):
             for _ in range(self._main_agents_n):
                 main_agent = MainPlayer(player_id, payoff=self._payoff, team=team_plan)
-                self._learning_agents[player_id] = main_agent
+                self._matchmakers[player_id] = main_agent
                 player_id += 1
 
             for _ in range(self._main_exploiters_n):
                 exploiter = MainExploiter(player_id, payoff=self._payoff, team=team_plan)
-                self._learning_agents[player_id] = exploiter
+                self._matchmakers[player_id] = exploiter
                 player_id += 1
 
             for _ in range(self._league_exploiters_n):
                 league_exploiter = LeagueExploiter(player_id, payoff=self._payoff, team=team_plan)
-                self._learning_agents[player_id] = league_exploiter
+                self._matchmakers[player_id] = league_exploiter
                 player_id += 1
-        for player in self._learning_agents.values():
+        for player in self._matchmakers.values():
             self._payoff.add_player(player)
 
     def roles_per_initial_agent(self) -> int:

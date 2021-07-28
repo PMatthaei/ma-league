@@ -18,9 +18,10 @@ class SimplePlayer(Player):
         super().__init__(player_id, communication, teams, payoff)
         self._pfsp = PFSPSampling()
 
-    def get_match(self, home_team) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
+    def get_match(self, team=None) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
         """
         Samples an SimplePlayer opponent using PFSP with win rates as prioritization.
+        :param **kwargs:
         :return:
         """
         simple_players = self.payoff.get_players_of_type(SimplePlayer)

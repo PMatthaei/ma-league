@@ -1,22 +1,21 @@
 import time
-from logging import warning
 from torch.multiprocessing import Barrier
 from torch.multiprocessing.queue import Queue
 
 from typing import Tuple
 
-from league.components import Matchmaker
 from league.processes.interfaces.league_experiment_process import LeagueExperimentInstance
 from league.rolebased.alphastar.main_player import MainPlayer
 from league.components.team_composer import Team
+from league.rolebased.players import Player
 from runs.train.league_experiment import LeagueExperiment
 
 
 class RolebasedLeagueInstance(LeagueExperimentInstance):
-    def __init__(self, matchmaking: Matchmaker, home_team: Team, communication: Tuple[int, Tuple[Queue, Queue]],
+    def __init__(self, matchmaker: Player, home_team: Team, communication: Tuple[int, Tuple[Queue, Queue]],
                  sync_barrier: Barrier, **kwargs):
 
-        super().__init__(matchmaking, home_team, communication, sync_barrier, **kwargs)
+        super().__init__(matchmaker, home_team, communication, sync_barrier, **kwargs)
 
     def _run_experiment(self):
         self._logger.info(f"Start pre-training with AI in process: {self._proc_id} with {self._home_team}")
@@ -28,7 +27,7 @@ class RolebasedLeagueInstance(LeagueExperimentInstance):
         self._share_agent_params(self.home_agent_state)
 
         # Progress to save initial checkpoint of agents after all runs performed setup
-        if isinstance(self._home, MainPlayer):  # TODO: Allow for different kinds of initial historical players
+        if isinstance(self._matchmaker, MainPlayer):  # TODO: Allow for different kinds of initial historical players
             self._request_checkpoint()  # MainPlayers are initially added as historical players
 
         start_time = time.time()
@@ -36,24 +35,19 @@ class RolebasedLeagueInstance(LeagueExperimentInstance):
 
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
 
-            self._away, flag = self._home.get_match()
-            match = self._get_agent_params(self._away)
-            if match is None:
-                warning("No Opponent was found.")
-                continue
+            adversary = [self._adversary_idx, self._adversary_team, adversary_params] = self._matchmaker.get_match(self._home_team) or (None, None, None)
+            if adversary.count(None) > 0:  # Test if all necessary data set
+                self._logger.info(f"No match found. Ending {str(self)}")
+                break
 
-            self._away_team, agent = match
-
-            self._experiment.load_adversary(agent=match)
-
-            self._logger.info(str(self))
+            self._experiment.load_adversary(agent=adversary_params)
 
             # Start training against new opponent and integrate the team of the away player
             self._register_team(self._away, rebuild=True)
             self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
 
             # Share agent after training
-            self._share_agent_params()
+            self._share_agent_params(agent=self.home_agent_state)
 
             end_time = time.time()
 

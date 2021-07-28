@@ -1,9 +1,11 @@
-from torch import Tensor
-from typing import Tuple, List
+from multiprocessing.synchronize import Barrier
 
-from torch.multiprocessing.queue import Queue
+from torch import Tensor
+from typing import  List
 
 from league.components import Team
+from league.processes.agent_pool_instance import AgentPoolInstance
+from utils.config_builder import ConfigBuilder
 
 
 class League(object):
@@ -11,20 +13,18 @@ class League(object):
     def __init__(self,
                  teams: List[Team],
                  payoff: Tensor,
-                 communication: Tuple[int, Tuple[Queue, Queue]],
+                 agent_pool: AgentPoolInstance,
                  main_agents_n=1):
+        self._teams = teams
         self._payoff = payoff
-        self._learning_agents = {}
+        self._matchmakers = {}
         self._main_agents_n = main_agents_n
-        self._comm = communication
-
-        # Setup initial learning agents
-        self._setup(teams)
+        self._agent_pool = agent_pool
 
     def __getitem__(self, item):
         raise NotImplementedError()
 
-    def _setup(self, initial_agents):
+    def setup(self, sync: Barrier, config_builder: ConfigBuilder):
         raise NotImplementedError()
 
     def roles_per_initial_agent(self) -> int:
@@ -32,4 +32,4 @@ class League(object):
 
     @property
     def size(self) -> int:
-        return len(self._learning_agents)
+        return len(self._matchmakers)

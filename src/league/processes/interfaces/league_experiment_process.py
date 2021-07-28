@@ -13,7 +13,7 @@ from league.components.team_composer import Team
 class LeagueExperimentInstance(ExperimentInstance):
 
     def __init__(self,
-                 matchmaking: Matchmaker,
+                 matchmaker: Matchmaker,
                  home_team: Team,
                  communication: Tuple[int, Tuple[Queue, Queue]],
                  sync_barrier: Barrier, **kwargs):
@@ -26,7 +26,7 @@ class LeagueExperimentInstance(ExperimentInstance):
         Opponent sampling is decided via a matchmaking component.
 
         :param agent_pool:
-        :param matchmaking:
+        :param matchmaker:
         :param home_team:
         :param communication:
         :param sync_barrier:
@@ -36,7 +36,7 @@ class LeagueExperimentInstance(ExperimentInstance):
         self._home_team: Team = home_team
         self._adversary_team: Team = None
         self._adversary_idx: int = None
-        self._matchmaker: Matchmaker = matchmaking
+        self._matchmaker: Matchmaker = matchmaker
 
         self._comm_id = communication[0]
         self._in_queue, self._out_queue = communication[1]  # In- and Outgoing Communication
@@ -51,7 +51,7 @@ class LeagueExperimentInstance(ExperimentInstance):
 
     @property
     def home_agent_state(self) -> OrderedDict:
-        return self._experiment.home_mac.agent.state_dict()
+        return self._experiment.home_mac.agent.state_dict()  # return agent of the controller in the current experiment
 
     def _configure_experiment(self, home: Team, ai: bool, away: Team = None):
         # In case this process needs to save models -> modify token
@@ -69,8 +69,7 @@ class LeagueExperimentInstance(ExperimentInstance):
 
     def _share_agent_params(self, agent: OrderedDict, team: Team = None):
         """
-        Share agent
-        and wait until every process finished to sharing to ensure every agent is up-to-date before next match.
+        Share agent and wait until every process finished to sharing to ensure every agent is up-to-date before next match.
         This will currently require each instance to share in order to release barrier.
         :param agent:
         :return:
@@ -80,10 +79,10 @@ class LeagueExperimentInstance(ExperimentInstance):
         cmd = AgentParamsUpdateCommand(origin=self._comm_id, data=(tid, agent_clone))
         self._in_queue.put(cmd)
         del agent_clone
-        self._ack()
+        self._ack()  # Wait for message received approval
         self._sync_barrier.wait() if self._sync_barrier is not None else None
 
-    def _extract_result(self, env_info: dict):
+    def _extract_result(self, env_info: dict) -> PayoffEntry:
         policy_team_id = self._experiment.stepper.policy_team_id
         draw = env_info["draw"]
         battle_won = env_info["battle_won"]
@@ -113,7 +112,7 @@ class LeagueExperimentInstance(ExperimentInstance):
         self._sync_barrier.wait() if self._sync_barrier is not None else None
         cmd = CloseCommunicationCommand(origin=self._comm_id)
         self._in_queue.put(cmd)
-        self._ack()
+        self._ack()  # Wait for message received approval
         self._in_queue.close()
         self._out_queue.close()
 

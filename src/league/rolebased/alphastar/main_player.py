@@ -9,14 +9,13 @@ from league.rolebased.players import Player, HistoricalPlayer
 from league.utils.helpers import remove_monotonic_suffix
 
 
-
 class MainPlayer(Player):
     def __init__(self, player_id: int, payoff, team):
         super().__init__(player_id, payoff, team)
         self._checkpoint_step = 0
         self._pfsp = PFSPSampling()
 
-    def get_match(self) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
+    def get_match(self, team=None) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
         """
         Samples an HistoricalPlayer opponent using PFSP with probability 0.5.
         In other cases play against MainPlayers using SP or verify that no player was omitted.

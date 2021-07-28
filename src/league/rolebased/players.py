@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
-from typing import Tuple, List
+from typing import Tuple, List, OrderedDict
 
 from torch import Tensor
 from torch.multiprocessing.queue import Queue
@@ -14,22 +14,23 @@ from modules.agents.agent_network import AgentNetwork
 
 class Player(Matchmaker):
 
-    def __init__(self, player_id: int, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor):
+    def __init__(self, player_id: int, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team],
+                 payoff: Tensor):
         super().__init__(communication, teams, payoff)
         self.id_ = player_id
-        self._payoff = payoff
         self.team = teams[player_id]
         self.trained_steps = 0
         self._checkpoint_step = None
 
-    def get_match(self, team: Team) -> Player:
-        raise NotImplementedError
+    def get_match(self, team=None) -> Player:
+        raise NotImplementedError()
 
     def ready_to_checkpoint(self) -> bool:
-        return False
+        raise NotImplementedError()
 
-    def _create_checkpoint(self) -> HistoricalPlayer:
-        return HistoricalPlayer(self.id_, self._payoff, deepcopy(self.agent))
+    def is_main_player(self):
+        from league.rolebased.alphastar import MainPlayer
+        return isinstance(self, MainPlayer)
 
     @property
     def payoff(self):
@@ -37,7 +38,7 @@ class Player(Matchmaker):
 
     def checkpoint(self) -> HistoricalPlayer:
         self._checkpoint_step = self.trained_steps
-        return self._create_checkpoint()
+        return  # to send checkpoint cmd
 
     def __str__(self):
         return f"{type(self).__name__}_{self.id_}"
@@ -46,21 +47,21 @@ class Player(Matchmaker):
         return re.sub(r'(?<!^)(?=[A-Z])', '_', str(self)).lower()
 
 
-class HistoricalPlayer(Player):
+class HistoricalPlayer:
 
-    def __init__(self, player_id: int, payoff, agent: AgentNetwork):
+    def __init__(self, player_id: int, parent_id: int):
         """
 
         :param player_id:
         :param payoff:
         """
 
-        super().__init__(player_id, payoff)
-        self._parent = agent
+        super().__init__(player_id)
+        self._parent_id = parent_id
 
     @property
-    def parent(self) -> AgentNetwork:
-        return self._parent
+    def parent(self) -> int:
+        return self._parent_id
 
     def get_match(self, team: Team) -> Tuple[Player, bool]:
         raise ValueError("Historical players should not request matches.")
