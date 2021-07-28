@@ -29,8 +29,7 @@ else
    echo "venv already created. Skipping..."
 fi
 
-echo "Starting Experiment Assistent"
-
+# "Starting Experiment Assistent"
 chmod 755 run.py
 
 ./run.py
