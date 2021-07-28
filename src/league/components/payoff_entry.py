@@ -1,4 +1,5 @@
 from enum import IntEnum
+from typing import List
 
 from torch import Tensor
 
@@ -17,22 +18,22 @@ class PayoffWrapper:
         Wraps around the shared payoff tensor to act as proxy for reoccurring operations on the payoff tensor.
         :param payoff:
         """
-        self._payoff_tensor: Tensor = payoff
+        self._p: Tensor = payoff
 
-    def _win_rates(self, idx):
-        games = self._payoff_tensor[idx, :, PayoffEntry.GAMES]
+    def win_rates(self, idx, indices: List[int]=None):
+        games = self._p[idx, :, PayoffEntry.GAMES] if indices is None else self._p[idx, indices, PayoffEntry.GAMES]
         no_game_mask = games == 0.0
-        wins = self._payoff_tensor[idx, :, PayoffEntry.WIN]
-        draws = self._payoff_tensor[idx, :, PayoffEntry.DRAW]
+        wins = self._p[idx, :, PayoffEntry.WIN] if indices is None else self._p[idx, indices, PayoffEntry.WIN]
+        draws = self._p[idx, :, PayoffEntry.DRAW] if indices is None else self._p[idx, indices, PayoffEntry.DRAW]
         win_rates = (wins + 0.5 * draws) / games
         win_rates[no_game_mask] = .5  # If no games played we divided by 0 -> NaN -> replace with .5
         return win_rates
 
     def games(self, i):
-        return self._payoff_tensor[i, :, PayoffEntry.WIN]
+        return self._p[i, :, PayoffEntry.WIN]
 
     def matches(self, i):
-        return self._payoff_tensor[i, :, PayoffEntry.MATCHES]
+        return self._p[i, :, PayoffEntry.MATCHES]
 
     def win(self, i, j):
         self.increment(i, j, PayoffEntry.WIN)
@@ -47,4 +48,4 @@ class PayoffWrapper:
         self.increment(i, j, PayoffEntry.MATCHES)
 
     def increment(self, i, j, entry: PayoffEntry):
-        self._payoff_tensor[i, j, entry] += 1
+        self._p[i, j, entry] += 1

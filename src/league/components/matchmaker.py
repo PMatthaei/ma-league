@@ -26,6 +26,10 @@ class Matchmaker:
         self.payoff: PayoffWrapper = PayoffWrapper(payoff)
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[int, Team, OrderedDict]]:
+        """
+        :param home_team:
+        :return: A tuple consisting of instance id, team and the current agent params from the agent pool
+        """
         raise NotImplementedError()
 
     def get_agents(self):
@@ -61,21 +65,12 @@ class PFSPMatchmaking(Matchmaker):
     def get_match(self, home_team: Team) -> Union[None, Tuple[int, Team, OrderedDict]]:
         home_instance = self.get_instance_id(home_team)
         opponents = self.get_agents()
-        win_rates = self._win_rates(home_instance)
+        win_rates = self.payoff.win_rates(home_instance)
         chosen_tid: int = self._sampling_strategy.sample(opponents=list(opponents.keys()), prio_measure=win_rates)
         chosen_idx = self._instance_to_tid[chosen_tid]
         team = self.get_team(tid=chosen_tid)
         self.payoff.match(home_instance, chosen_idx)
         return chosen_idx, team, opponents[chosen_tid]
-
-    def _win_rates(self, idx):
-        games = self.payoff.games(idx)
-        no_game_mask = games == 0.0
-        wins = self.payoff[idx, :, PayoffEntry.WIN]
-        draws = self.payoff[idx, :, PayoffEntry.DRAW]
-        win_rates = (wins + 0.5 * draws) / games
-        win_rates[no_game_mask] = .5  # If no games played we divided by 0 -> NaN -> replace with .5
-        return win_rates
 
 
 class FSPMatchmaking(Matchmaker):

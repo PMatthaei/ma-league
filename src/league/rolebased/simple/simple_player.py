@@ -13,9 +13,9 @@ from league.rolebased.players import Player
 
 class SimplePlayer(Player):
 
-    def __init__(self, player_id: int, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team],
+    def __init__(self, pid: int, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team],
                  payoff: Tensor):
-        super().__init__(player_id, communication, teams, payoff)
+        super().__init__(pid, communication, teams, payoff)
         self._pfsp = PFSPSampling()
 
     def get_match(self, team=None) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
@@ -24,10 +24,10 @@ class SimplePlayer(Player):
         :param **kwargs:
         :return:
         """
-        simple_players = self.payoff.get_players_of_type(SimplePlayer)
-        win_rates = self.payoff[self, simple_players]
-        chosen = self._pfsp.sample(simple_players, prio_measure=win_rates, weighting="squared")
-        return self.payoff.players[chosen], True
+        opponents: List[int] = self.payoff.get_players_of_type(SimplePlayer)
+        win_rates = self.payoff.win_rates(self.pid, opponents)
+        chosen = self._pfsp.sample(opponents, prio_measure=win_rates, weighting="squared")
+        return chosen_idx, chosen_team, self.payoff.players[chosen]
 
     def ready_to_checkpoint(self) -> bool:
         """
@@ -38,5 +38,3 @@ class SimplePlayer(Player):
         if steps_passed < 2e9:
             return False
         return True
-
-

@@ -10,8 +10,8 @@ from league.utils.helpers import remove_monotonic_suffix
 
 
 class MainPlayer(Player):
-    def __init__(self, player_id: int, payoff, team):
-        super().__init__(player_id, payoff, team)
+    def __init__(self, pid: int, payoff, team):
+        super().__init__(pid, payoff, team)
         self._checkpoint_step = 0
         self._pfsp = PFSPSampling()
 
@@ -28,7 +28,7 @@ class MainPlayer(Player):
             return self._pfsp_branch()
 
         main_agents = [
-            player for player in self._payoff.players
+            player for player in self.payoff.players
             if isinstance(player, MainPlayer)
         ]
         opponent = np.random.choice(main_agents)
@@ -48,16 +48,16 @@ class MainPlayer(Player):
         :return:
         """
         historical = [
-            player.id_ for player in self._payoff.players
+            player.id_ for player in self.payoff.players
             if isinstance(player, HistoricalPlayer)
         ]
 
         if len(historical) == 0:  # no new historical opponents found # TODO
             return None, False
 
-        win_rates = self._payoff[self.id_, historical]
+        win_rates = self.payoff[self.id_, historical]
         chosen = self._pfsp.sample(historical, prio_measure=win_rates, weighting="squared")
-        return self._payoff.players[chosen], True
+        return self.payoff.players[chosen], True
 
     def _selfplay_branch(self, opponent: Player) -> Tuple[Player, bool]:
         """
@@ -66,12 +66,12 @@ class MainPlayer(Player):
         :return:
         """
         # Play self-play match
-        if self._payoff[self.id_, opponent.id_] > 0.3:
+        if self.payoff[self.id_, opponent.id_] > 0.3:
             return opponent, False
 
         # Opponent too strong -> use checkpoint of the opponent as curriculum
         historical = [
-            player.id_ for player in self._payoff.players
+            player.id_ for player in self.payoff.players
             if isinstance(player, HistoricalPlayer) and player.parent == opponent
         ]
 
@@ -79,38 +79,38 @@ class MainPlayer(Player):
             return opponent, False
 
         # PFSP on checkpoints of opponent
-        win_rates = self._payoff[self.id_, historical]
+        win_rates = self.payoff[self.id_, historical]
         chosen = self._pfsp.sample(historical, prio_measure=win_rates, weighting="variance")
-        return self._payoff.players[chosen], True
+        return self.payoff.players[chosen], True
 
     def _verification_branch(self, opponent) -> Union[Tuple[None, None], Tuple[Player, bool]]:
         # Check exploitation
         from league.rolebased.alphastar.exploiters import MainExploiter
 
         exploiters = set([  # Get all exploiters
-            player for player in self._payoff.players
+            player for player in self.payoff.players
             if isinstance(player, MainExploiter)
         ])
         exp_historical = [  # Get all historical players which originate from exploiters
-            player.id_ for player in self._payoff.players
+            player.id_ for player in self.payoff.players
             if isinstance(player, HistoricalPlayer) and player.parent in exploiters
         ]
         # If historical exploiters min. win rate is smaller threshold -> PFSP
-        win_rates = self._payoff[self.id_, exp_historical]
+        win_rates = self.payoff[self.id_, exp_historical]
         if len(win_rates) and win_rates.min() < 0.3:
             chosen = self._pfsp.sample(exp_historical, prio_measure=win_rates, weighting="squared")
-            return self._payoff.players[chosen], True
+            return self.payoff.players[chosen], True
 
         # Check forgetting
         historical = [
-            player.id_ for player in self._payoff.players
+            player.id_ for player in self.payoff.players
             if isinstance(player, HistoricalPlayer) and player.parent == opponent
         ]
-        win_rates = self._payoff[self.id_, historical]
+        win_rates = self.payoff[self.id_, historical]
         win_rates, historical = remove_monotonic_suffix(win_rates, historical)
         if len(win_rates) and win_rates.min() < 0.7:
             chosen = self._pfsp.sample(historical, prio_measure=win_rates, weighting="squared")
-            return self._payoff.players[chosen], True
+            return self.payoff.players[chosen], True
 
         # TODO: when and why do we get here?
         return None, None
@@ -125,8 +125,8 @@ class MainPlayer(Player):
             return False
 
         historical = [
-            player.id_ for player in self._payoff.players
+            player.id_ for player in self.payoff.players
             if isinstance(player, HistoricalPlayer)
         ]
-        win_rates = self._payoff[self.id_, historical]
+        win_rates = self.payoff[self.id_, historical]
         return win_rates.min() > 0.7 or steps_passed > 4e9  # TODO make constant

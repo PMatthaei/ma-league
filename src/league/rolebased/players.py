@@ -8,17 +8,18 @@ from torch import Tensor
 from torch.multiprocessing.queue import Queue
 
 from league.components import Matchmaker
+from league.components.payoff_entry import PayoffWrapper
 from league.components.team_composer import Team
 from modules.agents.agent_network import AgentNetwork
 
 
 class Player(Matchmaker):
 
-    def __init__(self, player_id: int, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team],
+    def __init__(self, pid: int, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team],
                  payoff: Tensor):
         super().__init__(communication, teams, payoff)
-        self.id_ = player_id
-        self.team = teams[player_id]
+        self.pid = pid
+        self.team = teams[pid]
         self.trained_steps = 0
         self._checkpoint_step = None
 
@@ -33,15 +34,15 @@ class Player(Matchmaker):
         return isinstance(self, MainPlayer)
 
     @property
-    def payoff(self):
-        return self._payoff
+    def payoff(self) -> PayoffWrapper:
+        return self.payoff
 
     def checkpoint(self) -> HistoricalPlayer:
         self._checkpoint_step = self.trained_steps
         return  # to send checkpoint cmd
 
     def __str__(self):
-        return f"{type(self).__name__}_{self.id_}"
+        return f"{type(self).__name__}_{self.pid}"
 
     def prettier(self):
         return re.sub(r'(?<!^)(?=[A-Z])', '_', str(self)).lower()
