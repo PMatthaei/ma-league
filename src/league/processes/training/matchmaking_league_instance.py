@@ -1,11 +1,11 @@
 import time
-from typing import Tuple
-
 from torch.multiprocessing import Barrier, Queue
 
+from typing import Tuple
+
 from league.components.matchmaker import Matchmaker
-from league.components.team_composer import Team
 from league.processes.interfaces.league_experiment_process import LeagueExperimentInstance
+from league.components.team_composer import Team
 from runs.train.league_experiment import LeagueExperiment
 from runs.train.ma_experiment import MultiAgentExperiment
 

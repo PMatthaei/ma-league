@@ -4,18 +4,20 @@ import json
 import os
 import sys
 import threading
+import torch as th
+
 from copy import deepcopy
 from os.path import dirname, abspath
 from pathlib import Path
 
-import torch as th
 from maenv.core import RoleTypes, UnitAttackTypes
 from maenv.utils.enums import EnumEncoder
+
+from league.processes import REGISTRY as experiment_REGISTRY
+from league.components.matchmaker import REGISTRY as matchmaking_REGISTRY
+from league.processes.central_worker import CentralWorker
 from torch.multiprocessing import set_start_method
 
-from league.components.matchmaker import REGISTRY as matchmaking_REGISTRY
-from league.processes import REGISTRY as experiment_REGISTRY
-from league.processes.central_worker import CentralWorker
 
 set_start_method('spawn', force=True)
 

@@ -1,8 +1,8 @@
-import torch as th
-
 from components.episode_batch import EpisodeBatch
 from controllers.sfs_controller import SFSController
 from learners.learner import Learner
+
+import torch as th
 
 
 class SFSLearner(Learner):

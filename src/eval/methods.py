@@ -1,8 +1,8 @@
 from random import shuffle
 from typing import Tuple
 
-import numpy as np
 import torch as th
+import numpy as np
 
 
 def avg_proportional_loss(jpc_matrix: th.tensor) -> float:

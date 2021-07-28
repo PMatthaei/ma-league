@@ -1,5 +1,4 @@
 from functools import partial
-
 from maenv.environment import TeamsEnv
 
 

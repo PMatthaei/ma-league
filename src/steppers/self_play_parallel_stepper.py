@@ -1,12 +1,14 @@
 from functools import partial
 
 import torch
-import torch as th
 
 from components.episode_batch import EpisodeBatch
-from custom_logging.logger import Originator
+
 from steppers import ParallelStepper
+import torch as th
+
 from steppers.utils.stepper_utils import append_pre_transition_data
+from custom_logging.logger import Originator
 
 
 class SelfPlayParallelStepper(ParallelStepper):

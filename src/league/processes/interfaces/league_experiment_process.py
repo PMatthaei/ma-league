@@ -4,10 +4,10 @@ from torch.multiprocessing import Barrier
 from torch.multiprocessing.queue import Queue
 
 from league.components import Matchmaker, PayoffEntry
-from league.components.commands import CloseCommunicationCommand, AgentParamsUpdateCommand, AgentParamsGetCommand
-from league.components.team_composer import Team
 from league.processes.agent_pool_instance import clone_state_dict
 from league.processes.interfaces.experiment_process import ExperimentInstance
+from league.components.commands import CloseCommunicationCommand, AgentParamsUpdateCommand, AgentParamsGetCommand
+from league.components.team_composer import Team
 
 
 class LeagueExperimentInstance(ExperimentInstance):

@@ -1,6 +1,5 @@
-import torch as th
-
 from .basic_controller import BasicMAC
+import torch as th
 
 
 # This multi-agent controller shares parameters between agents and takes

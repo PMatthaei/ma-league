@@ -1,5 +1,5 @@
-import torch as th
 import torch.nn as nn
+import torch as th
 import torch.nn.functional as F
 from torch.autograd import Variable
 

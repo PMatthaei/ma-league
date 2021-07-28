@@ -1,12 +1,11 @@
 import copy
 
+from components.episode_batch import EpisodeBatch
+from modules.mixers.vdn import VDNMixer
+from modules.mixers.qmix import QMixer
+from modules.mixers.flex_qmix import FlexQMixer, LinearFlexQMixer
 import torch as th
 from torch.optim import RMSprop
-
-from components.episode_batch import EpisodeBatch
-from modules.mixers.flex_qmix import FlexQMixer, LinearFlexQMixer
-from modules.mixers.qmix import QMixer
-from modules.mixers.vdn import VDNMixer
 
 
 class REFILLearner:

@@ -1,7 +1,6 @@
-from torch.optim import RMSprop
-
 from components.episode_batch import EpisodeBatch
 from controllers.multi_agent_controller import MultiAgentController
+from torch.optim import RMSprop
 
 
 class Learner:

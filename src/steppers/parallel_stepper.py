@@ -1,12 +1,12 @@
-from functools import partial
-
 import torch
 from torch.multiprocessing.queue import Queue
 
-from components.episode_batch import EpisodeBatch
 from custom_logging.collectibles import Collectibles
 from custom_logging.utils.enums import Originator
+from functools import partial
+from components.episode_batch import EpisodeBatch
 from steppers.env_stepper import EnvStepper
+
 from steppers.utils.env_worker_process import EnvWorker
 from steppers.utils.stepper_utils import get_policy_team_id
 

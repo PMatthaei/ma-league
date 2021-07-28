@@ -6,12 +6,14 @@ from typing import Dict
 import torch as th
 
 from components.replay_buffers.replay_buffer import ReplayBuffer
-from components.transforms import OneHot
-from controllers import EnsembleMAC
 from runs.experiment_run import ExperimentRun
-from steppers import REGISTRY as stepper_REGISTRY
 from steppers.episode_stepper import EnvStepper
 from utils.asset_manager import AssetManager
+
+from controllers import EnsembleMAC
+
+from components.transforms import OneHot
+from steppers import REGISTRY as stepper_REGISTRY
 
 # Config TODO: Pack into args
 MODEL_COLLECTION_BASE_PATH = "/home/pmatthaei/Projects/ma-league-results/models/"

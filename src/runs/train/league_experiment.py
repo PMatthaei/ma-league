@@ -1,4 +1,7 @@
-from typing import OrderedDict
+from typing import Dict, OrderedDict
+
+from controllers import EnsembleMAC
+from modules.agents.agent_network import AgentNetwork
 
 from runs.train.sp_ma_experiment import SelfPlayMultiAgentExperiment
 

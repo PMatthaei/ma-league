@@ -1,12 +1,15 @@
-from collections import OrderedDict
-from typing import Tuple
-
+from torch import Tensor
 from torch.multiprocessing import get_context, Process, Barrier
+from typing import Tuple, Dict, List
+from collections import OrderedDict
 from torch.multiprocessing.queue import Queue
 
 from custom_logging.platforms import CustomConsoleLogger
-from league.components.commands import CloseCommunicationCommand, AgentCheckpointAddCommand, AgentParamsUpdateCommand, \
+from league.components import PayoffEntry
+from league.components.commands import CloseCommunicationCommand, PayoffUpdateCommand, AgentCheckpointAddCommand, \
+    AgentParamsUpdateCommand, \
     AgentParamsGetCommand, AgentPoolGetCommand
+from league.components.team_composer import Team
 
 
 def clone_state_dict(state_dict: OrderedDict):

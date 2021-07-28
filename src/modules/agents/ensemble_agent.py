@@ -1,8 +1,8 @@
 from typing import List
 
 import torch as th
-import torch.nn.functional as F
 from torch import nn
+import torch.nn.functional as F
 
 from modules.agents import AgentNetwork
 

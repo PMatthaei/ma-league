@@ -1,6 +1,5 @@
-from torch.optim import RMSprop
-
 from modules.layers.mlp import MLP
+from torch.optim import RMSprop
 
 
 class PolicySuccessorFeatures(MLP):

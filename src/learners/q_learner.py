@@ -1,12 +1,11 @@
 import copy
-
 import torch as th
 
-from components.episode_batch import EpisodeBatch
 from controllers.multi_agent_controller import MultiAgentController
 from learners.learner import Learner
 from modules.mixers.qmix import QMixer
 from modules.mixers.vdn import VDNMixer
+from components.episode_batch import EpisodeBatch
 
 
 class QLearner(Learner):

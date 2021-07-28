@@ -7,8 +7,9 @@ from torch.multiprocessing.queue import Queue
 
 from league.components import Matchmaker
 from league.components.self_play import PFSPSampling
-from league.components.team_composer import Team
+
 from league.roles.players import Player
+from league.components.team_composer import Team
 
 
 class SimplePlayer(Matchmaker):

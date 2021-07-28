@@ -1,8 +1,8 @@
 import itertools
+from torch.multiprocessing import Pool
 from typing import Tuple, List, Union
 
 import torch as th
-from torch.multiprocessing import Pool
 
 from eval.methods import avg_proportional_loss
 from learners.learner import Learner

@@ -1,5 +1,5 @@
-import torch as th
 from torch import Tensor
+import torch as th
 
 
 class FeatureFunction:

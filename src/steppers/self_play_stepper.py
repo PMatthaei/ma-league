@@ -1,8 +1,8 @@
 import torch as th
 
 from custom_logging.collectibles import Collectibles
-from custom_logging.logger import Originator
 from steppers import EpisodeStepper
+from custom_logging.logger import Originator
 from steppers.utils.stepper_utils import build_pre_transition_data
 
 

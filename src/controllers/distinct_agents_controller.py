@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import List
 
-import torch as th
-
-from components.action_selectors import REGISTRY as action_REGISTRY
 from components.episode_batch import EpisodeBatch
 from controllers import BasicMAC
 from modules.agents import REGISTRY as agent_REGISTRY, AgentNetwork
+from components.action_selectors import REGISTRY as action_REGISTRY
+import torch as th
 
 
 class DistinctMAC(BasicMAC):

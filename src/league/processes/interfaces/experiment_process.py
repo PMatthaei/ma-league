@@ -1,19 +1,21 @@
-import datetime
-import os
+import time
 import traceback
-from types import SimpleNamespace
 from typing import Dict
 
+from torch.multiprocessing import Process, current_process
+import os
+import datetime
 import numpy as np
+from torch import manual_seed, device
+
 from sacred import SETTINGS, Experiment
 from sacred.observers import FileStorageObserver
 from sacred.utils import apply_backspaces_and_linefeeds
-from torch import manual_seed, device
-from torch.multiprocessing import Process, current_process
-
-from custom_logging.logger import MainLogger
 from custom_logging.platforms import CustomConsoleLogger
+from custom_logging.logger import MainLogger
 from utils.main_utils import config_copy
+
+from types import SimpleNamespace
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
