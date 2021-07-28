@@ -57,6 +57,8 @@ class Team:
         return self.id_
 
     def __eq__(self, other):
+        if other == None:
+            return False
         return self.id_ == other.id_
 
     def __str__(self):

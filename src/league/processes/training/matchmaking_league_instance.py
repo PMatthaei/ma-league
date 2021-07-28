@@ -31,9 +31,8 @@ class MatchmakingLeagueInstance(LeagueExperimentInstance):
         # Run real league play in self-play against pre-trained but fixed multi-agent policies
         self._logger.info(f"Start training in {str(self)} with {self._home_team} for {self._args.league_runtime_hours} hours")
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
-            self._adversary_idx, self._adversary_team, adversary_params = self._matchmaker.get_match(self._home_team) \
-                                                                          or (None, None, None)
-            if all((self._adversary_idx, self._adversary_team, adversary_params)):
+            adversary = [self._adversary_idx, self._adversary_team, adversary_params] = self._matchmaker.get_match(self._home_team) or (None, None, None)
+            if adversary.count(None) > 0: # Test if all necessary data set
                 self._logger.info(f"No match found. Ending process: {self._proc_id} with {self._home_team}")
                 break
 

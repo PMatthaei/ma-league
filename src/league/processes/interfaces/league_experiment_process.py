@@ -103,7 +103,6 @@ class LeagueExperimentInstance(ExperimentInstance):
         """
         result = self._extract_result(env_info)
         assert self._adversary_idx is not None, "Ensure to set the opponents instance idx on matchmaking."
-        print(self.idx, self._adversary_idx, result)
         self._matchmaker.payoff[self.idx, self._adversary_idx, result] += 1
 
     def _request_close(self):

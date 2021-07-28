@@ -53,6 +53,7 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
         #
         # Training loop
         #
+        self._logger.info(f"Starting main training loop in {str(self)}")
         while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
             #
             # Retrieve current version of the agent from the pool
@@ -62,9 +63,9 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
             #
             # Fetch agents from another teams training instance
             #
-            adversary = (self._adversary_idx, self._adversary_team, foreign_params) = self._matchmaker.get_match(self._home_team) or (None, None, None)
-            if all(adversary):
-                self._logger.info(f"No match found: {adversary}. Ending {str(self)}")
+            adversary = [self._adversary_idx, self._adversary_team, foreign_params] = self._matchmaker.get_match(self._home_team) or (None, None, None)
+            if adversary.count(None) > 0: # Test if all necessary data set
+                self._logger.info(f"No match found. Ending {str(self)}")
                 break
 
             self._logger.info(f"Matched foreign team {self._adversary_team.id_} in {str(self)}")

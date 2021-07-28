@@ -68,9 +68,8 @@ class CentralWorker(Process):
         #
         # Components
         #
-        comm = agent_pool.register()
         matchmaker: Matchmaker = matchmaking_REGISTRY[self._args.matchmaking](
-            communication=comm,
+            communication=agent_pool.register(),
             payoff=payoff,
             teams=teams
         )
@@ -99,7 +98,7 @@ class CentralWorker(Process):
         # Wait for experiments to finish
         #
         [p.join() for p in procs]
-        matchmaker.disconnect() # TODO! Why do we get here and the pool never joins?!? Why do all procs join?
+        matchmaker.disconnect()
         agent_pool.join()
 
         #

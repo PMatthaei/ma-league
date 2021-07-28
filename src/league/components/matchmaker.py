@@ -25,6 +25,9 @@ class Matchmaker:
         self._tid_to_instance = {v: k for k, v in self._instance_to_tid.items()}
         self.payoff = payoff
 
+    def get_match(self, home_team: Team) -> Union[None, Tuple[int, Team, OrderedDict]]:
+        raise NotImplementedError()
+
     def get_agents(self):
         cmd = AgentPoolGetCommand(origin=self._comm_id)
         self._in_q.put(cmd)
@@ -37,6 +40,8 @@ class Matchmaker:
         ack = self._out_q.get()
         if ack is not None:
             raise Exception("Illegal ACK")
+        self._in_q.close()
+        self._out_q.close()
 
     def get_instance_id(self, team: Team) -> int:
         return self._instance_to_tid[team.id_]
@@ -45,9 +50,6 @@ class Matchmaker:
         if tid is None:
             tid = self._tid_to_instance[instance_id]
         return self._teams_dict[tid]
-
-    def get_match(self, home_team: Team) -> Union[None, Tuple[int, Team, OrderedDict]]:
-        raise NotImplementedError()
 
 
 class PFSPMatchmaking(Matchmaker):
@@ -94,7 +96,6 @@ class BalancedMatchmaking(Matchmaker):
 
     def __init__(self, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor):
         super().__init__(communication, teams, payoff)
-        super().__init__(communication, teams, payoff)
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[int, Team, OrderedDict]]:
         idx = self.get_instance_id(home_team)
@@ -110,7 +111,6 @@ class BalancedMatchmaking(Matchmaker):
 class RandomMatchmaking(Matchmaker):
     def __init__(self, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor):
         super().__init__(communication, teams, payoff)
-        super().__init__(communication, teams, payoff)
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[int, Team, OrderedDict]]:
         idx = self.get_instance_id(home_team)
@@ -121,12 +121,35 @@ class RandomMatchmaking(Matchmaker):
         chosen_idx = self._instance_to_tid[random_id]
 
         self.payoff[idx, chosen_idx, PayoffEntry.MATCHES] += 1
-        return chosen_idx, self.get_team(tid=random_id), agents[random_id]
+        team = self.get_team(tid=random_id)
+        return chosen_idx, team, agents[random_id]
+
+
+class NonRecurringAllAdversaryMatchmaking(Matchmaker):
+
+    def __init__(self, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor):
+        super().__init__(communication, teams, payoff)
+
+    def get_match(self, home_team: Team) -> Union[None, Tuple[int, Team, OrderedDict]]:
+        home_instance = self.get_instance_id(home_team)
+
+        agents = self.get_agents()
+        matches = self.payoff[home_instance, :, PayoffEntry.MATCHES]
+        matches[home_instance] = 2 # Fake two matches played to prevent self selection
+        if th.all(matches > 0): # If every adversary played once
+            return None
+        chosen_idx = th.argmin(matches).item()  # Get adversary we played the least
+        if chosen_idx == home_instance:
+            raise Exception(f"Invalid adversary in instance {chosen_idx}. Should not play against self.")
+        self.payoff[home_instance, chosen_idx, PayoffEntry.MATCHES] += 1
+        team = self.get_team(chosen_idx)
+        return chosen_idx, team, agents[team.id_]
 
 
 REGISTRY = {
     "pfsp": PFSPMatchmaking,
     "uniform": BalancedMatchmaking,
     "random": RandomMatchmaking,
-    "fsp": FSPMatchmaking
+    "fsp": FSPMatchmaking,
+    "adversaries": NonRecurringAllAdversaryMatchmaking
 }

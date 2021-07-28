@@ -90,9 +90,8 @@ class AgentPoolInstance(Process):
         if len(self._closed) == len(self._in_queues):  # Shutdown
             self.shutdown = True
             self._in_queues[cmd.origin].close()
-            self.logger.info("League Coordinator shut down.")
+            self.logger.info("AgentPoolInstance shut down.")
         self._out_queues[cmd.origin].put(None)  # ACK
-        self._out_queues[cmd.origin].close()
 
     def _checkpoint(self, cmd: AgentCheckpointAddCommand):
         """
