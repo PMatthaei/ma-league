@@ -3,6 +3,7 @@ import re
 import subprocess
 from typing import Dict
 
+from maenv.core import RoleTypes, UnitAttackTypes
 from pip._vendor.distlib.compat import raw_input
 
 args = []
@@ -12,7 +13,7 @@ def options_string(options: Dict):
     return ", ".join([f"{num}) {option}" for num, option in options.items()])
 
 
-def select(title, options, arg, only_arg=False):
+def select(title, options, arg, only_arg=False, is_enum=False):
     response = None
     options.append("Quit")
     num_options = {str(num + 1): option for num, option, in enumerate(options)}
@@ -29,8 +30,8 @@ def select(title, options, arg, only_arg=False):
             if yes and only_arg:
                 args.append(f"{arg}")
                 return yes
-            else:
-                response = response if yes else response.lower()
+            elif not only_arg:
+                response = response if yes or is_enum else response.lower()
                 args.append(f"{arg}={response}")
                 return yes
 
@@ -42,7 +43,7 @@ def enter(title, arg):
 
 
 def choice(title, arg, only_arg=False) -> bool:
-    yes = select(title=f"Activate {title} ?", options=["True", "False"], arg=arg, only_arg=only_arg)
+    yes = select(title=title, options=["True", "False"], arg=arg, only_arg=only_arg)
     return yes
 
 
@@ -59,15 +60,22 @@ if __name__ == '__main__':
     enter("League size", arg="--league_size")
     enter("Team size", arg="--team_size")
 
-    choice("CUDA", arg="--use_cuda")
-    choice("CUDA work balance", arg="--balance-cuda-workload", only_arg=True)
-
-    yes = choice("model saving", arg="--save_model")
-    save_model_interval = enter("model saving interval", arg="--save_model_interval") if yes else ""
-
+    use_cuda = choice("CUDA", arg="--use_cuda")
+    choice("CUDA work balance", arg="--balance-cuda-workload", only_arg=True) if use_cuda else None
     choice("Tensorboard", arg="--use_tensorboard")
 
-    python_cmd = f"{python_cmd_base} {' '.join(args)} force-unit --unique --role=HEALER --attack=RANGED"
+    save_model = choice("model saving", arg="--save_model")
+    enter("model saving interval", arg="--save_model_interval") if save_model else None
+
+    force_unit = choice("unit enforcing", arg="force-unit", only_arg=True)
+    if force_unit:
+        choice("unique forced unit in team", arg="--unique", only_arg=True)
+        select(title="role of enforced unit", options=[r.name for r in list(RoleTypes)], arg="--role", is_enum=True)
+        select(title="attack type of enforced unit", options=[a.name for a in list(UnitAttackTypes)], arg="--attack", is_enum=True)
+    else:
+        print("Currently no support for non-unit enforcing!")
+        exit(0)
+    python_cmd = f"{python_cmd_base} {' '.join(args)}"
 
     python_cmd = re.sub(' +', ' ', python_cmd)  # Clean multiple whitespaces
     print(f"\n\n  Command: {python_cmd} \n\n")

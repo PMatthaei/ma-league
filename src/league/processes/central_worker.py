@@ -47,7 +47,7 @@ class CentralWorker(Process):
         # train, test = train_test_split(np.array(composer.teams)) # TODO!
         # Sample random teams containing uid
         teams = composer.sample(k=self._args.league_size, contains=uid, unique=self._args.unique)
-        # Sort ranged healer first in all teams for later consistency
+        # Sort ranged healer first in all teams for later consistency # TODO! support for not on first location
         teams = composer.sort_team_units(teams, uid=uid)
         n_teams = len(teams)
 
