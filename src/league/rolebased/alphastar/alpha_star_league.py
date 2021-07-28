@@ -5,11 +5,11 @@ from league.roles.alphastar.main_player import MainPlayer
 
 class AlphaStarLeague(League):
 
-    def __init__(self, initial_agents, payoff, main_agents_n=1, main_exploiters_n=1, league_exploiters_n=2):
+    def __init__(self, teams, payoff, main_agents_n=1, main_exploiters_n=1, league_exploiters_n=2):
         """
         AlphaStar created its own roles which adapt PFSP with certain changes or tweaks. Its main new roles include the
         MainExploiter and LeagueExploiter
-        :param initial_agents:
+        :param teams:
         :param payoff:
         :param main_agents_n:
         :param main_exploiters_n:
@@ -17,7 +17,7 @@ class AlphaStarLeague(League):
         """
         self._main_exploiters_n = main_exploiters_n
         self._league_exploiters_n = league_exploiters_n
-        super().__init__(initial_agents, payoff, main_agents_n)
+        super().__init__(teams, payoff, main_agents_n)
 
     def _setup(self, initial_agents):
         player_id = 0

@@ -2,21 +2,27 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
-from typing import Tuple, Union
+from typing import Tuple, List
 
+from torch import Tensor
+from torch.multiprocessing.queue import Queue
 
+from league.components import Matchmaker
+from league.components.team_composer import Team
 from modules.agents.agent_network import AgentNetwork
 
 
-class Player(object):
+class Player(Matchmaker):
 
-    def __init__(self, player_id: int, payoff, team):
+    def __init__(self, player_id: int, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor):
+        super().__init__(communication, teams, payoff)
         self.id_ = player_id
         self._payoff = payoff
-        self.team = team
-        self.agent: Union[AgentNetwork, None] = None
+        self.team = teams[player_id]
+        self.trained_steps = 0
+        self._checkpoint_step = None
 
-    def get_match(self) -> Player:
+    def get_match(self, team: Team) -> Player:
         raise NotImplementedError
 
     def ready_to_checkpoint(self) -> bool:
@@ -30,7 +36,7 @@ class Player(object):
         return self._payoff
 
     def checkpoint(self) -> HistoricalPlayer:
-        self._checkpoint_step = self.agent.trained_steps
+        self._checkpoint_step = self.trained_steps
         return self._create_checkpoint()
 
     def __str__(self):
@@ -56,7 +62,7 @@ class HistoricalPlayer(Player):
     def parent(self) -> AgentNetwork:
         return self._parent
 
-    def get_match(self) -> Tuple[Player, bool]:
+    def get_match(self, team: Team) -> Tuple[Player, bool]:
         raise ValueError("Historical players should not request matches.")
 
     def checkpoint(self) -> HistoricalPlayer:

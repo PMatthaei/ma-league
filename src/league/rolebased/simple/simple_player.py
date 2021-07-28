@@ -5,19 +5,17 @@ from typing import Tuple, Union, Any, List, Dict
 from torch import Tensor
 from torch.multiprocessing.queue import Queue
 
-from league.components import Matchmaker
 from league.components.self_play import PFSPSampling
 
-from league.roles.players import Player
 from league.components.team_composer import Team
+from league.rolebased.players import Player
 
 
-class SimplePlayer(Matchmaker):
+class SimplePlayer(Player):
 
-    def __init__(self, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor,
-                 allocation: Dict[int, int]):
-        super().__init__(communication, teams, payoff, allocation)
-        self._checkpoint_step = 0
+    def __init__(self, player_id: int, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team],
+                 payoff: Tensor):
+        super().__init__(player_id, communication, teams, payoff)
         self._pfsp = PFSPSampling()
 
     def get_match(self, home_team) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
@@ -35,7 +33,7 @@ class SimplePlayer(Matchmaker):
         Checkpoint Logic - Checkpoint agent if more than 2e9 training steps passed
         :return:
         """
-        steps_passed = self.agent.trained_steps - self._checkpoint_step
+        steps_passed = self.trained_steps - self._checkpoint_step
         if steps_passed < 2e9:
             return False
         return True

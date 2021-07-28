@@ -1,5 +1,5 @@
 import random
-from typing import Tuple, Dict, Union, List, OrderedDict
+from typing import Tuple, Union, List, OrderedDict
 from torch.multiprocessing.queue import Queue
 
 import torch as th
@@ -7,7 +7,7 @@ from torch import Tensor
 
 from league.components import PayoffEntry
 from league.components.self_play import PFSPSampling, FSPSampling
-from league.components.commands import AgentPoolGetCommand, CloseCommunicationCommand
+from league.utils.commands import AgentPoolGetCommand, CloseCommunicationCommand
 from league.components.team_composer import Team
 
 
@@ -55,6 +55,7 @@ class Matchmaker:
 class PFSPMatchmaking(Matchmaker):
     def __init__(self, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor):
         super().__init__(communication, teams, payoff)
+
         self._sampling_strategy = PFSPSampling()
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[int, Team, OrderedDict]]:

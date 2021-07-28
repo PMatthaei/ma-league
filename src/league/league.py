@@ -1,35 +1,34 @@
-from typing import Tuple
+from torch import Tensor
+from typing import Tuple, List
 
-from league.roles.players import Player
+from torch.multiprocessing.queue import Queue
+
+from league.components import Team
 
 
 class League(object):
 
     def __init__(self,
-                 initial_agents,
-                 payoff,
+                 teams: List[Team],
+                 payoff: Tensor,
+                 communication: Tuple[int, Tuple[Queue, Queue]],
                  main_agents_n=1):
         self._payoff = payoff
         self._learning_agents = {}
         self._main_agents_n = main_agents_n
+        self._comm = communication
 
         # Setup initial learning agents
-        self._setup(initial_agents)
+        self._setup(teams)
+
+    def __getitem__(self, item):
+        raise NotImplementedError()
 
     def _setup(self, initial_agents):
         raise NotImplementedError()
 
     def roles_per_initial_agent(self) -> int:
         raise NotImplementedError()
-
-    def update(self, home: int, away: int, result: str) -> Tuple[Player, Player]:
-        return self._payoff.update(home, away, result)
-
-    def get_player(self, idx: int) -> Player:
-        return self._payoff.get_player(idx)
-
-    def add_player(self, player: Player):
-        self._payoff.add_player(player)
 
     @property
     def size(self) -> int:

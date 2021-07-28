@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Dict
+from typing import Dict, List
 
 from nestargs.parser import NestedNamespace
 
@@ -15,57 +15,51 @@ class ConfigBuilder:
         self._src_dir = src_dir
         self._log_dir = log_dir
         self._params = params
-        pass
 
     def build(self, training_idx: int) -> Dict:
         params = deepcopy(self._params)  # Copy to prevent changing for subsequent build() calls
 
-        experiment_config = self._read_config_yamls(params)
+        config = self._read_config_yamls(params)
 
-        experiment_config["log_dir"] = self._log_dir  # set logging directory for instance metrics and model
+        config["log_dir"] = self._log_dir  # set logging directory for instance metrics and model
 
-        if "match_build_plan" in experiment_config['env_args']:  # Load build plan if configured
-            plan = experiment_config['env_args']["match_build_plan"]
-            experiment_config['env_args']["match_build_plan"] = get_match_build_plan(self._src_dir, plan)
+        if "match_build_plan" in config['env_args']:  # Load build plan if configured
+            plan = config['env_args']["match_build_plan"]
+            config['env_args']["match_build_plan"] = get_match_build_plan(self._src_dir, plan)
 
         # Overwrite .yaml config with command params via update
-        self._overparse_params(experiment_config, params)
+        self._overparse_params(config, params)
 
-        self._assign_device(experiment_config, training_idx)
+        self._assign_device(config, training_idx)
 
-        return experiment_config
+        return config
 
     def _read_config_yamls(self, params):
         # Get the defaults from default.yaml
-        config_dict = get_default_config(self._src_dir)
-        # Load env base config
+        # Load yamls
+        config: Dict = get_default_config(self._src_dir)
         env_config = get_config(params, "--env-config", "envs", path=self._src_dir)
         league_config = get_config(params, "--league-config", "leagues", path=self._src_dir)
-
-        # Load algorithm base config
         alg_config = get_config(params, "--config", "algs", path=self._src_dir)
-        # Integrate loaded dicts into main dict
-        config_dict = recursive_dict_update(config_dict, env_config)
-        config_dict = recursive_dict_update(config_dict, league_config)  # League overwrites env
-        experiment_config = recursive_dict_update(config_dict, alg_config)  # Algorithm overwrites all config
+
+        config = recursive_dict_update(config, env_config)
+        config = recursive_dict_update(config, league_config)  # league overwrites env config
+        experiment_config = recursive_dict_update(config, alg_config)  # algorithm overwrites all config
         experiment_config = args_sanity_check(experiment_config)  # check args are valid
         return experiment_config
 
-    def _overparse_params(self, experiment_config, params):
-        # Build parser to parse the
-        parser = build_config_argsparser(experiment_config)
+    def _overparse_params(self, config: Dict, params: List[str]):
+        parser = build_config_argsparser(config)  # Build parser to parse the params
         args, _ = parser.parse_known_args(params)
         args_dict = self._namespace_to_dict(args)
-        experiment_config.update(args_dict)
+        config.update(args_dict)  # Overwrite current config
 
-    def _assign_device(self, experiment_config, training_idx):
+    def _assign_device(self, config, training_idx):
         if self.worker_args.balance_cuda_workload:
-            # Distribute instance workload evenly in round robin manner to all cuda devices
-            device_id = training_idx % len(self.worker_args.cuda_devices)
+            device_id = training_idx % len(self.worker_args.cuda_devices) # Assign device in round robin manner
         else:
             device_id = 0
-        experiment_config["device"] = self.worker_args.cuda_devices[device_id] if experiment_config[
-            "use_cuda"] else "cpu"  # set device depending on cuda
+        config["device"] = self.worker_args.cuda_devices[device_id] if config["use_cuda"] else "cpu"
 
     def _namespace_to_dict(self, args: NestedNamespace):
         args_dict = vars(args)

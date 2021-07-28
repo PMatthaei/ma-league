@@ -4,9 +4,11 @@ from argparse import Namespace
 from typing import Dict
 
 from custom_logging.platforms import CustomConsoleLogger
+from league import SimpleLeague
 from league.components import PayoffEntry
 from torch.multiprocessing import Barrier, current_process
 
+from league.league import League
 from league.processes.agent_pool_instance import AgentPoolInstance
 from league.components.team_composer import TeamComposer
 from league.processes import REGISTRY as experiment_REGISTRY
@@ -37,7 +39,6 @@ class CentralWorker(Process):
         central_logger.info(f'League Parameters: {vars(self._args)}')
         central_logger.info(f'Logging league instances into directory: {self._log_dir}')
 
-
         #
         # Build league teams
         #
@@ -63,21 +64,22 @@ class CentralWorker(Process):
         payoff = zeros((n_teams, n_teams, n_entries)).share_memory_()
 
         #
-        # Communication Infrastructure
+        # Components
         #
-        # Handle command communication within the league
         agent_pool = AgentPoolInstance(
             sync_barrier=sync_barrier
         )
-
-        #
-        # Components
-        #
-        matchmaker: Matchmaker = matchmaking_REGISTRY[self._args.matchmaking](
-            communication=agent_pool.register(),
-            payoff=payoff,
-            teams=teams
-        )
+        league, matchmaker = None, None
+        if self._args.experiment == "matchmaking" or self._args.experiment == "ensemble":
+            matchmaker: Matchmaker = matchmaking_REGISTRY[self._args.matchmaking](
+                communication=agent_pool.register(),
+                payoff=payoff,
+                teams=teams
+            )
+        elif self._args.experiment == "rolebased":
+            league: League = SimpleLeague(teams=teams, payoff=payoff, communication=agent_pool.register())
+        else:
+            raise NotImplementedError("Experiment not supported.")
 
         #
         # Start experiment instances
@@ -89,7 +91,7 @@ class CentralWorker(Process):
                 idx=idx,
                 experiment_config=self.config_builder.build(idx),
                 home_team=team,
-                matchmaking=matchmaker,
+                matchmaking=matchmaker if matchmaker is not None else league[idx],
                 communication=agent_pool.register(),
                 sync_barrier=sync_barrier
             )
@@ -112,7 +114,8 @@ class CentralWorker(Process):
         self._print_payoff(payoff, teams)
 
     def _print_payoff(self, payoff, teams):
-        team_allocation: Dict[int, int] = dict({team.id_: idx for idx, team in enumerate(teams)})  # Mapping team id -> instance id
+        team_allocation: Dict[int, int] = dict(
+            {team.id_: idx for idx, team in enumerate(teams)})  # Mapping team id -> instance id
         for team in teams:
             tid = team.id_
             index = team_allocation[tid]
