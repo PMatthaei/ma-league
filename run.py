@@ -12,7 +12,7 @@ def options_string(options: Dict):
     return ", ".join([f"{num}) {option}" for num, option in options.items()])
 
 
-def select(title, options, arg):
+def select(title, options, arg, only_arg=False):
     response = None
     options.append("Quit")
     num_options = {str(num + 1): option for num, option, in enumerate(options)}
@@ -25,9 +25,14 @@ def select(title, options, arg):
         else:
             yes = True if response == "True" else False
             print(f"\n Choice: {response} \n")
-            response = response if yes else response.lower()
-            args.append(f"{arg}={response}")
-            return yes
+
+            if yes and only_arg:
+                args.append(f"{arg}")
+                return yes
+            else:
+                response = response if yes else response.lower()
+                args.append(f"{arg}={response}")
+                return yes
 
 
 def enter(title, arg):
@@ -36,8 +41,8 @@ def enter(title, arg):
     args.append(f"{arg}={response}")
 
 
-def choice(title, arg) -> bool:
-    yes = select(title=f"Activate {title} ?", options=["True", "False"], arg=arg)
+def choice(title, arg, only_arg=False) -> bool:
+    yes = select(title=f"Activate {title} ?", options=["True", "False"], arg=arg, only_arg=only_arg)
     return yes
 
 
@@ -55,6 +60,7 @@ if __name__ == '__main__':
     enter("Team size", arg="--team_size")
 
     choice("CUDA", arg="--use_cuda")
+    choice("CUDA work balance", arg="--balance-cuda-workload", only_arg=True)
 
     yes = choice("model saving", arg="--save_model")
     save_model_interval = enter("model saving interval", arg="--save_model_interval") if yes else ""

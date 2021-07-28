@@ -32,6 +32,9 @@ pip install git+https://github.com/PMatthaei/ma-env.git
 python3 -c "import torch; print(torch.cuda.device_count())"
 
 echo "Execute command as Slurm job..."
-# train
-python3 ../src/matchmaking_league_main.py --config=qmix --env-config=ma with play_mode=league --league-config=default headless_controls=False use_cuda=True use_tensorboard=False save_model=False
+
+# "Starting Experiment Assistent"
+chmod 755 run.py
+
+./run.py
 
