@@ -50,8 +50,7 @@ class MatchmakingLeagueInstance(LeagueExperimentInstance):
 
             self._configure_experiment(home=self._home_team, away=self._adversary_team, ai=False)
             self._logger.info(f"Prepared experiment in {str(self)}")
-            self._experiment = LeagueExperiment(args=self._args, logger=self._logger,
-                                                on_episode_end=self._update_payoff)
+            self._experiment = LeagueExperiment(args=self._args, logger=self._logger, on_episode_end=self._update_payoff)
             self._logger.info(f"Loading adversary team {self._adversary_team.id_} in {str(self)}")
             self._experiment.load_home_agent(agent=agent_state)
             self._experiment.load_adversary(agent=adversary_params)

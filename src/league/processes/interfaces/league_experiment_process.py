@@ -109,10 +109,10 @@ class LeagueExperimentInstance(ExperimentInstance):
         Close the communication channel to the agent pool
         :return:
         """
-        self._sync_barrier.wait() if self._sync_barrier is not None else None
         cmd = CloseCommunicationCommand(origin=self._comm_id)
         self._in_queue.put(cmd)
         self._ack()  # Wait for message received approval
+        self._sync_barrier.wait() if self._sync_barrier is not None else None
         self._in_queue.close()
         self._out_queue.close()
 

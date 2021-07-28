@@ -5,29 +5,30 @@ from torch.multiprocessing.queue import Queue
 from typing import Tuple
 
 from league.processes.interfaces.league_experiment_process import LeagueExperimentInstance
-from league.rolebased.alphastar.main_player import MainPlayer
 from league.components.team_composer import Team
 from league.rolebased.players import Player
 from runs.train.league_experiment import LeagueExperiment
+from runs.train.ma_experiment import MultiAgentExperiment
 
 
-class RolebasedLeagueInstance(LeagueExperimentInstance):
+class RoleBasedLeagueInstance(LeagueExperimentInstance):
     def __init__(self, matchmaker: Player, home_team: Team, communication: Tuple[int, Tuple[Queue, Queue]],
                  sync_barrier: Barrier, **kwargs):
 
         super().__init__(matchmaker, home_team, communication, sync_barrier, **kwargs)
+        self._matchmaker = matchmaker
 
     def _run_experiment(self):
-        self._logger.info(f"Start pre-training with AI in process: {self._proc_id} with {self._home_team}")
+        self._logger.info(f"Start pre-training with AI in {str(self)} ")
 
         # Initial play to train policy of the team against mirrored AI
         self._configure_experiment(home=self._home_team, ai=True)
-        self._experiment = LeagueExperiment(args=self._args, logger=self._logger)
+        self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
         self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
         self._share_agent_params(self.home_agent_state)
 
         # Progress to save initial checkpoint of agents after all runs performed setup
-        if isinstance(self._matchmaker, MainPlayer):  # TODO: Allow for different kinds of initial historical players
+        if self._matchmaker.is_main_player():  # TODO: Allow for different kinds of initial historical players
             self._request_checkpoint()  # MainPlayers are initially added as historical players
 
         start_time = time.time()
@@ -40,10 +41,9 @@ class RolebasedLeagueInstance(LeagueExperimentInstance):
                 self._logger.info(f"No match found. Ending {str(self)}")
                 break
 
+            self._configure_experiment(home=self._home_team, away=self._adversary_team, ai=False)
+            self._experiment = LeagueExperiment(args=self._args, logger=self._logger)
             self._experiment.load_adversary(agent=adversary_params)
-
-            # Start training against new opponent and integrate the team of the away player
-            self._register_team(self._away, rebuild=True)
             self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
 
             # Share agent after training
@@ -51,10 +51,10 @@ class RolebasedLeagueInstance(LeagueExperimentInstance):
 
             end_time = time.time()
 
-            # Wait until every process finished to sync for printing the payoff table
-            self._sync_barrier.wait()
-
         self._request_close()
 
     def _request_checkpoint(self):
         pass
+
+    def __str__(self):
+        return f"{self.__class__.__name__}: " + str(self.idx) + " with " + str(self._home_team) + f" as {self._matchmaker.__class__.__name__}"

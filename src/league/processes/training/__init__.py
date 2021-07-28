@@ -1,4 +1,4 @@
 from .ensemble_instance import EnsembleLeagueInstance
 from .ma_experiment_instance import MultiAgentExperimentInstance
-from .role_based_league_instance import RolebasedLeagueInstance
+from .role_based_league_instance import RoleBasedLeagueInstance
 from .matchmaking_league_instance import MatchmakingLeagueInstance

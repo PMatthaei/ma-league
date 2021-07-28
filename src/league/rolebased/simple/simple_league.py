@@ -4,7 +4,7 @@ from typing import List
 from torch import Tensor
 
 from league.components import Team
-from league.processes import RolebasedLeagueInstance
+from league.processes import RoleBasedLeagueInstance
 from league.processes.interfaces.league_experiment_process import LeagueExperimentInstance
 from league.rolebased.league import League
 from league.processes.agent_pool_instance import AgentPoolInstance
@@ -36,7 +36,7 @@ class SimpleLeague(League):
                 teams=self._teams,
                 communication=self._agent_pool.register()
             )
-            proc = RolebasedLeagueInstance(
+            proc = RoleBasedLeagueInstance(
                 idx=idx,
                 experiment_config=self.config_builder.build(idx),
                 home_team=team,  # TODO replace with teams[idx] from matchmaker

@@ -80,7 +80,7 @@ class CentralWorker(Process):
             #
             # Start experiment instances
             #
-             # All running processes representing an agent playing in the league
+            # All running processes representing an agent playing in the league
             experiment = experiment_REGISTRY[self._args.experiment]
             for idx, team in enumerate(teams):
                 proc = experiment(
@@ -113,7 +113,7 @@ class CentralWorker(Process):
         # Wait for experiments to finish
         #
         [p.join() for p in procs]
-        matchmaker.disconnect()
+        matchmaker.disconnect()  # Disconnect comm for matchmaker(s) which was needed to communicate with agent pool
         agent_pool.join()
 
         #

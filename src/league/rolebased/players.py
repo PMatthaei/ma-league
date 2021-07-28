@@ -30,12 +30,7 @@ class Player(Matchmaker):
         raise NotImplementedError()
 
     def is_main_player(self):
-        from league.rolebased.alphastar import MainPlayer
-        return isinstance(self, MainPlayer)
-
-    @property
-    def payoff(self) -> PayoffWrapper:
-        return self.payoff
+        raise NotImplementedError()
 
     def checkpoint(self) -> HistoricalPlayer:
         self._checkpoint_step = self.trained_steps

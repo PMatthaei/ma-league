@@ -40,7 +40,7 @@ class Matchmaker:
     def disconnect(self):
         cmd = CloseCommunicationCommand(origin=self._comm_id)
         self._in_q.put(cmd)
-        ack = self._out_q.get()
+        ack = self._out_q.get() # Blocks
         if ack is not None:
             raise Exception("Illegal ACK")
         self._in_q.close()
