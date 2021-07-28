@@ -8,7 +8,7 @@ from league import SimpleLeague
 from league.components import PayoffEntry
 from torch.multiprocessing import Barrier, current_process
 
-from league.league import League
+from league.rolebased.league import League
 from league.processes.agent_pool_instance import AgentPoolInstance
 from league.components.team_composer import TeamComposer
 from league.processes import REGISTRY as experiment_REGISTRY
@@ -69,37 +69,45 @@ class CentralWorker(Process):
         agent_pool = AgentPoolInstance(
             sync_barrier=sync_barrier
         )
-        matchmakers, matchmaker = None, None
+        matchmaker = None
+        procs = []
         if self._args.experiment == "matchmaking" or self._args.experiment == "ensemble":
             matchmaker: Matchmaker = matchmaking_REGISTRY[self._args.matchmaking](
                 communication=agent_pool.register(),
                 payoff=payoff,
                 teams=teams
             )
+            #
+            # Start experiment instances
+            #
+             # All running processes representing an agent playing in the league
+            experiment = experiment_REGISTRY[self._args.experiment]
+            for idx, team in enumerate(teams):
+                proc = experiment(
+                    idx=idx,
+                    experiment_config=self.config_builder.build(idx),
+                    home_team=team,  # TODO replace with teams[idx] from matchmaker
+                    matchmaker=matchmaker,
+                    communication=agent_pool.register(),
+                    sync_barrier=sync_barrier
+                )
+                procs.append(proc)
+
+            agent_pool.start()
+
+            [p.start() for p in procs]
+
         elif self._args.experiment == "rolebased":
-            matchmakers: League = SimpleLeague(teams=teams, payoff=payoff, agent_pool=agent_pool)
+            league: SimpleLeague = SimpleLeague(
+                teams=teams,
+                payoff=payoff,
+                agent_pool=agent_pool,
+                sync=sync_barrier,
+                config_builder=self.config_builder
+            )
+            procs = league.start()
         else:
             raise NotImplementedError("Experiment not supported.")
-
-        #
-        # Start experiment instances
-        #
-        procs = []  # All running processes representing an agent playing in the league
-        experiment = experiment_REGISTRY[self._args.experiment]
-        for idx, team in enumerate(teams):
-            proc = experiment(
-                idx=idx,
-                experiment_config=self.config_builder.build(idx),
-                home_team=team, # TODO replace with teams[idx] from matchmaker
-                matchmaker=matchmaker if matchmaker is not None else matchmakers[idx],
-                communication=agent_pool.register(),
-                sync_barrier=sync_barrier
-            )
-            procs.append(proc)
-
-        agent_pool.start()
-
-        [p.start() for p in procs]
 
         #
         # Wait for experiments to finish

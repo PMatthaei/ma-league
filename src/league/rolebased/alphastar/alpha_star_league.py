@@ -1,4 +1,4 @@
-from league.league import League
+from league.rolebased.league import League
 from league.rolebased.alphastar.exploiters import MainExploiter, LeagueExploiter
 from league.rolebased.alphastar.main_player import MainPlayer
 

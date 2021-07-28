@@ -1,7 +1,7 @@
 from multiprocessing.synchronize import Barrier
 
 from torch import Tensor
-from typing import  List
+from typing import List
 
 from league.components import Team
 from league.processes.agent_pool_instance import AgentPoolInstance

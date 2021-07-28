@@ -5,7 +5,6 @@ from torch.multiprocessing.queue import Queue
 import torch as th
 from torch import Tensor
 
-from league.components import PayoffEntry
 from league.components.payoff_entry import PayoffWrapper
 from league.components.self_play import PFSPSampling, FSPSampling
 from league.utils.commands import AgentPoolGetCommand, CloseCommunicationCommand
@@ -21,8 +20,8 @@ class Matchmaker:
     def __init__(self, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor):
         self._comm_id, (self._in_q, self._out_q) = communication
         self._teams_dict = {team.id_: team for team in teams}
-        self._instance_to_tid = {team.id_: idx for idx, team in enumerate(teams)}
-        self._tid_to_instance = {v: k for k, v in self._instance_to_tid.items()}
+        self._tid_to_instance = {team.id_: idx for idx, team in enumerate(teams)}
+        self._instance_to_tid = {v: k for k, v in self._tid_to_instance.items()}
         self.payoff: PayoffWrapper = PayoffWrapper(payoff)
 
     def get_match(self, home_team: Team) -> Union[None, Tuple[int, Team, OrderedDict]]:
@@ -48,11 +47,11 @@ class Matchmaker:
         self._out_q.close()
 
     def get_instance_id(self, team: Team) -> int:
-        return self._instance_to_tid[team.id_]
+        return self._tid_to_instance[team.id_]
 
     def get_team(self, instance_id: int = None, tid=None) -> Team:
         if tid is None:
-            tid = self._tid_to_instance[instance_id]
+            tid = self._instance_to_tid[instance_id]
         return self._teams_dict[tid]
 
 
@@ -67,7 +66,7 @@ class PFSPMatchmaking(Matchmaker):
         opponents = self.get_agents()
         win_rates = self.payoff.win_rates(home_instance)
         chosen_tid: int = self._sampling_strategy.sample(opponents=list(opponents.keys()), prio_measure=win_rates)
-        chosen_idx = self._instance_to_tid[chosen_tid]
+        chosen_idx = self._tid_to_instance[chosen_tid]
         team = self.get_team(tid=chosen_tid)
         self.payoff.match(home_instance, chosen_idx)
         return chosen_idx, team, opponents[chosen_tid]
@@ -82,7 +81,7 @@ class FSPMatchmaking(Matchmaker):
         home_instance = self.get_instance_id(home_team)
         opponents = self.get_agents()
         chosen_tid: int = self._sampling_strategy.sample(opponents=list(opponents.keys()))
-        chosen_idx = self._instance_to_tid[chosen_tid]
+        chosen_idx = self._tid_to_instance[chosen_tid]
         team = self.get_team(tid=chosen_tid)
         self.payoff.match(home_instance, chosen_idx)
         return chosen_idx, team, opponents[chosen_tid]
@@ -114,7 +113,7 @@ class RandomMatchmaking(Matchmaker):
         agents = self.get_agents()
         ids = list(agents.keys())
         random_id = random.choice(ids)
-        chosen_idx = self._instance_to_tid[random_id]
+        chosen_idx = self._tid_to_instance[random_id]
 
         self.payoff.match(home_instance, chosen_idx)
         team = self.get_team(tid=random_id)

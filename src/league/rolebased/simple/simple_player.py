@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Tuple, Union, Any, List, Dict
+from typing import Tuple, Union, Any, List, Dict, OrderedDict
 
 from torch import Tensor
 from torch.multiprocessing.queue import Queue
@@ -18,16 +18,19 @@ class SimplePlayer(Player):
         super().__init__(pid, communication, teams, payoff)
         self._pfsp = PFSPSampling()
 
-    def get_match(self, team=None) -> Union[Tuple[Any, bool], Tuple[Player, bool]]:
+    def get_match(self, team=None) -> Union[None, Tuple[int, Team, OrderedDict]]:
         """
         Samples an SimplePlayer opponent using PFSP with win rates as prioritization.
         :param **kwargs:
         :return:
         """
-        opponents: List[int] = self.payoff.get_players_of_type(SimplePlayer)
-        win_rates = self.payoff.win_rates(self.pid, opponents)
-        chosen = self._pfsp.sample(opponents, prio_measure=win_rates, weighting="squared")
-        return chosen_idx, chosen_team, self.payoff.players[chosen]
+        agents = self.get_agents()
+        opponents_tids: List[int] = [agent for agent in agents if agent == SimplePlayer]
+        win_rates = self.payoff.win_rates(self.pid, opponents_tids)
+        chosen_tid = self._pfsp.sample(opponents_tids, prio_measure=win_rates, weighting="squared")
+        chosen_team = self.get_team(tid=chosen_tid)
+        chosen_idx = self._tid_to_instance[chosen_tid]
+        return chosen_idx, chosen_team, agents[chosen_tid]
 
     def ready_to_checkpoint(self) -> bool:
         """
