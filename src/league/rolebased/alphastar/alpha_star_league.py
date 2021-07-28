@@ -1,6 +1,6 @@
 from league.league import League
-from league.roles.alphastar.exploiters import MainExploiter, LeagueExploiter
-from league.roles.alphastar.main_player import MainPlayer
+from league.rolebased.alphastar.exploiters import MainExploiter, LeagueExploiter
+from league.rolebased.alphastar.main_player import MainPlayer
 
 
 class AlphaStarLeague(League):

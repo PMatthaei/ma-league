@@ -7,7 +7,7 @@ from typing import Tuple
 
 from league.components import Matchmaker
 from league.processes.interfaces.league_experiment_process import LeagueExperimentInstance
-from league.roles.alphastar.main_player import MainPlayer
+from league.rolebased.alphastar.main_player import MainPlayer
 from league.components.team_composer import Team
 from runs.train.league_experiment import LeagueExperiment
 

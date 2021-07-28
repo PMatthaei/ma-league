@@ -5,9 +5,9 @@ from typing import Tuple, Union, Any
 import numpy as np
 
 from league.components.self_play import PFSPSampling
+from league.rolebased.players import Player, HistoricalPlayer
 from league.utils.helpers import remove_monotonic_suffix
 
-from league.roles.players import Player, HistoricalPlayer
 
 
 class MainPlayer(Player):
@@ -86,7 +86,7 @@ class MainPlayer(Player):
 
     def _verification_branch(self, opponent) -> Union[Tuple[None, None], Tuple[Player, bool]]:
         # Check exploitation
-        from league.roles.alphastar.exploiters import MainExploiter
+        from league.rolebased.alphastar.exploiters import MainExploiter
 
         exploiters = set([  # Get all exploiters
             player for player in self._payoff.players
