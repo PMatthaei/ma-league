@@ -21,3 +21,7 @@ class LeagueExperiment(SelfPlayMultiAgentExperiment):
     def _test(self, n_test_runs):
         self.last_test_T = self.stepper.t_env
         pass  # Skip tests in league to save computing time
+
+    def load_home_agent(self, agent: OrderedDict):
+        self.home_mac.load_state_dict(agent=agent)
+        del agent

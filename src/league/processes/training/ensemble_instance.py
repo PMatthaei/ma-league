@@ -47,18 +47,19 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
         self._logger.info(f"Share agent from process: {self._proc_id}")
         self._share_agent_params(agent=self.home_agent_state)  # make agent accessible to other instances
 
-        start_time = time.time()
-        end_time = time.time()
-
         #
         # Training loop
         #
-        self._logger.info(f"Starting main training loop in {str(self)}")
-        while end_time - start_time <= self._args.league_runtime_hours * 60 * 60:
+        self._logger.info(f"Start training in {str(self)}")
+
+        iters = 1
+        while True: # Break with no match
+            self._logger.info(f"Start iteration {iters} in {str(self)}")
+
             #
             # Retrieve current version of the agent from the pool
             #
-            home_team, agent_state = self._get_agent_params()
+            _, agent_state = self._get_agent_params()
 
             #
             # Fetch agents from another teams training instance
@@ -93,7 +94,7 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
             self._logger.info(f"Share trained ensemble in {str(self)}")
             self._share_agent_params(agent=self.ensemble_agent_state)
 
-            end_time = time.time()
+            iters += 1
 
         self._logger.info(f"Training in {str(self)} finished")
 
