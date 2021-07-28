@@ -3,10 +3,9 @@ from torch.multiprocessing import Process
 from argparse import Namespace
 from typing import Dict
 
-
 from custom_logging.platforms import CustomConsoleLogger
 from league.components import PayoffEntry
-from torch.multiprocessing import Barrier, Manager, current_process
+from torch.multiprocessing import Barrier, current_process
 
 from league.processes.agent_pool_instance import AgentPoolInstance
 from league.components.team_composer import TeamComposer
@@ -21,7 +20,14 @@ class CentralWorker(Process):
         self._params = params
         self._args = args
         self._log_dir = log_dir
-        self._src_dir = src_dir # Load league base config
+        self._src_dir = src_dir  # Load league base config
+
+        self.config_builder = ConfigBuilder(
+            worker_args=self._args,
+            src_dir=self._src_dir,
+            log_dir=self._log_dir,
+            params=self._params
+        )
 
     def run(self) -> None:
         central_logger = CustomConsoleLogger("central-worker")
@@ -31,7 +37,6 @@ class CentralWorker(Process):
         central_logger.info(f'League Parameters: {vars(self._args)}')
         central_logger.info(f'Logging league instances into directory: {self._log_dir}')
 
-        config_builder = ConfigBuilder(src_dir=self._src_dir, log_dir=self._log_dir, params=self._params)
 
         #
         # Build league teams
@@ -82,7 +87,7 @@ class CentralWorker(Process):
         for idx, team in enumerate(teams):
             proc = experiment(
                 idx=idx,
-                experiment_config=config_builder.build(idx),
+                experiment_config=self.config_builder.build(idx),
                 home_team=team,
                 matchmaking=matchmaker,
                 communication=agent_pool.register(),

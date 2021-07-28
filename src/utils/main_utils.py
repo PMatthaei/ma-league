@@ -18,7 +18,7 @@ def set_agents_only(config):
     config["env_args"]["match_build_plan"][1]["is_scripted"] = False
 
 
-def get_match_build_plan(path, env_args):
+def get_match_build_plan(path, plan):
     """
     Load a match plan defined in the environment config.
     :param path:
@@ -26,7 +26,7 @@ def get_match_build_plan(path, env_args):
     :return:
     """
     import json
-    with open(f'{os.path.join(path)}/config/teams/{env_args["match_build_plan"]}.json') as f:
+    with open(f'{os.path.join(path)}/config/teams/{plan}.json') as f:
         return json.load(f, object_hook=as_enum)
 
 

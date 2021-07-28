@@ -4,6 +4,8 @@ import json
 import os
 import sys
 import threading
+import torch as th
+
 from copy import deepcopy
 from os.path import dirname, abspath
 from pathlib import Path
@@ -43,6 +45,11 @@ def main():
     matchmaking_choices = list(matchmaking_REGISTRY.keys())
     parser.add_argument('--matchmaking', default=matchmaking_choices[0], choices=matchmaking_choices, type=str,
                         help="Define the matchmaking used if the experiment is using matchmaking.")
+
+    parser.add_argument('--balance-cuda-workload', dest='balance_cuda_workload', action='store_true',
+                                   help="Distribute workload of instances on different GPUs (round robin).")
+    parser.set_defaults(balance_cuda_workload=False)
+
     #
     # Arguments for instances
     #
@@ -69,6 +76,9 @@ def main():
     force_unit_parser.set_defaults(unique=True)
 
     args, _ = parser.parse_known_args(params)
+
+    available_cuda_devices = [f"cuda:{th.cuda.device(i).idx}" for i in range(th.cuda.device_count())]
+    args.cuda_devices = available_cuda_devices
 
     # Basics to start a experiment
     src_dir = f"{dirname(abspath(__file__))}"  # Path to src directory
