@@ -29,7 +29,7 @@ class ExperimentRun:
     def _train_episode(self, episode_num):
         raise NotImplementedError()
 
-    def start(self, play_time=None):
+    def start(self, play_time=None) -> int:
         raise NotImplementedError()
 
     def _finish(self):

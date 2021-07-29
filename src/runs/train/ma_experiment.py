@@ -9,7 +9,7 @@ from steppers.episode_stepper import EnvStepper
 from utils.asset_manager import AssetManager
 from utils.timehelper import time_left, time_str
 
-from marl.learners import REGISTRY as le_REGISTRY
+from marl.learners import REGISTRY as learner_REGISTRY
 from marl.controllers import REGISTRY as mac_REGISTRY
 from marl.components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
@@ -18,7 +18,7 @@ from marl.components.feature_functions import REGISTRY as feature_func_REGISTRY
 
 class MultiAgentExperiment(ExperimentRun):
 
-    def __init__(self, args, logger, on_episode_end=None):
+    def __init__(self, args, logger, on_episode_end=None, t_env=0):
         """
         Performs the standard way of training a single multi-agent against a static scripted AI opponent for a fixed
         number of environment steps or a time limit.
@@ -40,7 +40,7 @@ class MultiAgentExperiment(ExperimentRun):
             self._update_args({"sfs_n_features": self.sfs.n_features})
 
         # Init stepper so we can get env info
-        self.stepper = self._build_stepper()
+        self.stepper = self._build_stepper(initial_t_env=t_env)
 
         # Get env info from stepper
         self.env_info = self.stepper.get_env_info()
@@ -70,16 +70,28 @@ class MultiAgentExperiment(ExperimentRun):
 
     def _build_learners(self):
         # Buffers
-        self.home_buffer = ReplayBuffer(self.scheme, self.groups, self.args.buffer_size,
-                                        self.env_info["episode_limit"] + 1,
-                                        preprocess=self.preprocess,
-                                        device="cpu" if self.args.buffer_cpu_only else self.args.device)
+        self.home_buffer = ReplayBuffer(
+            scheme=self.scheme,
+            groups=self.groups,
+            buffer_size=self.args.buffer_size,
+            max_seq_length=self.env_info["episode_limit"] + 1,
+            preprocess=self.preprocess,
+            device="cpu" if self.args.buffer_cpu_only else self.args.device
+        )
         # Setup multi-agent controller here
-        self.home_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
+        self.home_mac = mac_REGISTRY[self.args.mac](
+            scheme=self.home_buffer.scheme,
+            groups=self.groups,
+            args=self.args
+        )
         # Learners
-        self.home_learner = le_REGISTRY[self.args.learner](self.home_mac, self.home_buffer.scheme, self.logger,
-                                                           self.args,
-                                                           name="home")
+        self.home_learner = learner_REGISTRY[self.args.learner](
+            mac=self.home_mac,
+            scheme=self.home_buffer.scheme,
+            logger=self.logger,
+            args=self.args,
+            name="home"
+        )
         # Register in list of learners
         self.learners.append(self.home_learner)
 
@@ -104,8 +116,8 @@ class MultiAgentExperiment(ExperimentRun):
         }
         return groups, preprocess, scheme
 
-    def _build_stepper(self) -> EnvStepper:
-        return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
+    def _build_stepper(self, initial_t_env: int=0) -> EnvStepper:
+        return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger, t_env=initial_t_env)
 
     def _init_stepper(self):
         if not self.stepper.is_initalized:
@@ -120,7 +132,7 @@ class MultiAgentExperiment(ExperimentRun):
     def _has_not_reached_time_limit(self):
         return self._play_time is not None and ((self._end_time - self._start_time) <= self._play_time)
 
-    def start(self, play_time_seconds=None, on_train=None):
+    def start(self, play_time_seconds=None, on_train=None) -> int:
         """
         :param play_time_seconds: Play the run for a certain time in seconds.
         :return:
@@ -186,6 +198,8 @@ class MultiAgentExperiment(ExperimentRun):
         self.logger.log_report()  # Final log
         # Finish and clean up
         self._finish()
+
+        return self.stepper.t_env
 
     def load_models(self, checkpoint_path=None):
         timestep_to_load = self.asset_manager.load_learner(learners=self.learners, load_step=self.args.load_step)

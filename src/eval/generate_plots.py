@@ -9,8 +9,8 @@ algos = []
 envs = []
 
 label = "qmix_4t_h1"
-path = "/home/pmatthaei/Projects/ma-league-results/sacred/6/info.json"
-out_path="/home/pmatthaei/Projects/ma-league-results/sacred/6/" + "plots/"
+path = "/home/pmatthaei/Projects/ma-league/results/league_2021-07-29_17-28-47/instance_0/sacred/1/info.json"
+out_path="/home/pmatthaei/Projects/ma-league/results/league_2021-07-29_17-28-47/instance_0/sacred/1/" + "plots/"
 
 def extract_plot_data():
     # Read json
@@ -58,7 +58,7 @@ def plot():
             sns.lineplot(x=xs, y=ys, ci=95, label=data[2])
 
             plt.xlabel('steps')
-            plt.xlim(right=2000000)  # Experiments end at 2 million steps
+            plt.xlim(right=8000)  # Experiments end at 2 million steps
             metric_label = metric.replace('_', ' ')
             plt.ylabel(metric_label)
 

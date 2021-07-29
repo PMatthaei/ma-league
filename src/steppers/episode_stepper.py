@@ -14,7 +14,7 @@ from marl.components.feature_functions import REGISTRY as feature_func_REGISTRY,
 
 class EpisodeStepper(EnvStepper):
 
-    def __init__(self, args, logger: MainLogger):
+    def __init__(self, args, logger: MainLogger, t_env=0):
         """
         Runs a single episode and returns the gathered step data as episode batch to feed into a single learner.
         This runner is only supported one training agent against a AI/environment.
@@ -38,7 +38,7 @@ class EpisodeStepper(EnvStepper):
         self.episode_limit = self.env.episode_limit
         self.t = 0  # current time step within the episode
 
-        self.t_env = 0  # total time steps for this runner in the provided environment across multiple episodes
+        self.t_env = t_env  # total time steps for this runner in the provided environment across multiple episodes
         self.phi: FeatureFunction = feature_func_REGISTRY[self.args.sfs] if self.args.sfs else None
         self.home_batch = None
         self.home_mac = None
@@ -97,7 +97,8 @@ class EpisodeStepper(EnvStepper):
 
         while not terminated:
             pre_transition_data = self.perform_pre_transition_step()
-            actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+            actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
+                                                              test_mode=test_mode)
             if is_greedy is not None:
                 actions_taken.append(th.stack([actions, is_greedy]))
 
@@ -122,7 +123,8 @@ class EpisodeStepper(EnvStepper):
             self.t += 1
 
         pre_transition_data = self.perform_pre_transition_step()
-        actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+        actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
+                                                          test_mode=test_mode)
 
         if is_greedy is not None:
             actions_taken.append(th.stack([actions, is_greedy]))
