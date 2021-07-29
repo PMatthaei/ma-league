@@ -3,11 +3,15 @@ import re
 import subprocess
 from typing import Dict
 
-from maenv.core import RoleTypes, UnitAttackTypes
 from pip._vendor.distlib.compat import raw_input
 
 args = []
 
+#
+# !! WARN !! No imports from src/** allowed !!
+# Error: mkl-service + Intel(R) MKL: MKL_THREADING_LAYER=INTEL is incompatible with libgomp.so.1 library.
+# Try to import numpy first or set the threading layer accordingly. Set MKL_SERVICE_FORCE_INTEL to force it.
+#
 
 def options_string(options: Dict):
     return ", ".join([f"{num}) {option}" for num, option in options.items()])
@@ -70,8 +74,8 @@ if __name__ == '__main__':
     force_unit = choice("unit enforcing", arg="force-unit", only_arg=True)
     if force_unit:
         choice("unique forced unit in team", arg="--unique", only_arg=True)
-        select(title="role of enforced unit", options=[r.name for r in list(RoleTypes)], arg="--role", is_enum=True)
-        select(title="attack type of enforced unit", options=[a.name for a in list(UnitAttackTypes)], arg="--attack", is_enum=True)
+        select(title="role of enforced unit", options=["TANK", "HEALER", "ADC"], arg="--role", is_enum=True)
+        select(title="attack type of enforced unit", options=["RANGED", "MELEE"], arg="--attack", is_enum=True)
     else:
         print("Currently no support for non-unit enforcing!")
         exit(0)

@@ -39,12 +39,12 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
         #
         # Initial play to train policy of the team against AI against mirrored team -> Performed for each team
         #
-        self._logger.info(f"Start training in process: {self._proc_id} with {self._home_team}")
+        self._logger.info(f"Start training in {str(self)}")
         self._configure_experiment(home=self._home_team, ai=True)
         self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
-        self._logger.info(f"Train against AI in process: {self._proc_id}")
+        self._logger.info(f"Train against AI in {str(self)}")
         self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
-        self._logger.info(f"Share agent from process: {self._proc_id}")
+        self._logger.info(f"Share agent from {str(self)}")
         self._share_agent_params(agent=self.home_agent_state)  # make agent accessible to other instances
 
         #
