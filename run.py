@@ -3,7 +3,6 @@ import re
 import subprocess
 from typing import Dict
 
-from pip._vendor.distlib.compat import raw_input
 
 args = []
 
@@ -22,7 +21,7 @@ def select(title, options, arg, only_arg=False, is_enum=False):
     options.append("Quit")
     num_options = {str(num + 1): option for num, option, in enumerate(options)}
     while response not in options:
-        response = raw_input(f"----- Choose {title}:\n {options_string(num_options)} \n Enter: ")
+        response = input(f"----- Choose {title}:\n {options_string(num_options)} \n Enter: ")
         response = num_options[response]
         if response == "Quit":
             print("Quitting Assistent")
@@ -41,7 +40,7 @@ def select(title, options, arg, only_arg=False, is_enum=False):
 
 
 def enter(title, arg):
-    response = raw_input(f"----- Enter desired {title}: \n ")
+    response = input(f"----- Enter desired {title}: \n ")
     print(f"\n Choice: {response} \n")
     args.append(f"{arg}={response}")
 
@@ -50,6 +49,8 @@ def choice(title, arg, only_arg=False) -> bool:
     yes = select(title=title, options=["True", "False"], arg=arg, only_arg=only_arg)
     return yes
 
+def confirm():
+    _ = input("Confirm the command via any key.")
 
 if __name__ == '__main__':
     print("Starting Experiment Assistant...")
@@ -83,6 +84,8 @@ if __name__ == '__main__':
 
     python_cmd = re.sub(' +', ' ', python_cmd)  # Clean multiple whitespaces
     print(f"\n\n  Command: {python_cmd} \n\n")
+
+    confirm()
 
     subprocess.check_call(python_cmd.split(" "))
 

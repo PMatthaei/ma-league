@@ -9,8 +9,8 @@ algos = []
 envs = []
 
 label = "qmix_4t_h1"
-path = "/home/pmatthaei/Projects/ma-league/results/league_2021-07-29_17-28-47/instance_0/sacred/1/info.json"
-out_path="/home/pmatthaei/Projects/ma-league/results/league_2021-07-29_17-28-47/instance_0/sacred/1/" + "plots/"
+path = "/home/pmatthaei/Projects/ma-league/results/league_2021-07-29_22-25-08/instance_1/sacred/1/info.json"
+out_path="/home/pmatthaei/Projects/ma-league/results/league_2021-07-29_22-25-08/instance_1/sacred/1/" + "plots/"
 
 def extract_plot_data():
     # Read json
