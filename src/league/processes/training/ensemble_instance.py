@@ -84,7 +84,7 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
                 args=self._args,
                 logger=self._logger,
                 on_episode_end=self._update_payoff,
-                t_env=self._t_env
+                log_start_t=self._t_env
             )
             self._logger.info(f"Load ensemble agents {str(self)}")
             self._experiment.load_ensemble(native=foreign_params, foreign_agent=agent_state)

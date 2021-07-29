@@ -6,14 +6,14 @@ from runs.train.ma_experiment import MultiAgentExperiment
 
 class EnsembleExperiment(MultiAgentExperiment):
 
-    def __init__(self, args, logger, on_episode_end=None, t_env=0):
+    def __init__(self, args, logger, on_episode_end=None, log_start_t=0):
         """
         LeaguePlay performs training of a single multi-agent and offers loading of new adversarial agents.
         :param args:
         :param logger:
         :param on_episode_end:
         """
-        super().__init__(args, logger, on_episode_end, t_env)
+        super().__init__(args, logger, on_episode_end, log_start_t)
         assert isinstance(self.home_mac, EnsembleMAC), 'Ensemble experiment enforces "mac"=ensemble in configuration'
 
     def load_ensemble(self, native: OrderedDict, foreign_agent: OrderedDict):

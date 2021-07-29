@@ -91,11 +91,11 @@ class MainLogger:
         self._tensorboard_logger.log(key, value, t_env, log_type) if self._tensorboard_logger else None
         self._sacred_logger.log(key, value, t_env, log_type) if self._sacred_logger else None
 
-    def _log_collectibles(self, t):
+    def _log_collectibles(self, t_env):
         """
         Print all collectibles at the given timestep. A collectible describes a collection of values which are collected
         during an episode and therefore need preprocessing before being logged as a single scalar.
-        :param t:
+        :param t_env:
         :return:
         """
         mode = "test" if self.test_mode else "train"
@@ -104,13 +104,13 @@ class MainLogger:
             if collectible.is_global:
                 processed_data = list(zip(collectible.keys, self.preprocess_collectible(collectible)))
                 for k, v in processed_data:  # Log all data generated from the collected data via the preprocessing
-                    self.log_stat(f"{prefix}{k}", v, t, log_type=collectible.log_type)
+                    self.log_stat(f"{prefix}{k}", v, t_env, log_type=collectible.log_type)
                     self.episodal_stats[collectible][mode].clear()
             else:
                 for i, origin in enumerate(Originator.list()):
                     processed_data = list(zip(collectible.keys, self.preprocess_collectible(collectible, origin)))
                     for k, v in processed_data:
-                        self.log_stat(f"{prefix}{origin}_{k}", v, t, log_type=collectible.log_type)
+                        self.log_stat(f"{prefix}{origin}_{k}", v, t_env, log_type=collectible.log_type)
                     self.episodal_stats[collectible][mode][origin].clear()
 
     def collect(self, collectible: Collectibles, data, origin: Originator = Originator.HOME, parallel=False):

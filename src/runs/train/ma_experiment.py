@@ -18,7 +18,7 @@ from marl.components.feature_functions import REGISTRY as feature_func_REGISTRY
 
 class MultiAgentExperiment(ExperimentRun):
 
-    def __init__(self, args, logger, on_episode_end=None, t_env=0):
+    def __init__(self, args, logger, on_episode_end=None, log_start_t=0):
         """
         Performs the standard way of training a single multi-agent against a static scripted AI opponent for a fixed
         number of environment steps or a time limit.
@@ -40,7 +40,7 @@ class MultiAgentExperiment(ExperimentRun):
             self._update_args({"sfs_n_features": self.sfs.n_features})
 
         # Init stepper so we can get env info
-        self.stepper = self._build_stepper(initial_t_env=t_env)
+        self.stepper = self._build_stepper(log_start_t=log_start_t)
 
         # Get env info from stepper
         self.env_info = self.stepper.get_env_info()
@@ -116,8 +116,8 @@ class MultiAgentExperiment(ExperimentRun):
         }
         return groups, preprocess, scheme
 
-    def _build_stepper(self, initial_t_env: int=0) -> EnvStepper:
-        return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger, t_env=initial_t_env)
+    def _build_stepper(self, log_start_t: int=0) -> EnvStepper:
+        return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger, log_start_t=log_start_t)
 
     def _init_stepper(self):
         if not self.stepper.is_initalized:

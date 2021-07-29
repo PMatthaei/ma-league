@@ -14,7 +14,7 @@ from marl.components.feature_functions import REGISTRY as feature_func_REGISTRY,
 
 class EpisodeStepper(EnvStepper):
 
-    def __init__(self, args, logger: MainLogger, t_env=0):
+    def __init__(self, args, logger: MainLogger, log_start_t=0):
         """
         Runs a single episode and returns the gathered step data as episode batch to feed into a single learner.
         This runner is only supported one training agent against a AI/environment.
@@ -37,16 +37,23 @@ class EpisodeStepper(EnvStepper):
 
         self.episode_limit = self.env.episode_limit
         self.t = 0  # current time step within the episode
-
-        self.t_env = t_env  # total time steps for this runner in the provided environment across multiple episodes
+        self.log_start_t = log_start_t # timestep to start logging from
+        self.t_env = 0  # total time steps for this runner in the provided environment across multiple episodes
         self.phi: FeatureFunction = feature_func_REGISTRY[self.args.sfs] if self.args.sfs else None
         self.home_batch = None
         self.home_mac = None
         self.new_batch_fn = None
 
     def initialize(self, scheme, groups, preprocess, home_mac, away_mac=None):
-        self.new_batch_fn = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,  # last step
-                                    preprocess=preprocess, device=self.args.device)
+        self.new_batch_fn = partial(
+            EpisodeBatch,
+            scheme,
+            groups,
+            self.batch_size,
+            self.episode_limit + 1,  # last step
+            preprocess=preprocess,
+            device=self.args.device
+        )
         self.home_mac = home_mac
         self.is_initalized = True
 
@@ -71,6 +78,10 @@ class EpisodeStepper(EnvStepper):
     @property
     def epsilon(self):
         return getattr(self.home_mac.action_selector, "epsilon", None)
+
+    @property
+    def log_t(self):
+        return self.log_start_t + self.t_env
 
     def run(self, test_mode=False):
         """
@@ -97,8 +108,12 @@ class EpisodeStepper(EnvStepper):
 
         while not terminated:
             pre_transition_data = self.perform_pre_transition_step()
-            actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
-                                                              test_mode=test_mode)
+            actions, is_greedy = self.home_mac.select_actions(
+                self.home_batch,
+                t_ep=self.t,
+                t_env=self.t_env,
+                test_mode=test_mode
+            )
             if is_greedy is not None:
                 actions_taken.append(th.stack([actions, is_greedy]))
 
@@ -122,9 +137,13 @@ class EpisodeStepper(EnvStepper):
 
             self.t += 1
 
-        pre_transition_data = self.perform_pre_transition_step()
-        actions, is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
-                                                          test_mode=test_mode)
+        _ = self.perform_pre_transition_step()
+        actions, is_greedy = self.home_mac.select_actions(
+            self.home_batch,
+            t_ep=self.t,
+            t_env=self.t_env,
+            test_mode=test_mode
+        )
 
         if is_greedy is not None:
             actions_taken.append(th.stack([actions, is_greedy]))
@@ -145,9 +164,9 @@ class EpisodeStepper(EnvStepper):
         self.logger.collect(Collectibles.DRAW, env_info["draw"])
         self.logger.collect(Collectibles.STEPS, self.t)
         # Log epsilon from mac directly
-        self.logger.log_stat("home_epsilon", self.epsilon, self.t_env)
+        self.logger.log_stat("home_epsilon", self.epsilon, self.log_t)
         # Log collectibles if conditions suffice
-        self.logger.log(self.t_env)
+        self.logger.log(self.log_t)
 
         return self.home_batch, env_info
 
