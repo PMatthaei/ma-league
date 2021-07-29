@@ -2,7 +2,7 @@ from functools import partial
 
 import torch
 
-from components.episode_batch import EpisodeBatch
+from marl.components.episode_batch import EpisodeBatch
 
 from steppers import ParallelStepper
 import torch as th

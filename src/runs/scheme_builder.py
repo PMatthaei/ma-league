@@ -1,6 +1,6 @@
 import torch as th
 
-from components.transforms import OneHot
+from marl.components.transforms import OneHot
 
 
 class SchemeBuilder:

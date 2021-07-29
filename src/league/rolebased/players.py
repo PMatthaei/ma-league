@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import re
-from copy import deepcopy
-from typing import Tuple, List, OrderedDict
+from typing import Tuple, List
 
 from torch import Tensor
 from torch.multiprocessing.queue import Queue
 
 from league.components import Matchmaker
-from league.components.payoff_entry import PayoffWrapper
 from league.components.team_composer import Team
-from modules.agents.agent_network import AgentNetwork
 
 
 class Player(Matchmaker):

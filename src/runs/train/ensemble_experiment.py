@@ -1,6 +1,6 @@
 from typing import OrderedDict
 
-from controllers import EnsembleMAC
+from marl.controllers import EnsembleMAC
 from runs.train.ma_experiment import MultiAgentExperiment
 
 

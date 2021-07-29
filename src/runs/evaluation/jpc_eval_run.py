@@ -5,7 +5,7 @@ from typing import Tuple, List, Union
 import torch as th
 
 from eval.methods import avg_proportional_loss
-from learners.learner import Learner
+from marl.learners.learner import Learner
 from runs.train.sp_ma_experiment import SelfPlayMultiAgentExperiment
 
 

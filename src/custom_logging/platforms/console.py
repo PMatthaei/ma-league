@@ -6,7 +6,7 @@ import numpy as np
 
 
 class CustomConsoleLogger(Logger):
-    def __init__(self, name: str):
+    def __init__(self, name: str, log_file_config=None):
         super().__init__(name)
         self.handlers = []
         ch = logging.StreamHandler()
@@ -14,6 +14,12 @@ class CustomConsoleLogger(Logger):
         ch.setFormatter(formatter)
         self.addHandler(ch)
         self.setLevel(logging.INFO)
+
+        if log_file_config is not None:
+            fh = logging.FileHandler(filename=log_file_config["path"])
+            fh.setFormatter(formatter)
+            self.addHandler(fh)
+
         logging.setLoggerClass(CustomConsoleLogger)
 
     def log_stats_report(self, stats: Dict):

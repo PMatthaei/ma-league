@@ -8,7 +8,6 @@ from league import SimpleLeague
 from league.components import PayoffEntry
 from torch.multiprocessing import Barrier, current_process
 
-from league.rolebased.league import League
 from league.processes.agent_pool_instance import AgentPoolInstance
 from league.components.team_composer import TeamComposer
 from league.processes import REGISTRY as experiment_REGISTRY
@@ -32,7 +31,7 @@ class CentralWorker(Process):
         )
 
     def run(self) -> None:
-        central_logger = CustomConsoleLogger("central-worker")
+        central_logger = CustomConsoleLogger("central-worker", log_file_config={"path": f"{self._log_dir}/central.log"})
         central_worker_id = current_process()
 
         central_logger.info(f'Central working running in process {central_worker_id}')
@@ -61,7 +60,7 @@ class CentralWorker(Process):
         #
         n_entries = len(PayoffEntry)
         from torch import zeros
-        payoff = zeros((n_teams, n_teams, n_entries)).share_memory_()
+        payoff = zeros((n_teams, n_teams, n_entries)).share_memory_() # TODO Extend tensor if new agent added
 
         #
         # Components

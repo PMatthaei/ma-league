@@ -3,17 +3,17 @@ import time
 
 import torch as th
 
-from components.replay_buffers.replay_buffer import ReplayBuffer
+from marl.components.replay_buffers import ReplayBuffer
 from runs.experiment_run import ExperimentRun
 from steppers.episode_stepper import EnvStepper
 from utils.asset_manager import AssetManager
 from utils.timehelper import time_left, time_str
 
-from learners import REGISTRY as le_REGISTRY
-from controllers import REGISTRY as mac_REGISTRY
-from components.transforms import OneHot
+from marl.learners import REGISTRY as le_REGISTRY
+from marl.controllers import REGISTRY as mac_REGISTRY
+from marl.components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
-from components.feature_functions import REGISTRY as feature_func_REGISTRY
+from marl.components.feature_functions import REGISTRY as feature_func_REGISTRY
 
 
 class MultiAgentExperiment(ExperimentRun):

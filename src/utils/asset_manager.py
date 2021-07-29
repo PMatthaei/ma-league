@@ -5,7 +5,7 @@ from maenv.utils.enums import as_enum
 
 from exceptions.checkpoint_exceptions import NoLearnersProvided
 from league.components.team_composer import Team
-from learners.learner import Learner
+from marl.learners.learner import Learner
 from utils.run_utils import find_latest_model_path
 
 
