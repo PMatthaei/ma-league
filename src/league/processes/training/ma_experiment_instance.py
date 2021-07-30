@@ -1,4 +1,4 @@
-from league.processes.interfaces.experiment_process import ExperimentInstance
+from league.processes.interfaces import ExperimentInstance
 from runs.train.ma_experiment import MultiAgentExperiment
 
 

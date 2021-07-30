@@ -4,7 +4,7 @@ from torch.multiprocessing.queue import Queue
 
 from typing import Tuple
 
-from league.processes.interfaces.league_experiment_process import LeagueExperimentInstance
+from league.processes.interfaces import LeagueExperimentInstance
 from league.components.team_composer import Team
 from league.rolebased.players import Player
 from runs.train.league_experiment import LeagueExperiment

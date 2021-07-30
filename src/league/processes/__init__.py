@@ -1,6 +1,5 @@
-from .training.ensemble_instance import EnsembleLeagueInstance
-from .training.matchmaking_league_instance import MatchmakingLeagueInstance
-from .training.role_based_league_instance import RoleBasedLeagueInstance
+from .training import EnsembleLeagueInstance, MultiAgentExperimentInstance, RoleBasedLeagueInstance, MatchmakingLeagueInstance
+
 
 REGISTRY = {
     "ensemble": EnsembleLeagueInstance,

@@ -5,7 +5,7 @@ from torch import Tensor
 
 from league.components import Team
 from league.processes import RoleBasedLeagueInstance
-from league.processes.interfaces.league_experiment_process import LeagueExperimentInstance
+from league.processes.interfaces import LeagueExperimentInstance
 from league.rolebased.league import League
 from league.processes.agent_pool_instance import AgentPoolInstance
 from league.rolebased.players import Player
