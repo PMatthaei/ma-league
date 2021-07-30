@@ -5,7 +5,7 @@ from runs.train.sp_ma_experiment import SelfPlayMultiAgentExperiment
 
 class LeagueExperiment(SelfPlayMultiAgentExperiment):
 
-    def __init__(self, args, logger, finish_callback=None, on_episode_end=None):
+    def __init__(self, args, logger, on_episode_end=None,  log_start_t=0):
         """
         LeaguePlay performs training of a single multi-agent and offers loading of new adversarial agents.
         :param args:
@@ -13,7 +13,7 @@ class LeagueExperiment(SelfPlayMultiAgentExperiment):
         :param finish_callback:
         :param on_episode_end:
         """
-        super().__init__(args, logger, finish_callback, on_episode_end)
+        super().__init__(args, logger, on_episode_end=on_episode_end, log_start_t=log_start_t)
 
     def _test(self, n_test_runs):
         self.last_test_T = self.stepper.t_env

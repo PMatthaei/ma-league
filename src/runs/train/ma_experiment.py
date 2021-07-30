@@ -116,13 +116,17 @@ class MultiAgentExperiment(ExperimentRun):
         }
         return groups, preprocess, scheme
 
-    def _build_stepper(self, log_start_t: int=0) -> EnvStepper:
+    def _build_stepper(self, log_start_t: int = 0) -> EnvStepper:
         return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger, log_start_t=log_start_t)
 
     def _init_stepper(self):
         if not self.stepper.is_initalized:
-            self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
-                                    home_mac=self.home_mac)
+            self.stepper.initialize(
+                scheme=self.scheme,
+                groups=self.groups,
+                preprocess=self.preprocess,
+                home_mac=self.home_mac
+            )
 
     @property
     def _has_not_reached_t_max(self):
@@ -199,7 +203,7 @@ class MultiAgentExperiment(ExperimentRun):
         # Finish and clean up
         self._finish()
 
-        return self.stepper.t_env
+        return self.stepper.log_t
 
     def load_models(self, checkpoint_path=None):
         timestep_to_load = self.asset_manager.load_learner(learners=self.learners, load_step=self.args.load_step)

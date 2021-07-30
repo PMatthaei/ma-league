@@ -11,7 +11,7 @@ from steppers.episode_stepper import EnvStepper
 
 class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
 
-    def __init__(self, args, logger, finish_callback=None, episode_callback=None):
+    def __init__(self, args, logger, on_episode_end=None, log_start_t=0):
         """
         Self-Play replaces the opposing agent previously controlled by a static scripted AI with another static policy
         controlled agent. This agent is fixed during the training to prevent non-stationarity in the environment.
@@ -20,9 +20,7 @@ class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
         :param finish_callback:
         :param episode_callback:
         """
-        super().__init__(args, logger)
-        self.finish_callback = finish_callback
-        self.episode_callback = episode_callback
+        super().__init__(args, logger, on_episode_end=on_episode_end, log_start_t=log_start_t)
         # WARN: Assuming the away agent uses the same buffer scheme!!
         self.away_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
 
@@ -46,8 +44,12 @@ class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
         self._update_args(env_scheme)
         return env_scheme
 
-    def _build_stepper(self) -> EnvStepper:
-        return self_steppers_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
+    def _build_stepper(self, log_start_t=0) -> EnvStepper:
+        return self_steppers_REGISTRY[self.args.runner](
+            args=self.args,
+            logger=self.logger,
+            log_start_t=log_start_t
+        )
 
     def _init_stepper(self):
         # Give runner the scheme and most importantly BOTH multi-agent controllers
@@ -55,16 +57,11 @@ class SelfPlayMultiAgentExperiment(MultiAgentExperiment):
                                 home_mac=self.home_mac,
                                 away_mac=self.away_mac)
 
-    def _finish(self):
-        super()._finish()
-        if self.finish_callback is not None:
-            self.finish_callback()
-
     def _train_episode(self, episode_num, on_train_end=None):
         # Run for a whole episode at a time
         home_batch, _, env_info = self.stepper.run(test_mode=False)
-        if self.episode_callback is not None:
-            self.episode_callback(env_info)
+        if self.on_episode_end is not None:
+            self.on_episode_end(env_info)
 
         self.home_buffer.insert_episode_batch(home_batch)
 

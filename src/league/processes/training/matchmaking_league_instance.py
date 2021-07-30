@@ -22,7 +22,7 @@ class MatchmakingLeagueInstance(LeagueExperimentInstance):
         # Initial play to train policy of the team against mirrored AI
         self._configure_experiment(home=self._home_team, ai=True)
         self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
-        self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
+        self._t_env = self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
         self._share_agent_params(self.home_agent_state)
 
         start_time = time.time()
@@ -41,7 +41,8 @@ class MatchmakingLeagueInstance(LeagueExperimentInstance):
 
             self._logger.info(f"Start iteration {iters} in {str(self)}")
 
-            adversary = [self._adversary_idx, self._adversary_team, adversary_params] = self._matchmaker.get_match(self._home_team) or (None, None, None)
+            adversary = [self._adversary_idx, self._adversary_team, adversary_params] = self._matchmaker.get_match(
+                self._home_team) or (None, None, None)
             if adversary.count(None) > 0:  # Test if all necessary data set
                 self._logger.info(f"No match found. Ending {str(self)}")
                 break
@@ -50,12 +51,17 @@ class MatchmakingLeagueInstance(LeagueExperimentInstance):
 
             self._configure_experiment(home=self._home_team, away=self._adversary_team, ai=False)
             self._logger.info(f"Prepared experiment in {str(self)}")
-            self._experiment = LeagueExperiment(args=self._args, logger=self._logger, on_episode_end=self._update_payoff)
+            self._experiment = LeagueExperiment(
+                args=self._args,
+                logger=self._logger,
+                on_episode_end=self._update_payoff,
+                log_start_t=self._t_env
+            )
             self._logger.info(f"Loading adversary team {self._adversary_team.id_} in {str(self)}")
             self._experiment.load_home_agent(agent=agent_state)
             self._experiment.load_adversary(agent=adversary_params)
             self._logger.info(f"Starting adversary team {self._adversary_team.id_} in {str(self)}")
-            self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
+            self._t_env = self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
 
             # Share agent after training to make its current state accessible to other processes
             self._share_agent_params(agent=self.home_agent_state)

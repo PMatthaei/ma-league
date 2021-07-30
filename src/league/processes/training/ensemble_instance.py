@@ -30,7 +30,7 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
         super(EnsembleLeagueInstance, self).__init__(**kwargs)
 
         self._ensemble = None
-        self._t_env = 0
+        self._t_env = 0  # Used for continuous total environment step count to ensure correct logging
 
     @property
     def ensemble_agent_state(self) -> OrderedDict:
@@ -94,7 +94,7 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
             # Train the native agent in an ensemble with the foreign agent (and its team constellation)
             #
             self._logger.info(f"Train ensemble agents {str(self)}")
-            self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
+            self._t_env = self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
 
             #
             # Share agent after training to make its current state accessible to other processes

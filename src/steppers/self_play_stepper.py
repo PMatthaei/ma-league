@@ -8,7 +8,7 @@ from steppers.utils.stepper_utils import build_pre_transition_data
 
 class SelfPlayStepper(EpisodeStepper):
 
-    def __init__(self, args, logger):
+    def __init__(self, args, logger, log_start_t=0):
         """
         Stepper which is passing actions of two policies (home and opponent) into the same environment instead of
         hading one teams action selection over to an scripted AI.
@@ -21,7 +21,7 @@ class SelfPlayStepper(EpisodeStepper):
         :param args:
         :param logger:
         """
-        super().__init__(args, logger)
+        super().__init__(args, logger, log_start_t)
         self.away_mac = None
         self.away_batch = None
 
@@ -70,9 +70,9 @@ class SelfPlayStepper(EpisodeStepper):
             self.away_batch.update(away_pre_transition_data, ts=self.t)
 
             home_actions, h_is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
-                                                        test_mode=test_mode)
+                                                                     test_mode=test_mode)
             away_actions, a_is_greedy = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env,
-                                                        test_mode=test_mode)
+                                                                     test_mode=test_mode)
 
             home_actions_taken.append(th.stack([home_actions, h_is_greedy]))
             away_actions_taken.append(th.stack([away_actions, a_is_greedy]))
@@ -109,10 +109,12 @@ class SelfPlayStepper(EpisodeStepper):
         self.away_batch.update(away_last_data, ts=self.t)
 
         # Select actions in the last stored state
-        home_actions, h_is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+        home_actions, h_is_greedy = self.home_mac.select_actions(self.home_batch, t_ep=self.t, t_env=self.t_env,
+                                                                 test_mode=test_mode)
         self.home_batch.update({"actions": home_actions}, ts=self.t)
 
-        away_actions, a_is_greedy = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+        away_actions, a_is_greedy = self.away_mac.select_actions(self.away_batch, t_ep=self.t, t_env=self.t_env,
+                                                                 test_mode=test_mode)
         self.away_batch.update({"actions": away_actions}, ts=self.t)
 
         home_actions_taken.append(th.stack([home_actions, h_is_greedy]))
@@ -137,9 +139,9 @@ class SelfPlayStepper(EpisodeStepper):
         self.logger.collect(Collectibles.DRAW, env_info["draw"])
         self.logger.collect(Collectibles.STEPS, self.t)
         # Log epsilon from mac directly
-        self.logger.log_stat("home_epsilon", self.epsilons[0], self.t)
-        self.logger.log_stat("away_epsilon", self.epsilons[1], self.t)
+        self.logger.log_stat("home_epsilon", self.epsilons[0], self.log_t)
+        self.logger.log_stat("away_epsilon", self.epsilons[1], self.log_t)
         # Log collectibles if conditions suffice
-        self.logger.log(self.t_env)
+        self.logger.log(self.log_t)
 
         return self.home_batch, self.away_batch, env_info

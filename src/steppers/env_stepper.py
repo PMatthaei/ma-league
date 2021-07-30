@@ -13,6 +13,11 @@ class EnvStepper:
         self.batch_size = None
         self.t_env = None
         self.is_initalized = False
+        self.log_start_t = None
+
+    @property
+    def log_t(self):
+        return self.log_start_t + self.t_env
 
     def run(self, test_mode=False):
         raise NotImplementedError()
