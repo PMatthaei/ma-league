@@ -89,7 +89,7 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
                 log_start_t=self._t_env
             )
             self._logger.info(f"Load ensemble agents {str(self)}")
-            self._experiment.load_ensemble(native=foreign_params, foreign_agent=agent_state)
+            self._experiment.load_ensemble(native=foreign_params, foreign=agent_state)
             self._logger.info(f"Evaluate ensemble in {str(self)}")
             self._experiment.evaluate_sequential(test_n_episode=self._args.n_league_evaluation_episodes)
             #

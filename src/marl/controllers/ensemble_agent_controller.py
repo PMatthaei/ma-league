@@ -116,12 +116,11 @@ class EnsembleMAC(BasicMAC):
     def parameters(self):
         params = []
         params += list(self.agent.parameters())  # add native agents params
-        [params + list(agent.parameters()) for agent in
-         self.ensemble.values()]  # add params of each agent in the ensemble
+        [params + list(agent.parameters()) for agent in self.ensemble.values()]  # add params of each agent in ensemble
         return params
 
-    def update_trained_steps(self, trained_steps):
-        self.agent.trained_steps = trained_steps
+    def update_trained_steps(self, update):
+        self.agent.trained_steps += update
 
     def save_models(self, path, name):
         th.save(self.agent.state_dict(), f"{path}/{name}agent.th")

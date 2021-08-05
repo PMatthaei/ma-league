@@ -5,6 +5,8 @@ import torch as th
 
 from league.components import Team
 from marl.components.replay_buffers import ReplayBuffer
+from marl.controllers.multi_agent_controller import MultiAgentController
+from marl.learners.learner import Learner
 from runs.experiment_run import ExperimentRun
 from steppers.episode_stepper import EnvStepper
 from utils.asset_manager import AssetManager
@@ -34,20 +36,19 @@ class MultiAgentExperiment(ExperimentRun):
         self.start_time = time.time()
         self.last_time = self.start_time
         self.on_episode_end = on_episode_end
-        self.home_mac, self.home_buffer, self.home_learner = None, None, None
+        self.home_mac: MultiAgentController = None
+        self.home_buffer: ReplayBuffer = None
+        self.home_learner: Learner = None
 
         if self.args.sfs:  # Use feature function instead of reward
             self.sfs = feature_func_REGISTRY[self.args.sfs]
             self._update_args({"sfs_n_features": self.sfs.n_features})
 
-        # Init stepper so we can get env info
-        self.stepper = self._build_stepper(log_start_t=log_start_t)
+        self.stepper = self._build_stepper(log_start_t=log_start_t)  # Init stepper so we can get env info
 
-        # Get env info from stepper
-        self.env_info = self.stepper.get_env_info()
+        self.env_info = self.stepper.get_env_info()  # Get env info from stepper
 
-        # Retrieve important data from the env and set in args
-        env_scheme = self._integrate_env_info()
+        env_scheme = self._integrate_env_info()  # Retrieve important data from the env and set in args
 
         self.logger.update_scheme(env_scheme)
 

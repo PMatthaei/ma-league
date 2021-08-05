@@ -53,8 +53,8 @@ class BasicMAC(MultiAgentController):
         agent_outs, self.hidden_states = self.agent(agent_inputs, self.hidden_states)
         return agent_outs
 
-    def update_trained_steps(self, trained_steps):
-        self.agent.trained_steps = trained_steps
+    def update_trained_steps(self, update):
+        self.agent.trained_steps += update
 
     def init_hidden(self, batch_size):
         self.hidden_states = self.agent.init_hidden().unsqueeze(0).expand(batch_size, self.n_agents, -1)  # bav
@@ -72,8 +72,7 @@ class BasicMAC(MultiAgentController):
         th.save(self.agent.state_dict(), "{}/{}agent.th".format(path, name))
 
     def load_models(self, path, name):
-        self.agent.load_state_dict(
-            th.load("{}/{}agent.th".format(path, name), map_location=lambda storage, loc: storage))
+        self.agent.load_state_dict(th.load("{}/{}agent.th".format(path, name), map_location=lambda storage, loc: storage))
 
     def _build_agent(self, input_shape) -> AgentNetwork:
         return agent_REGISTRY[self.args.agent](input_shape, self.args)

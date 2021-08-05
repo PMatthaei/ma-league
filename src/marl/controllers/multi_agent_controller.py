@@ -29,11 +29,9 @@ class MultiAgentController:
         self.input_shape = self._get_input_shape(scheme)
         self.agent: AgentNetwork = self._build_agent(self.input_shape)
         self.agent_output_type = args.agent_output_type
-
         self.action_selector = action_REGISTRY[args.action_selector](args)
-
         self.hidden_states = None
-
+        self.agent.trained_steps = 0
         if args.freeze_native:  # Freezes the native/original agent to prevent learning
             self.freeze_agent_weights()
 

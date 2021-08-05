@@ -22,12 +22,14 @@ class QLearner(Learner):
                 self.mixer = QMixer(args)
             else:
                 raise ValueError("Mixer {} not recognised.".format(args.mixer))
-            # Add additional mixer params for later optimization
-            self.params += list(self.mixer.parameters())
             self.target_mixer = copy.deepcopy(self.mixer)
 
         # TODO: a little wasteful to deepcopy (e.g. duplicates action selector), but should work for any MAC
         self.target_mac = copy.deepcopy(mac)
+
+    def parameters(self):
+        # Add additional mixer params for later optimization
+        return list(self.mac.parameters()) + list(self.mixer.parameters()) if self.mixer is not None else []
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int): # Default batch size = 32 episodes
         # Get the relevant batch quantities
@@ -99,7 +101,7 @@ class QLearner(Learner):
         self.optimiser.zero_grad()
         # Computes dloss/dx for every parameter x which has requires_grad=True.
         loss.backward()
-        grad_norm = th.nn.utils.clip_grad_norm_(self.params, self.args.grad_norm_clip)
+        grad_norm = th.nn.utils.clip_grad_norm_(self.parameters(), self.args.grad_norm_clip)
         self.optimiser.step()
 
         # Update target in interval
@@ -107,7 +109,8 @@ class QLearner(Learner):
             self.update_targets()
             self.last_target_update_episode = episode_num
 
-        self.mac.update_trained_steps(t_env)
+        trained_steps = th.count_nonzero(mask)
+        self.mac.update_trained_steps(trained_steps.item()) # tell mac how many steps have been trained
 
         # Log learner stats in interval
         if t_env - self.log_stats_t >= self.args.learner_log_interval:
