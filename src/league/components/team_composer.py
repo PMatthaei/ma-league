@@ -59,7 +59,7 @@ class Team:
     def __eq__(self, other):
         if other == None:
             return False
-        return self.tid == other.id_
+        return self.tid == other.tid
 
     def __str__(self):
         return f"Team #{self.tid}"

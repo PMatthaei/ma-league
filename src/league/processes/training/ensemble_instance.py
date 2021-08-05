@@ -42,11 +42,14 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
         #
         self._logger.info(f"Start training in {str(self)}")
         self._configure_experiment(home=self._home_team, ai=True)
+        self._args.mac = "basic"
         self._experiment = MultiAgentExperiment(args=self._args, logger=self._logger)
         self._logger.info(f"Train against AI in {str(self)}")
         self._t_env = self._experiment.start(play_time_seconds=self._args.play_time_mins * 60)
         self._logger.info(f"Share agent from {str(self)}")
         self._share_agent_params(agent=self.home_agent_state)  # make agent accessible to other instances
+
+        self._args.mac = "ensemble"
 
         #
         # Training loop
@@ -71,14 +74,13 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
                 self._logger.info(f"No match found. Ending {str(self)}")
                 break
 
-            self._logger.info(f"Matched foreign team {self._adversary_team.id_} in {str(self)}")
+            self._logger.info(f"Matched foreign team {self._adversary_team.tid} in {str(self)}")
 
             #
             # Evaluate how the agent performs in an ensemble with the foreign agent (and its team constellation)
             #
             self._logger.info(f"Build foreign team play in {str(self)}")
-            self._configure_experiment(home=self._adversary_team,
-                                       ai=True)  # Set the foreign team constellation as home team
+            self._configure_experiment(home=self._adversary_team, ai=True)  # Set the foreign team as home team
             self._logger.info(f"Build ensemble experiment in {str(self)}")
             self._experiment = EnsembleExperiment(
                 args=self._args,

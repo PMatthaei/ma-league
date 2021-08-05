@@ -104,7 +104,7 @@ class QLearner(Learner):
 
         # Update target in interval
         if (episode_num - self.last_target_update_episode) / self.args.target_update_interval >= 1.0:
-            self._update_targets()
+            self.update_targets()
             self.last_target_update_episode = episode_num
 
         self.mac.update_trained_steps(t_env)
@@ -121,7 +121,7 @@ class QLearner(Learner):
                                  (targets * mask).sum().item() / (mask_elems * self.args.n_agents), t_env)
             self.log_stats_t = t_env
 
-    def _update_targets(self):
+    def update_targets(self):
         self.target_mac.load_state(other_mac=self.mac)
         if self.mixer is not None:
             self.target_mixer.load_state_dict(self.mixer.state_dict())

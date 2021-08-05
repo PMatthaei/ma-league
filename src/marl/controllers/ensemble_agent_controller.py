@@ -39,7 +39,7 @@ class EnsembleMAC(BasicMAC):
 
         # Softmax the agent outputs if they're policy logits
         if self.agent_output_type == "pi_logits":
-            agent_outs = self._softmax(agent_outs, ep_batch, t, test_mode)
+            raise NotImplementedError()
 
         return agent_outs.view(ep_batch.batch_size, self.n_agents, -1)
 
@@ -90,7 +90,13 @@ class EnsembleMAC(BasicMAC):
     def load_state(self, other_mac: EnsembleMAC):
         # Load state from another MAC (f.e. when loading target mac)
         self.agent.load_state_dict(other_mac.agent.state_dict())
-        [agent.load_state_dict(other_mac.ensemble[idx].state_dict()) for idx, agent in self.ensemble.items()]
+        for aid, agent in other_mac.ensemble.items():
+            if aid in self.ensemble:  # If the ensemble already has an agent with the given id
+                self.ensemble[aid].load_state_dict(agent.state_dict())
+            else:  # Else build it and merge into ensemble
+                new_agent = self._build_agent(self.input_shape)
+                new_agent.load_state_dict(agent.state_dict())
+                self.ensemble.update({aid: agent})
 
     def load_state_dict(self, agent: OrderedDict = None, ensemble: Dict[int, OrderedDict] = None):
         self.agent.load_state_dict(agent) if agent is not None else None
@@ -118,7 +124,7 @@ class EnsembleMAC(BasicMAC):
         self.agent.trained_steps = trained_steps
 
     def save_models(self, path, name):
-        th.save(self.agent.state_dict(),  f"{path}/{name}agent.th")
+        th.save(self.agent.state_dict(), f"{path}/{name}agent.th")
         for aid, state in self.ensemble.items():
             th.save(state, f"{path}/{name}ensemble_agent{aid}.th")
 
@@ -136,8 +142,8 @@ class EnsembleMAC(BasicMAC):
 
     @property
     def native_agents_ids(self):
-        return list(self._all_ids.difference(self.specific_agents_ids))
+        return list(self._all_ids.difference(self.ensemble_ids))
 
     @property
-    def specific_agents_ids(self):
+    def ensemble_ids(self):
         return list(self.ensemble.keys())  # Agent IDs that use specific network for inference instead of native

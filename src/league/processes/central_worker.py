@@ -122,9 +122,9 @@ class CentralWorker(Process):
 
     def _print_payoff(self, payoff, teams):
         team_allocation: Dict[int, int] = dict(
-            {team.id_: idx for idx, team in enumerate(teams)})  # Mapping team id -> instance id
+            {team.tid: idx for idx, team in enumerate(teams)})  # Mapping team id -> instance id
         for team in teams:
-            tid = team.id_
+            tid = team.tid
             index = team_allocation[tid]
             print(f'Stats for {team} from instance {index}')
             for entry in PayoffEntry:

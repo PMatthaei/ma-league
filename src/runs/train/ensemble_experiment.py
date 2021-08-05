@@ -27,3 +27,5 @@ class EnsembleExperiment(MultiAgentExperiment):
         self.home_mac.freeze_agent_weights()
         # ! WARN ! Currently it is enforced that all teams have the agent to swap in the first(=0) position
         self.home_mac.load_state_dict(ensemble={0: foreign_agent})  # Load foreign agent into first agent in ensemble.
+
+        self.home_learner.update_targets() # Init target mac with ensemble

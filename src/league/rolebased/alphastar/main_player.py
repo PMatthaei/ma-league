@@ -48,14 +48,14 @@ class MainPlayer(Player):
         :return:
         """
         historical = [
-            player.id_ for player in self.payoff.players
+            player.tid for player in self.payoff.players
             if isinstance(player, HistoricalPlayer)
         ]
 
         if len(historical) == 0:  # no new historical opponents found # TODO
             return None, False
 
-        win_rates = self.payoff[self.id_, historical]
+        win_rates = self.payoff[self.tid, historical]
         chosen = self._pfsp.sample(historical, prio_measure=win_rates, weighting="squared")
         return self.payoff.players[chosen], True
 
@@ -66,12 +66,12 @@ class MainPlayer(Player):
         :return:
         """
         # Play self-play match
-        if self.payoff[self.id_, opponent.id_] > 0.3:
+        if self.payoff[self.tid, opponent.tid] > 0.3:
             return opponent, False
 
         # Opponent too strong -> use checkpoint of the opponent as curriculum
         historical = [
-            player.id_ for player in self.payoff.players
+            player.tid for player in self.payoff.players
             if isinstance(player, HistoricalPlayer) and player.parent == opponent
         ]
 
@@ -79,7 +79,7 @@ class MainPlayer(Player):
             return opponent, False
 
         # PFSP on checkpoints of opponent
-        win_rates = self.payoff[self.id_, historical]
+        win_rates = self.payoff[self.tid, historical]
         chosen = self._pfsp.sample(historical, prio_measure=win_rates, weighting="variance")
         return self.payoff.players[chosen], True
 
@@ -92,21 +92,21 @@ class MainPlayer(Player):
             if isinstance(player, MainExploiter)
         ])
         exp_historical = [  # Get all historical players which originate from exploiters
-            player.id_ for player in self.payoff.players
+            player.tid for player in self.payoff.players
             if isinstance(player, HistoricalPlayer) and player.parent in exploiters
         ]
         # If historical exploiters min. win rate is smaller threshold -> PFSP
-        win_rates = self.payoff[self.id_, exp_historical]
+        win_rates = self.payoff[self.tid, exp_historical]
         if len(win_rates) and win_rates.min() < 0.3:
             chosen = self._pfsp.sample(exp_historical, prio_measure=win_rates, weighting="squared")
             return self.payoff.players[chosen], True
 
         # Check forgetting
         historical = [
-            player.id_ for player in self.payoff.players
+            player.tid for player in self.payoff.players
             if isinstance(player, HistoricalPlayer) and player.parent == opponent
         ]
-        win_rates = self.payoff[self.id_, historical]
+        win_rates = self.payoff[self.tid, historical]
         win_rates, historical = remove_monotonic_suffix(win_rates, historical)
         if len(win_rates) and win_rates.min() < 0.7:
             chosen = self._pfsp.sample(historical, prio_measure=win_rates, weighting="squared")
@@ -125,8 +125,8 @@ class MainPlayer(Player):
             return False
 
         historical = [
-            player.id_ for player in self.payoff.players
+            player.tid for player in self.payoff.players
             if isinstance(player, HistoricalPlayer)
         ]
-        win_rates = self.payoff[self.id_, historical]
+        win_rates = self.payoff[self.tid, historical]
         return win_rates.min() > 0.7 or steps_passed > 4e9  # TODO make constant

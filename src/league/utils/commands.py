@@ -22,7 +22,7 @@ class Resources(Enum):
 class BaseCommand:
 
     def __init__(self, command_type: CommandTypes, origin: int, resource: Resources, data: Any):
-        self.id_ = uuid.uuid4()
+        self.tid = uuid.uuid4()
         self.type = command_type
         self.origin = origin
         self.resource = resource
