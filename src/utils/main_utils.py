@@ -38,6 +38,8 @@ def recursive_dict_update(dest_dict, source_dict):
     :param source_dict:
     :return:
     """
+    if source_dict is None or len(source_dict) == 0:
+        return dest_dict
     for k, v in source_dict.items():
         if isinstance(v, collections.Mapping):
             dest_dict[k] = recursive_dict_update(dest_dict.get(k, {}), v)

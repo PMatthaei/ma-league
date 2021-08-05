@@ -16,7 +16,7 @@ class ConfigBuilder:
         self._log_dir = log_dir
         self._params = params
 
-    def build(self, training_idx: int) -> Dict:
+    def build(self, training_idx: int=None) -> Dict:
         params = deepcopy(self._params)  # Copy to prevent changing for subsequent build() calls
 
         config = self._read_config_yamls(params)

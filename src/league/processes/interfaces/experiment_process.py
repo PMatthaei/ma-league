@@ -107,7 +107,7 @@ class ExperimentInstance(Process):
         return config
 
 
-class EmptyInstance(ExperimentInstance):  # For demonstration only
+class LinearRegressionInstance(ExperimentInstance):  # For demonstration only
 
     def _run_experiment(self):
         import torch

@@ -7,7 +7,7 @@ from os.path import dirname, abspath
 
 from torch.multiprocessing import set_start_method
 
-from league.processes.interfaces.experiment_process import EmptyInstance
+from league.processes.interfaces.experiment_process import LinearRegressionInstance
 from copy import deepcopy
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     for idx in range(args.n):
         dummy = {"name": "empty", "log_dir": log_dir, "use_cuda": True, "env_args": {"seed": None, "record": False},
                  "test_nepisode": 1, "runner_log_interval": 1, "use_tensorboard": False}
-        proc = EmptyInstance(idx=idx, experiment_config=dummy)
+        proc = LinearRegressionInstance(idx=idx, experiment_config=dummy)
         procs.append(proc)
 
     [r.start() for r in procs]

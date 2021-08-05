@@ -1,2 +1,2 @@
-from .experiment_process import EmptyInstance, ExperimentInstance
+from .experiment_process import LinearRegressionInstance, ExperimentInstance
 from .league_experiment_process import LeagueExperimentInstance
