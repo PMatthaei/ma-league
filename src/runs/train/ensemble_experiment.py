@@ -24,7 +24,7 @@ class EnsembleExperiment(MultiAgentExperiment):
         :return:
         """
         self.home_mac.load_state_dict(agent=native)  # Load the native agent and freeze its weights
-        self.home_mac.freeze_agent_weights()
+        #self.home_mac.freeze_agent_weights() # TODO: Try not freezing since agents may suffer
         # ! WARN ! Currently it is enforced that all teams have the agent to swap in the first(=0) position
         self.home_mac.load_state_dict(ensemble={0: foreign_agent})  # Load foreign agent into first agent in ensemble.
 
