@@ -61,7 +61,7 @@ class LeagueExperimentInstance(ExperimentInstance):
         self._args.env_args['match_build_plan'][1]['is_scripted'] = ai
 
     def _get_agent_params(self, team: Team = None) -> Tuple[Team, OrderedDict]:
-        tid = self._home_team.id_ if team is None else team.id_
+        tid = self._home_team.tid if team is None else team.tid
         cmd = AgentParamsGetCommand(origin=self._comm_id, data=tid)
         self._in_queue.put(cmd)
         tid, agent_params = self._out_queue.get()
@@ -74,7 +74,7 @@ class LeagueExperimentInstance(ExperimentInstance):
         :param agent:
         :return:
         """
-        tid: int = self._home_team.id_ if team is None else team.id_
+        tid: int = self._home_team.tid if team is None else team.tid
         agent_clone = clone_state_dict(agent)
         cmd = AgentParamsUpdateCommand(origin=self._comm_id, data=(tid, agent_clone))
         self._in_queue.put(cmd)

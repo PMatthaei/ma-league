@@ -17,7 +17,7 @@ from maenv.core import RoleTypes, UnitAttackTypes
 
 class Team:
     def __init__(self, tid: int, units: Tuple[Dict], is_scripted: bool = False):
-        self.id_ = tid
+        self.tid = tid
         self.units: List[Dict] = list(units)
         self._uids: List[int] = [unit["uid"] for unit in self.units]  # IDs of units
         self._rids: List[int] = [unit["role"].value["id"] for unit in self.units]  # IDs of roles
@@ -54,15 +54,15 @@ class Team:
         return roles
 
     def __hash__(self):
-        return self.id_
+        return self.tid
 
     def __eq__(self, other):
         if other == None:
             return False
-        return self.id_ == other.id_
+        return self.tid == other.id_
 
     def __str__(self):
-        return f"Team #{self.id_}"
+        return f"Team #{self.tid}"
 
     def difference(self, team: Team):
         """

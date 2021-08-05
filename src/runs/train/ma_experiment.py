@@ -3,6 +3,7 @@ import time
 
 import torch as th
 
+from league.components import Team
 from marl.components.replay_buffers import ReplayBuffer
 from runs.experiment_run import ExperimentRun
 from steppers.episode_stepper import EnvStepper
@@ -58,6 +59,9 @@ class MultiAgentExperiment(ExperimentRun):
         [learner.build_optimizer() for learner in self.learners]  # Should be called after cuda()
 
         self.asset_manager = AssetManager(args=self.args, logger=self.logger)
+        for tid, team_plan in enumerate(self.args.env_args["match_build_plan"]):
+            team_plan["tid"] = tid
+            self.asset_manager.save_team(path=self.args.log_dir, team=team_plan)
 
     def _integrate_env_info(self):
         env_scheme = {
@@ -154,7 +158,7 @@ class MultiAgentExperiment(ExperimentRun):
 
             if self.args.evaluate or self.args.save_replay:
                 self.evaluate_sequential()
-                return
+                return 0
 
         # start training
         episode = 0
@@ -211,8 +215,7 @@ class MultiAgentExperiment(ExperimentRun):
 
     def save_models(self, identifier=None):
         self.model_save_time = self.stepper.t_env
-        out_path = self.asset_manager.save_learner(learners=self.learners, t_env=self.model_save_time,
-                                                   identifier=identifier)
+        out_path = self.asset_manager.save_learner(learners=self.learners, t=self.model_save_time, id=identifier)
         return out_path
 
     def _finish(self):

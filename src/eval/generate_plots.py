@@ -1,4 +1,5 @@
 import json
+import os
 from copy import copy
 from typing import List, Dict
 
@@ -52,26 +53,30 @@ def extract_plot_data(paths: List[str]) -> Dict:
     return plot_data
 
 
-def plot(data: Dict):
+def plot(data: Dict, out_path:str, show=False):
+    if not os.path.isdir(out_path):
+        os.makedirs(out_path)
+
     for metric, metric_data in data.items():
         # Exclude for now since weird jsons are returned
         if metric in ['home_epsilon', 'grad_norm']:
             continue
-
+        plt.figure()
         df = pd.DataFrame(metric_data)
         sns.lineplot(x="step", y="ys", ci=95, data=df, sort=True)
         plt.ylabel(metric.replace("_", " "))
         plt.xlim(left=-1)
         if "percentage" in metric:
             plt.ylim(bottom=0, top=1.0)
-
-        plt.show()
-
+        plt.savefig(out_path + metric + '.png')
+        if show:
+            plt.show()
+        plt.clf()
 
 if __name__ == '__main__':
     name = "QMIX"
-    path = "/home/pmatthaei/Projects/ma-league-results/sacred/6/info.json"
-    path2 = "/home/pmatthaei/Projects/ma-league-results/sacred/5/info.json"
-    paths = [path, path2]
-    data = extract_plot_data(paths=paths)
-    plot(data)
+    path = "/home/pmatthaei/Projects/ma-league-results/saba/results/league_2021-07-30_18-23-08/instance_0/sacred/1"
+    paths = [path.replace("instance_0", f"instance_{i}")for i in range(5)]
+    for p in paths:
+        data = extract_plot_data(paths=[f"{p}/info.json"])
+        plot(data, out_path=f"{p}/plots/")

@@ -19,8 +19,8 @@ class Matchmaker:
 
     def __init__(self, communication: Tuple[int, Tuple[Queue, Queue]], teams: List[Team], payoff: Tensor):
         self._comm_id, (self._in_q, self._out_q) = communication
-        self._teams_dict = {team.id_: team for team in teams}
-        self._tid_to_instance = {team.id_: idx for idx, team in enumerate(teams)}
+        self._teams_dict = {team.tid: team for team in teams}
+        self._tid_to_instance = {team.tid: idx for idx, team in enumerate(teams)}
         self._instance_to_tid = {v: k for k, v in self._tid_to_instance.items()}
         self.payoff: PayoffWrapper = PayoffWrapper(payoff)
 
@@ -47,7 +47,7 @@ class Matchmaker:
         self._out_q.close()
 
     def get_instance_id(self, team: Team) -> int:
-        return self._tid_to_instance[team.id_]
+        return self._tid_to_instance[team.tid]
 
     def get_team(self, instance_id: int = None, tid=None) -> Team:
         if tid is None:
@@ -138,7 +138,7 @@ class NonRecurringAllAdversaryMatchmaking(Matchmaker):
             raise Exception(f"Invalid adversary in instance {chosen_idx}. Should not play against self.")
         self.payoff.match(home_instance, chosen_idx)
         team = self.get_team(chosen_idx)
-        return chosen_idx, team, agents[team.id_]
+        return chosen_idx, team, agents[team.tid]
 
 
 REGISTRY = {
