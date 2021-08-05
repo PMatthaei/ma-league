@@ -1,114 +1,24 @@
 import os
 import sys
+import threading
 import traceback
 
 import torch as th
 import datetime
-import threading
 
 from types import SimpleNamespace
-import numpy as np
 from os.path import dirname, abspath
 from copy import deepcopy
-from sacred import Experiment, SETTINGS
-from sacred.observers import FileStorageObserver
-from sacred.utils import apply_backspaces_and_linefeeds
-from torch import manual_seed, device
-
-from custom_logging.logger import MainLogger
-from custom_logging.platforms.console import CustomConsoleLogger
+from sacred import SETTINGS
+from league.processes.eval.replay_instance import ReplayInstance
 from utils.config_builder import ConfigBuilder
-from utils.main_utils import config_copy
+from torch.multiprocessing import set_start_method
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Lower tf logging level
 
 SETTINGS['CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
 
-
-def build_sacred_experiment(config, log_dir) -> Experiment:
-    logger = CustomConsoleLogger(f"ma-experiment")
-
-    ex = Experiment(f"ma-experiment")
-    ex.logger = logger
-    ex.captured_out_filter = apply_backspaces_and_linefeeds
-    ex.add_config(config)
-
-    # Save to disk by default for sacred
-    results_path = os.path.join(log_dir)
-    file_obs_path = os.path.join(results_path, "sacred")
-    ex.observers.append(FileStorageObserver(file_obs_path))
-    logger.info(f"Saving to FileStorageObserver in {file_obs_path}.")
-    return ex
-
-
-def setup_logger(_log, _run, args):
-    logger = MainLogger(_log, args)
-    # configure tensorboard logger
-    unique_token = "{}__{}".format(args.name, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-    args.unique_token = unique_token
-    if args.use_tensorboard:
-        tb_logs_direc = os.path.join(args.log_dir, "tb_logs")
-        tb_exp_direc = os.path.join(tb_logs_direc, "{}").format(unique_token)
-        logger.setup_tensorboard(tb_exp_direc)
-    # sacred is on by default
-    logger.setup_sacred(_run)
-    return logger
-
-
-def run(_run, _config, _log):
-    _args = SimpleNamespace(**_config)
-    _args.device = device(_config["device"] if _args.use_cuda else "cpu")
-    _args.env_args["record"] = _args.log_dir if _args.env_args["record"] else ""
-
-    _logger = setup_logger(_log, _run, _args)
-
-    try:
-        # Run and train
-        if _config['play_mode'] == "self":
-            eval_method = _config['eval']
-            if not eval_method:
-                from runs.train.sp_ma_experiment import SelfPlayMultiAgentExperiment
-                play = SelfPlayMultiAgentExperiment(args=_args, logger=_logger)
-            elif eval_method == "jpc":
-                from runs.evaluation.jpc_eval_run import JointPolicyCorrelationEvaluationRun
-                play = JointPolicyCorrelationEvaluationRun(args=_args, logger=_logger)
-            elif eval_method == "replay":
-                from runs.evaluation.replay_eval_run import ReplayGenerationRun
-                play = ReplayGenerationRun(args=_args, logger=_logger)
-            else:
-                from runs.train.sp_ma_experiment import SelfPlayMultiAgentExperiment
-                play = SelfPlayMultiAgentExperiment(args=_args, logger=_logger)
-        else:
-            from runs.train.ma_experiment import MultiAgentExperiment
-            play = MultiAgentExperiment(args=_args, logger=_logger)
-
-        play.start()
-    except Exception as e:  # Interrupt should not be issued in _run_experiment
-        _logger.info(f"Experiment process ended due to error: {e}")
-        traceback.print_exc()
-    # Clean up after finishing
-    print("Exiting Main")
-
-    print("Stopping all threads")
-    for t in threading.enumerate():
-        if t.name != "MainThread":
-            print("Thread {} is alive! Is daemon: {}".format(t.name, t.daemon))
-            t.join(timeout=1)
-            print("Thread joined")
-
-    print("Exiting script")
-
-    # Making sure framework really exits
-    os._exit(os.EX_OK)
-
-
-def _set_seed(_config):
-    config = config_copy(_config)
-    np.random.seed(config["seed"])
-    manual_seed(config["seed"])
-    config['env_args']['seed'] = config["seed"]
-    return config
-
+set_start_method('spawn', force=True)
 
 if __name__ == '__main__':
     params = deepcopy(sys.argv)
@@ -125,19 +35,34 @@ if __name__ == '__main__':
         log_dir=log_dir,
         params=params
     )
-    config, params = config_builder.build()
+    config = config_builder.build()
 
-    ex = build_sacred_experiment(config=config, log_dir=log_dir)
+    r = ReplayInstance(idx=0, experiment_config=config)
+    r.start()
+    r.join()
 
+    # Clean up after finishing
+    print("Exiting Main")
 
-    @ex.main
-    def main(_run, _config, _log):
-        config = _set_seed(_config)
+    print("Stopping all threads")
+    for t in threading.enumerate():
+        if t.name != "MainThread":
+            print("Thread {} is alive! Is daemon: {}".format(t.name, t.daemon))
+            t.join(timeout=1)
+            print("Thread joined")
 
-        # run the framework
-        run(_run, config, _log)
-
-    ex.run_commandline(params)
+    print("Exiting script")
+# ex = build_sacred_experiment(config=config, log_dir=log_dir)
+#
+#
+# @ex.main
+# def main(_run, _config, _log):
+#     config = _set_seed(_config)
+#
+#     # run the framework
+#     run(_run, config, _log)
+#
+# ex.run_commandline(params)
 
 # def run(_run, _config, _log):
 #     # check args sanity

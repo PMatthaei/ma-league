@@ -10,20 +10,22 @@ from runs.experiment_run import ExperimentRun
 from steppers.episode_stepper import EnvStepper
 from utils.asset_manager import AssetManager
 
-from marl.controllers import EnsembleMAC
+from marl.controllers import EnsembleMAC, BasicMAC
 
 from marl.components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY
 
 # Config TODO: Pack into args
-MODEL_COLLECTION_BASE_PATH = "/home/pmatthaei/Projects/ma-league-results/models/"
+# MODEL_COLLECTION_BASE_PATH = "/home/pmatthaei/Projects/ma-league-results/models/"
+MODEL_COLLECTION_BASE_PATH = "/home/pmatthaei/Projects/ma-league-results/saba/results/league_2021-07-30_18-23-08/instance_0/models/qmix__2021-07-30_18-23-12"
 
 # POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "4/qmix__2021-07-09_12-49-37_team_0"
-POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0"
+POLICY_TEAM = "/home/pmatthaei/Projects/ma-league-results/saba/results/league_2021-07-30_18-23-08/instance_0/models/qmix"
 
 # POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "3/qmix__2021-07-08_22-23-56_team_0"
 # POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0"
-POLICY_TEAM_ID = 1
+POLICY_TEAM_ID = 0
+STEP = 750100
 
 
 class ReplayGenerationRun(ExperimentRun):
@@ -60,8 +62,7 @@ class ReplayGenerationRun(ExperimentRun):
                                         preprocess=self.preprocess,
                                         device="cpu" if self.args.buffer_cpu_only else self.args.device)
         # Setup multi-agent controller here
-        self.home_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
-        self.away_mac = EnsembleMAC(self.home_buffer.scheme, self.groups, self.args)
+        self.home_mac = BasicMAC(self.home_buffer.scheme, self.groups, self.args)
 
     def _update_args(self) -> Dict:
         shapes = {
@@ -98,9 +99,9 @@ class ReplayGenerationRun(ExperimentRun):
         policy_team_id = POLICY_TEAM_ID
         ai_team_id = 1 - policy_team_id
 
-        self.args.env_args["record"] = True
+        self.args.env_args["headless"] = False
         self.args.env_args["debug_range"] = True
-        self.args.env_args["stochastic_spawns"] = False
+        self.args.env_args["stochastic_spawns"] = True
         home_team = self.asset_manager.load_team(path=POLICY_TEAM)
         self.args.env_args['match_build_plan'][policy_team_id] = home_team
         self.args.env_args['match_build_plan'][ai_team_id] = copy(home_team)
@@ -110,11 +111,15 @@ class ReplayGenerationRun(ExperimentRun):
 
     def _init_stepper(self):
         if not self.stepper.is_initalized:
-            self.stepper.initialize(scheme=self.scheme, groups=self.groups, preprocess=self.preprocess,
-                                    home_mac=self.home_mac)
+            self.stepper.initialize(
+                scheme=self.scheme,
+                groups=self.groups,
+                preprocess=self.preprocess,
+                home_mac=self.home_mac
+            )
 
     def load_agents(self):
-        state = self.asset_manager.load_state(path=POLICY_TEAM, component="agent")
+        state = self.asset_manager.load_state(path=POLICY_TEAM, component="agent", load_step=STEP)
         self.home_mac.load_state_dict(agent=state)
 
     def start(self, play_time_seconds=None):

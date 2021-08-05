@@ -61,7 +61,7 @@ class AssetManager:
 
         return timestep_to_load
 
-    def load_state(self, path: str, component: str) -> OrderedDict:
+    def load_state(self, path: str, component: str, load_step=0) -> OrderedDict:
         """
         Loads a network state dict from a .th file.
         :param path:
@@ -69,7 +69,7 @@ class AssetManager:
         :return:
         """
         import torch as th
-        latest, _ = find_latest_model_path(path)
+        latest, _ = find_latest_model_path(path, load_step=load_step)
         name = "home_qlearner_"  # TODO Adapt if more learners used
         return th.load(f"{latest}/{name}{component}.th", map_location=lambda storage, loc: storage)
 
