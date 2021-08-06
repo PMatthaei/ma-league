@@ -1,22 +1,15 @@
 import pprint
 from copy import copy
-from types import SimpleNamespace
-from typing import Dict
 
-import torch as th
 
-from marl.components.replay_buffers import ReplayBuffer
-from runs.experiment_run import ExperimentRun
 from runs.train.ma_experiment import MultiAgentExperiment
 from steppers.episode_stepper import EnvStepper
 
 from marl.controllers import REGISTRY as mac_REGISTRY
 
-from marl.components.transforms import OneHot
 from steppers import REGISTRY as stepper_REGISTRY, SelfPlayStepper
 
 # Config TODO: Pack into args
-from utils.asset_manager import AssetManager
 
 POLICY_TEAM_1 = "/home/pmatthaei/Projects/ma-league-results/saba/results/league_2021-08-05_19-02-10/instance_0/models/qmix"
 POLICY_TEAM_1_ID = 0
@@ -26,7 +19,7 @@ POLICY_TEAM_1_STEP = 1250140
 SELF_PLAY = True
 
 POLICY_TEAM_2 = "/home/pmatthaei/Projects/ma-league-results/saba/results/league_2021-08-05_19-02-10/instance_1/models/qmix"
-POLICY_TEAM_2_STEP = 1750135
+POLICY_TEAM_2_STEP = 1500180
 
 
 class ReplayGenerationRun(MultiAgentExperiment):
@@ -110,7 +103,7 @@ class ReplayGenerationRun(MultiAgentExperiment):
         self.home_mac.load_state_dict(agent=state)
 
         if SELF_PLAY:
-            state = self.asset_manager.load_state(path=POLICY_TEAM_2, component="agent", load_step=POLICY_TEAM_1_STEP)
+            state = self.asset_manager.load_state(path=POLICY_TEAM_2, component="agent", load_step=POLICY_TEAM_2_STEP)
             self.away_mac.load_state_dict(agent=state)
 
     def start(self, play_time_seconds=None, on_train=None) -> int:

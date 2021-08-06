@@ -80,7 +80,7 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
             # Evaluate how the agent performs in an ensemble with the foreign agent (and its team constellation)
             #
             self._logger.info(f"Build foreign team play in {str(self)}")
-            self._configure_experiment(home=self._adversary_team, ai=True)  # Set the foreign team as home team
+            self._configure_experiment(home=self._adversary_team, ai=False)  # Set the foreign team as home team
             self._logger.info(f"Build ensemble experiment in {str(self)}")
             self._experiment = EnsembleExperiment(
                 args=self._args,
@@ -90,6 +90,7 @@ class EnsembleLeagueInstance(LeagueExperimentInstance):
             )
             self._logger.info(f"Load ensemble agents {str(self)}")
             self._experiment.load_ensemble(native=foreign_params, foreign=agent_state)
+            self._experiment.load_adversary(agent=foreign_params)
             self._logger.info(f"Evaluate ensemble in {str(self)}")
             self._experiment.evaluate_sequential(test_n_episode=self._args.n_league_evaluation_episodes)
             #

@@ -2,9 +2,10 @@ from typing import OrderedDict
 
 from marl.controllers import EnsembleMAC
 from runs.train.ma_experiment import MultiAgentExperiment
+from runs.train.sp_ma_experiment import SelfPlayMultiAgentExperiment
 
 
-class EnsembleExperiment(MultiAgentExperiment):
+class EnsembleExperiment(SelfPlayMultiAgentExperiment):
 
     def __init__(self, args, logger, on_episode_end=None, log_start_t=0):
         """
