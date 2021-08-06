@@ -39,6 +39,7 @@ class MultiAgentExperiment(ExperimentRun):
         self.home_mac: MultiAgentController = None
         self.home_buffer: ReplayBuffer = None
         self.home_learner: Learner = None
+        self.asset_manager = AssetManager(args=self.args, logger=self.logger)
 
         if self.args.sfs:  # Use feature function instead of reward
             self.sfs = feature_func_REGISTRY[self.args.sfs]
@@ -58,11 +59,6 @@ class MultiAgentExperiment(ExperimentRun):
         self._build_learners()
 
         [learner.build_optimizer() for learner in self.learners]  # Should be called after cuda()
-
-        self.asset_manager = AssetManager(args=self.args, logger=self.logger)
-        for tid, team_plan in enumerate(self.args.env_args["match_build_plan"]):
-            team_plan["tid"] = tid
-            self.asset_manager.save_team(path=self.args.log_dir, team=team_plan)
 
     def _integrate_env_info(self):
         env_scheme = {
@@ -150,6 +146,8 @@ class MultiAgentExperiment(ExperimentRun):
             self.logger.info("Experiment Parameters:")
             experiment_params = pprint.pformat(self.args.__dict__, indent=4, width=1)
             self.logger.info("\n\n" + experiment_params + "\n")
+
+        self._save_team_config()  # Save team config. Config may change from constructor init but should be fixed here
 
         self._play_time = play_time_seconds
         self._init_stepper()
@@ -278,3 +276,8 @@ class MultiAgentExperiment(ExperimentRun):
         self._finish()
 
         return th.mean(ep_rewards)
+
+    def _save_team_config(self):
+        for tid, team_plan in enumerate(self.args.env_args["match_build_plan"]):
+            team_plan["tid"] = tid
+            self.asset_manager.save_team(path=self.args.log_dir, team=team_plan)

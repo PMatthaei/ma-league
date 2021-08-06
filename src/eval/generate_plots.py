@@ -75,7 +75,7 @@ def plot(data: Dict, out_path:str, show=False):
 
 if __name__ == '__main__':
     name = "QMIX"
-    path = "/home/pmatthaei/Projects/ma-league-results/saba/results/league_2021-07-30_18-23-08/instance_0/sacred/1"
+    path = "/home/pmatthaei/Projects/ma-league-results/saba/results/league_2021-08-05_19-02-10/instance_0/sacred/1"
     paths = [path.replace("instance_0", f"instance_{i}")for i in range(5)]
     for p in paths:
         data = extract_plot_data(paths=[f"{p}/info.json"])

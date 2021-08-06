@@ -7,28 +7,29 @@ import torch as th
 
 from marl.components.replay_buffers import ReplayBuffer
 from runs.experiment_run import ExperimentRun
+from runs.train.ma_experiment import MultiAgentExperiment
 from steppers.episode_stepper import EnvStepper
-from utils.asset_manager import AssetManager
 
-from marl.controllers import EnsembleMAC, BasicMAC
+from marl.controllers import REGISTRY as mac_REGISTRY
 
 from marl.components.transforms import OneHot
-from steppers import REGISTRY as stepper_REGISTRY
+from steppers import REGISTRY as stepper_REGISTRY, SelfPlayStepper
 
 # Config TODO: Pack into args
-# MODEL_COLLECTION_BASE_PATH = "/home/pmatthaei/Projects/ma-league-results/models/"
-MODEL_COLLECTION_BASE_PATH = "/home/pmatthaei/Projects/ma-league-results/saba/results/league_2021-07-30_18-23-08/instance_0/models/qmix__2021-07-30_18-23-12"
+from utils.asset_manager import AssetManager
 
-# POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "4/qmix__2021-07-09_12-49-37_team_0"
-POLICY_TEAM = "/home/pmatthaei/Projects/ma-league-results/saba/results/league_2021-07-30_18-23-08/instance_0/models/qmix"
+POLICY_TEAM_1 = "/home/pmatthaei/Projects/ma-league-results/saba/results/league_2021-08-05_19-02-10/instance_0/models/qmix"
+POLICY_TEAM_1_ID = 0
+POLICY_TEAM_1_STEP = 1250140
 
-# POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "3/qmix__2021-07-08_22-23-56_team_0"
-# POLICY_TEAM = MODEL_COLLECTION_BASE_PATH + "2/qmix__2021-07-07_12-52-06_team_0"
-POLICY_TEAM_ID = 0
-STEP = 750100
+#SELF_PLAY = False
+SELF_PLAY = True
+
+POLICY_TEAM_2 = "/home/pmatthaei/Projects/ma-league-results/saba/results/league_2021-08-05_19-02-10/instance_1/models/qmix"
+POLICY_TEAM_2_STEP = 1750135
 
 
-class ReplayGenerationRun(ExperimentRun):
+class ReplayGenerationRun(MultiAgentExperiment):
 
     def __init__(self, args, logger):
         """
@@ -39,90 +40,80 @@ class ReplayGenerationRun(ExperimentRun):
         :param logger:
         """
         super().__init__(args, logger)
-        self.asset_manager = AssetManager(args=self.args, logger=self.logger)
 
-        self.home_mac, self.away_mac = None, None
-
-        # Init stepper so we can get env info
-        self.stepper = self._build_stepper()
-
-        # Get env info from stepper
-        self.env_info = self.stepper.get_env_info()
-
-        # Retrieve important data from the env and set in args - call BEFORE scheme building
-        env_scheme = self._update_args()
-
-        self.logger.update_scheme(env_scheme)
-
-        # Default/Base scheme - call AFTER extracting env info
-        self.groups, self.preprocess, self.scheme = self._build_schemes()
-
-        self.home_buffer = ReplayBuffer(self.scheme, self.groups, self.args.buffer_size,
-                                        self.env_info["episode_limit"] + 1,
-                                        preprocess=self.preprocess,
-                                        device="cpu" if self.args.buffer_cpu_only else self.args.device)
-        # Setup multi-agent controller here
-        self.home_mac = BasicMAC(self.home_buffer.scheme, self.groups, self.args)
-
-    def _update_args(self) -> Dict:
-        shapes = {
-            "n_agents": int(self.env_info["n_agents"]),
+    def _integrate_env_info(self):
+        total_n_agents = self.env_info["n_agents"]
+        # Since the AI is replaced with fixed policy adversary agents, we need to re-calculate
+        # the amount of the learning agents for the scheme
+        if SELF_PLAY:
+            assert total_n_agents % 2 == 0, f"A total of {total_n_agents} agents in the env do not fit in the symmetric two-team scenario. " \
+                                            f"Ensure the Self-Play scenario has two team set to is_scripted=False"
+            per_team_n_agents = int(total_n_agents / 2)
+        env_scheme = {
+            "n_agents": per_team_n_agents if SELF_PLAY else total_n_agents,
             "n_actions": int(self.env_info["n_actions"]),
-            "state_shape": int(self.env_info["state_shape"])
+            "state_shape": int(self.env_info["state_shape"]),
+            "total_n_agents": total_n_agents
         }
-        self.args = SimpleNamespace(**{**vars(self.args), **shapes})  # Update
-        return shapes  # return delta to re-use
+        self._update_args(env_scheme)
+        return env_scheme
 
-    def _build_schemes(self):
-        scheme = {
-            "state": {"vshape": self.env_info["state_shape"]},
-            "obs": {"vshape": self.env_info["obs_shape"], "group": "agents"},
-            "actions": {"vshape": (1,), "group": "agents", "dtype": th.long},
-            "avail_actions": {"vshape": (self.env_info["n_actions"],), "group": "agents", "dtype": th.int},
-            "reward": {"vshape": (1,)},
-            "terminated": {"vshape": (1,), "dtype": th.uint8},
-        }
-        groups = {
-            "agents": int(self.env_info["n_agents"])
-        }
-        preprocess = {
-            "actions": ("actions_onehot", [OneHot(out_dim=int(self.env_info["n_actions"]))])
-        }
-        return groups, preprocess, scheme
+    def _build_learners(self):
+        super(ReplayGenerationRun, self)._build_learners()
+        if SELF_PLAY:
+            self.away_mac = mac_REGISTRY[self.args.mac](self.home_buffer.scheme, self.groups, self.args)
 
-    def _build_stepper(self) -> EnvStepper:
+    def _build_stepper(self, log_start_t: int = 0) -> EnvStepper:
         self._configure_environment_args()
-
+        if SELF_PLAY:
+            return SelfPlayStepper(args=self.args, logger=self.logger)
         return stepper_REGISTRY[self.args.runner](args=self.args, logger=self.logger)
 
     def _configure_environment_args(self):
-        policy_team_id = POLICY_TEAM_ID
-        ai_team_id = 1 - policy_team_id
+        policy_team_id = POLICY_TEAM_1_ID
+        other_team_id = 1 - policy_team_id
 
         self.args.env_args["headless"] = False
         self.args.env_args["debug_range"] = True
         self.args.env_args["stochastic_spawns"] = True
-        home_team = self.asset_manager.load_team(path=POLICY_TEAM)
+        home_team = self.asset_manager.load_team(path=POLICY_TEAM_1)
         self.args.env_args['match_build_plan'][policy_team_id] = home_team
-        self.args.env_args['match_build_plan'][ai_team_id] = copy(home_team)
+        if SELF_PLAY:
+            away_team = self.asset_manager.load_team(path=POLICY_TEAM_2)
+            self.args.env_args['match_build_plan'][other_team_id] = away_team
+        else:
+            self.args.env_args['match_build_plan'][other_team_id] = copy(home_team)
         self.args.env_args['match_build_plan'][policy_team_id]['tid'] = policy_team_id
-        self.args.env_args['match_build_plan'][ai_team_id]['tid'] = ai_team_id
-        self.args.env_args['match_build_plan'][ai_team_id]['is_scripted'] = True
+        self.args.env_args['match_build_plan'][other_team_id]['tid'] = other_team_id
+        self.args.env_args['match_build_plan'][other_team_id]['is_scripted'] = not SELF_PLAY
 
     def _init_stepper(self):
         if not self.stepper.is_initalized:
-            self.stepper.initialize(
-                scheme=self.scheme,
-                groups=self.groups,
-                preprocess=self.preprocess,
-                home_mac=self.home_mac
-            )
+            if isinstance(self.stepper, SelfPlayStepper):
+                self.stepper.initialize(
+                    scheme=self.scheme,
+                    groups=self.groups,
+                    preprocess=self.preprocess,
+                    home_mac=self.home_mac,
+                    away_mac=self.away_mac
+                )
+            else:
+                self.stepper.initialize(
+                    scheme=self.scheme,
+                    groups=self.groups,
+                    preprocess=self.preprocess,
+                    home_mac=self.home_mac
+                )
 
     def load_agents(self):
-        state = self.asset_manager.load_state(path=POLICY_TEAM, component="agent", load_step=STEP)
+        state = self.asset_manager.load_state(path=POLICY_TEAM_1, component="agent", load_step=POLICY_TEAM_1_STEP)
         self.home_mac.load_state_dict(agent=state)
 
-    def start(self, play_time_seconds=None):
+        if SELF_PLAY:
+            state = self.asset_manager.load_state(path=POLICY_TEAM_2, component="agent", load_step=POLICY_TEAM_1_STEP)
+            self.away_mac.load_state_dict(agent=state)
+
+    def start(self, play_time_seconds=None, on_train=None) -> int:
         """
         :param play_time_seconds: Play the run for a certain time in seconds.
         :return:
@@ -141,7 +132,7 @@ class ReplayGenerationRun(ExperimentRun):
 
         while episode < self.args.test_nepisode:
             # Run for a whole episode at a time
-            _, _ = self.stepper.run(test_mode=True)
+            self.stepper.run(test_mode=True)
             self.logger.log_stat("episode", episode, self.stepper.t_env)
 
             episode += 1
@@ -154,9 +145,6 @@ class ReplayGenerationRun(ExperimentRun):
     def _finish(self):
         self.stepper.close_env()
         self.logger.info("Finished.")
-
-    def _build_learners(self):
-        pass  # we do not need learners since...
 
     def _train_episode(self, episode_num):
         pass  # ... we do not train, just infer
